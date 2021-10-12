@@ -11,6 +11,15 @@ struct Cli<'a> {
     options: Vec<Option<String>>,
 }
 
+fn has_cb_or_d(v: String) -> Result<(), String> {
+    if v == "d" || v == "cb" {
+        return Ok(());
+    }
+    Err(String::from(
+        "Permitted values are 'cb' (commit-based) or 'd' (default)",
+    ))
+}
+
 impl Cli<'_> {
     fn new() -> Self {
         Self::new_from(std::env::args_os().into_iter()).unwrap_or_else(|e| e.exit())
@@ -82,13 +91,11 @@ impl Cli<'_> {
                be initialised as commit based (cb) or default (d)").arg(
                 Arg::with_name("mode")
                 .value_name("mode")
+                    .validator(has_cb_or_d)
                 .help(
                     "Whether the repository should \n\
                be initialised as commit based (cb) or default (d)",
-                )
-                .takes_value(true)
-                .min_values(0)
-                .max_values(1)))
+                )))
             .subcommand(App::new("edit")
                 .about("Change the hours worked value for a given day")
                 .arg(&hour_arg)
@@ -155,7 +162,10 @@ impl Cli<'_> {
             options.push(Some(edit.value_of("year").unwrap_or(&year).to_string()));
             command = Some("edit".to_string());
         } else if let Some(remove) = matches.subcommand_matches("remove") {
-            options.push(Some(remove.value_of("day").unwrap_or(&*day).to_string()));
+            // same here...
+            options.push(Some(remove.value_of("day").unwrap_or(&day).to_string()));
+            options.push(Some(remove.value_of("month").unwrap_or(&month).to_string()));
+            options.push(Some(remove.value_of("year").unwrap_or(&year).to_string()));
             command = Some("remove".to_string());
         } else if let Some(run_mode) = matches.subcommand_matches("run-mode") {
             options.push(Some(run_mode.value_of("mode").unwrap_or("d").to_string()));
@@ -285,7 +295,7 @@ mod tests {
     }
 
     #[test]
-    fn returns_an_error_when_a_year_is_passed_without_a_month() {
+    fn returns_an_error_when_a_year_is_passed_to_edit_without_a_month() {
         let result = Cli::new_from(["exename", "edit", "-y2020"].iter());
         assert!(result.is_err());
     }
@@ -298,5 +308,42 @@ mod tests {
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<u32>(result.options);
         assert_eq!(values, vec![5, 15, 12, 2021]);
+    }
+
+    #[test]
+    fn returns_an_error_when_a_year_is_passed_to_remove_without_a_month() {
+        let result = Cli::new_from(["exename", "remove", "-y2020"].iter());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn returns_an_error_when_an_hour_is_passed_to_remove() {
+        let result = Cli::new_from(["exename", "remove", "-h5"].iter());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn returns_a_passed_value_for_remove() {
+        let cli: Cli =
+            Cli::new_from(["exename", "remove", "-d21", "-m03", "-y2021"].iter()).unwrap();
+        let new_cli = cli.parse_commands(&cli.matches);
+        let result = new_cli.unwrap();
+        let values = unwrap_iter_with_option::<u32>(result.options);
+        assert_eq!(values, vec![21, 03, 2021]);
+    }
+
+    #[test]
+    fn returns_a_default_value_for_run_mode() {
+        let cli: Cli = Cli::new_from(["exename", "run-mode"].iter()).unwrap();
+        let new_cli = cli.parse_commands(&cli.matches);
+        let result = new_cli.unwrap();
+        let values = unwrap_iter_with_option::<String>(result.options);
+        assert_eq!(values, vec!["d"]);
+    }
+
+    #[test]
+    fn throws_an_error_if_an_incorrect_arg_is_passed_in_run_mode() {
+        let result: Result<Cli, Error> = Cli::new_from(["exename", "run-mode", "nn"].iter());
+        assert!(result.is_err());
     }
 }
