@@ -231,6 +231,7 @@ impl Cli<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::New;
     use std::fmt::Debug;
     use std::str::FromStr;
 

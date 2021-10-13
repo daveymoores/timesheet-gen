@@ -2,6 +2,8 @@ use std::process;
 
 mod cli;
 mod config;
+mod file_reader;
+mod help_prompt;
 mod timesheet;
 
 fn main() {
