@@ -6,26 +6,32 @@ use std::path::PathBuf;
 
 const CONFIG_FILE_NAME: &str = ".timesheet-gen.txt";
 
-fn get_home_path() -> PathBuf {
+/// Find the path to the users home directory
+pub fn get_home_path() -> PathBuf {
     match dirs::home_dir() {
         Some(dir) => dir,
         None => panic!("Home directory not found"),
     }
 }
 
+/// Create filepath to config file
 fn get_filepath(path: PathBuf) -> String {
     let home_path = path.to_str();
     home_path.unwrap().to_owned() + "/" + CONFIG_FILE_NAME
 }
 
-fn read_file(buffer: &mut String, path: String, error_fn: fn()) -> Result<&mut String, io::Error> {
+/// Read config file or throw error and call error function
+fn read_file(
+    buffer: &mut String,
+    path: String,
+    error_fn: fn() -> Result<(), std::io::Error>,
+) -> Result<&mut String, io::Error> {
     match File::open(&path) {
         Ok(mut file) => {
             file.read_to_string(buffer)?;
         }
-        Err(err) => {
-            println!("{:?}", err);
-            error_fn();
+        Err(_) => {
+            error_fn()?;
         }
     };
 
@@ -34,7 +40,7 @@ fn read_file(buffer: &mut String, path: String, error_fn: fn()) -> Result<&mut S
 
 pub fn read_data_from_config_file(
     buffer: &mut String,
-    error_fn: fn(),
+    error_fn: fn() -> Result<(), std::io::Error>,
 ) -> Result<&mut String, io::Error> {
     let config_path = get_filepath(get_home_path());
     let filled_buffer: &mut String = read_file(buffer, config_path, error_fn)?;
@@ -64,9 +70,11 @@ mod tests {
 
     #[test]
     fn read_file_returns_a_buffer() {
-        fn mock_error_fn() {
+        fn mock_error_fn() -> Result<(), std::io::Error> {
             assert!(false);
+            Ok(())
         }
+
         let mut buffer = String::new();
         let file_data = read_file(
             &mut buffer,
@@ -80,8 +88,9 @@ mod tests {
 
     #[test]
     fn read_file_calls_the_error_function() {
-        fn mock_error_fn() {
+        fn mock_error_fn() -> Result<(), std::io::Error> {
             assert!(true);
+            Ok(())
         }
 
         let mut buffer = String::new();

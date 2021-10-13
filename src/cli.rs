@@ -189,7 +189,7 @@ impl Cli<'_> {
         }
 
         // println!("matches: {:#?}", self.matches);
-        println!("options: {:?}", options);
+        // println!("options: {:?}", options);
 
         Ok(Cli {
             options,
