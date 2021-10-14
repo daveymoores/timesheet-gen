@@ -1,5 +1,5 @@
 /// Help prompt handles all of the interactions with the user.
-/// It writes to the std output, and returns a input data or a boolean
+/// It writes to the std output, and returns input data or a boolean
 use dialoguer::{Confirm, Input};
 
 pub struct HelpPrompt {}

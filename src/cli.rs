@@ -202,7 +202,7 @@ impl Cli<'_> {
         let matches = &self.matches;
         let cli: Cli = self.parse_commands(&matches)?;
 
-        let config = config::Config::new();
+        let config: config::Config = config::Config::new();
 
         Self::run_command(cli, config);
 
@@ -257,68 +257,64 @@ mod tests {
         Cli::run_command(response, mock_config);
     }
 
+    struct MockConfig {}
+    impl New for MockConfig {
+        fn new() -> Self {
+            MockConfig {}
+        }
+    }
+    impl Init for MockConfig {
+        fn init(&self, options: Vec<Option<String>>) {
+            assert!(true);
+        }
+    }
+
+    impl Edit for MockConfig {
+        fn edit(&self, options: Vec<Option<String>>) {
+            assert!(true);
+        }
+    }
+
+    impl Make for MockConfig {
+        fn make(&self, options: Vec<Option<String>>) {
+            assert!(true);
+        }
+    }
+
+    impl Remove for MockConfig {
+        fn remove(&self, options: Vec<Option<String>>) {
+            assert!(true);
+        }
+    }
+
+    impl RunMode for MockConfig {
+        fn run_mode(&self, options: Vec<Option<String>>) {
+            assert!(true);
+        }
+    }
+
     #[test]
     fn calls_config_init_with_a_init_command() {
-        struct MockConfig {}
-        impl New for MockConfig {}
-        impl Init for MockConfig {
-            fn init(&self, options: Vec<Option<String>>) {
-                assert!(true);
-            }
-        }
-
         call_command_from_mock_config(["exename", "init"].iter(), MockConfig::new());
     }
 
     #[test]
     fn calls_config_make_with_a_make_command() {
-        struct MockConfig {}
-        impl New for MockConfig {}
-        impl Make for MockConfig {
-            fn make(&self, options: Vec<Option<String>>) {
-                assert!(true);
-            }
-        }
-
         call_command_from_mock_config(["exename", "make"].iter(), MockConfig::new());
     }
 
     #[test]
     fn calls_config_edit_with_a_edit_command() {
-        struct MockConfig {}
-        impl New for MockConfig {}
-        impl Edit for MockConfig {
-            fn edit(&self, options: Vec<Option<String>>) {
-                assert!(true);
-            }
-        }
-
         call_command_from_mock_config(["exename", "edit", "-h5"].iter(), MockConfig::new());
     }
 
     #[test]
     fn calls_config_remove_with_a_remove_command() {
-        struct MockConfig {}
-        impl New for MockConfig {}
-        impl Remove for MockConfig {
-            fn remove(&self, options: Vec<Option<String>>) {
-                assert!(true);
-            }
-        }
-
         call_command_from_mock_config(["exename", "remove"].iter(), MockConfig::new());
     }
 
     #[test]
     fn calls_config_runmode_with_a_runmode_command() {
-        struct MockConfig {}
-        impl New for MockConfig {}
-        impl RunMode for MockConfig {
-            fn run_mode(&self, options: Vec<Option<String>>) {
-                assert!(true);
-            }
-        }
-
         call_command_from_mock_config(["exename", "run-mode"].iter(), MockConfig::new());
     }
 

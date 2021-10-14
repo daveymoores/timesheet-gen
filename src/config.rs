@@ -6,12 +6,14 @@
 pub struct Config {}
 
 pub trait New {
-    fn new() -> Config {
+    fn new() -> Self;
+}
+
+impl New for Config {
+    fn new() -> Self {
         Config {}
     }
 }
-
-impl New for Config {}
 
 impl Config {}
 
@@ -22,14 +24,15 @@ pub trait Init {
 
 impl Init for Config {
     fn init(&self, _options: Vec<Option<String>>) {
+        // create buffer to read
         let mut buffer = String::new();
+        // pass a prompt for if the config file doesn't exist
         let prompt = crate::help_prompt::HelpPrompt::onboarding;
 
-        let _config_data = crate::file_reader::read_data_from_config_file(&mut buffer, prompt)
-            .unwrap_or_else(|err| {
-                eprintln!("Error initialising timesheet-gen: {}", err);
-                std::process::exit(1);
-            });
+        crate::file_reader::read_data_from_config_file(&mut buffer, prompt).unwrap_or_else(|err| {
+            eprintln!("Error initialising timesheet-gen: {}", err);
+            std::process::exit(1);
+        });
     }
 }
 

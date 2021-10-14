@@ -25,7 +25,7 @@ fn read_file(
     buffer: &mut String,
     path: String,
     error_fn: fn() -> Result<(), std::io::Error>,
-) -> Result<&mut String, io::Error> {
+) -> Result<(), io::Error> {
     match File::open(&path) {
         Ok(mut file) => {
             file.read_to_string(buffer)?;
@@ -35,17 +35,17 @@ fn read_file(
         }
     };
 
-    Ok(buffer)
+    Ok(())
 }
 
 pub fn read_data_from_config_file(
     buffer: &mut String,
     error_fn: fn() -> Result<(), std::io::Error>,
-) -> Result<&mut String, io::Error> {
+) -> Result<(), io::Error> {
     let config_path = get_filepath(get_home_path());
-    let filled_buffer: &mut String = read_file(buffer, config_path, error_fn)?;
+    read_file(buffer, config_path, error_fn)?;
 
-    Ok(filled_buffer)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -76,14 +76,14 @@ mod tests {
         }
 
         let mut buffer = String::new();
-        let file_data = read_file(
+        read_file(
             &mut buffer,
             String::from("./testing-utils/.timesheet-gen.txt"),
             mock_error_fn,
         )
         .unwrap();
 
-        assert_eq!(file_data.trim(), "hello");
+        assert_eq!(buffer.trim(), "hello");
     }
 
     #[test]
