@@ -1,9 +1,12 @@
 extern crate clap;
 use crate::config;
 use crate::config::{Edit, Init, Make, New, Remove, RunMode};
+use crate::timesheet::Timesheet;
 use chrono::prelude::*;
 use clap::{App, Arg, ArgMatches, Error};
+use std::cell::RefCell;
 use std::ffi::OsString;
+use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Commands {
@@ -188,9 +191,6 @@ impl Cli<'_> {
             });
         }
 
-        // println!("matches: {:#?}", self.matches);
-        // println!("options: {:?}", options);
-
         Ok(Cli {
             options,
             command,
@@ -198,18 +198,24 @@ impl Cli<'_> {
         })
     }
 
+    // Create an instance of timesheet wrapped in a smart pointer
+    // Then pass this into each of the config functions as clones
+    // The clones being references to the original reference means
+    // that it can be passed into multiple functions
     pub fn run(&self) -> Result<(), clap::Error> {
+        let timesheet = Rc::new(RefCell::new(Timesheet { repo_path: None }));
+
         let matches = &self.matches;
         let cli: Cli = self.parse_commands(&matches)?;
 
         let config: config::Config = config::Config::new();
 
-        Self::run_command(cli, config);
+        Self::run_command(cli, config, &timesheet);
 
         Ok(())
     }
 
-    pub fn run_command<T>(cli: Cli, config: T)
+    pub fn run_command<T>(cli: Cli, config: T, timesheet: &Rc<RefCell<Timesheet>>)
     where
         T: Init + Make + Edit + Remove + RunMode,
     {
@@ -218,7 +224,7 @@ impl Cli<'_> {
                 panic!("The programme shouldn't be able to get here");
             }
             Some(commands) => match commands {
-                Commands::Init => config.init(cli.options),
+                Commands::Init => config.init(cli.options, Rc::clone(&timesheet)),
                 Commands::Make => config.make(cli.options),
                 Commands::Edit => config.edit(cli.options),
                 Commands::Remove => config.remove(cli.options),
@@ -254,7 +260,11 @@ mod tests {
         let new_cli = cli.parse_commands(&cli.matches);
         let response = new_cli.unwrap();
 
-        Cli::run_command(response, mock_config);
+        Cli::run_command(
+            response,
+            mock_config,
+            &Rc::new(RefCell::new(Timesheet { repo_path: None })),
+        );
     }
 
     struct MockConfig {}
@@ -264,7 +274,7 @@ mod tests {
         }
     }
     impl Init for MockConfig {
-        fn init(&self, options: Vec<Option<String>>) {
+        fn init(&self, options: Vec<Option<String>>, _timesheet: Rc<RefCell<Timesheet>>) {
             assert!(true);
         }
     }

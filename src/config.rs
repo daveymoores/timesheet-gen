@@ -1,3 +1,7 @@
+use crate::timesheet::Timesheet;
+use std::cell::RefCell;
+use std::rc::Rc;
+
 /// Creates and modifies the config file. Config does not directly hold the information
 /// contained in the config file, but provides the various operations that can be
 /// performed on it. The data is a stored within the Timesheet struct.
@@ -19,20 +23,27 @@ impl Config {}
 
 pub trait Init {
     /// Generate a config file with user variables
-    fn init(&self, options: Vec<Option<String>>);
+    fn init(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>);
 }
 
 impl Init for Config {
-    fn init(&self, _options: Vec<Option<String>>) {
+    fn init(&self, _options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+        // create mutable reference to timesheet using smart pointers
+        let mut_timesheet = timesheet.borrow_mut();
         // create buffer to read
         let mut buffer = String::new();
         // pass a prompt for if the config file doesn't exist
         let prompt = crate::help_prompt::HelpPrompt::onboarding;
 
-        crate::file_reader::read_data_from_config_file(&mut buffer, prompt).unwrap_or_else(|err| {
-            eprintln!("Error initialising timesheet-gen: {}", err);
-            std::process::exit(1);
-        });
+        crate::file_reader::read_data_from_config_file(&mut buffer, prompt, mut_timesheet)
+            .unwrap_or_else(|err| {
+                eprintln!("Error initialising timesheet-gen: {}", err);
+                std::process::exit(1);
+            });
+
+        println!("{:#?}", timesheet);
+
+        //if the file does exist parse the buffer
     }
 }
 
