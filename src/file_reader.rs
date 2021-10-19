@@ -73,10 +73,10 @@ mod tests {
 
     #[test]
     fn read_file_returns_a_buffer() {
-        fn mock_error_fn(_timesheet: RefMut<Timesheet>) -> Result<(), std::io::Error> {
+        let mock_error_fn: Box<dyn FnMut() -> Result<(), std::io::Error>> = Box::new(|| {
             assert!(false);
             Ok(())
-        }
+        });
 
         let timesheet = Rc::new(RefCell::new(Timesheet {
             namespace: None,
@@ -96,7 +96,6 @@ mod tests {
             &mut buffer,
             String::from("./testing-utils/.timesheet-gen.txt"),
             mock_error_fn,
-            mut_timesheet,
         )
         .unwrap();
 
@@ -105,10 +104,10 @@ mod tests {
 
     #[test]
     fn read_file_calls_the_error_function() {
-        fn mock_error_fn(_timesheet: RefMut<Timesheet>) -> Result<(), std::io::Error> {
+        let mock_error_fn: Box<dyn FnMut() -> Result<(), std::io::Error>> = Box::new(|| {
             assert!(true);
             Ok(())
-        }
+        });
 
         let timesheet = Rc::new(RefCell::new(Timesheet {
             namespace: None,
@@ -128,7 +127,6 @@ mod tests {
             &mut buffer,
             String::from("./testing-utils/.timesheet-gen.txt"),
             mock_error_fn,
-            mut_timesheet,
         );
     }
 }
