@@ -11,9 +11,7 @@ pub struct HelpPrompt {
 
 impl HelpPrompt {
     pub fn new(timesheet: Rc<RefCell<Timesheet>>) -> Self {
-        Self {
-            timesheet: Rc::clone(&timesheet),
-        }
+        Self { timesheet }
     }
 
     pub fn onboarding(self) -> Result<(), std::io::Error> {

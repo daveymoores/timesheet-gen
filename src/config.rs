@@ -28,6 +28,7 @@ pub trait Init {
 
 impl Init for Config {
     fn init(&self, _options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+        // clone this so that it doesn't get moved into help prompt
         let timesheet_clone = Rc::clone(&timesheet);
         // create buffer to read
         let mut buffer = String::new();
