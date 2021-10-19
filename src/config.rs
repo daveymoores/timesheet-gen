@@ -28,10 +28,11 @@ pub trait Init {
 
 impl Init for Config {
     fn init(&self, _options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+        let timesheet_clone = Rc::clone(&timesheet);
         // create buffer to read
         let mut buffer = String::new();
         // pass a prompt for if the config file doesn't exist
-        let prompt = crate::help_prompt::onboarding(Rc::clone(&timesheet));
+        let prompt = crate::help_prompt::HelpPrompt::new(timesheet_clone);
 
         crate::file_reader::read_data_from_config_file(&mut buffer, prompt).unwrap_or_else(|err| {
             eprintln!("Error initialising timesheet-gen: {}", err);

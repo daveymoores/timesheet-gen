@@ -1,3 +1,4 @@
+use crate::help_prompt::HelpPrompt;
 use crate::timesheet::Timesheet;
 use std::cell::RefMut;
 use std::fs::File;
@@ -22,17 +23,13 @@ fn get_filepath(path: PathBuf) -> String {
 }
 
 /// Read config file or throw error and call error function
-fn read_file(
-    buffer: &mut String,
-    path: String,
-    mut error_fn: Box<dyn FnMut() -> Result<(), std::io::Error>>,
-) -> Result<(), io::Error> {
+fn read_file(buffer: &mut String, path: String, prompt: HelpPrompt) -> Result<(), io::Error> {
     match File::open(&path) {
         Ok(mut file) => {
             file.read_to_string(buffer)?;
         }
         Err(_) => {
-            error_fn()?;
+            prompt.onboarding()?;
         }
     };
 
@@ -41,10 +38,10 @@ fn read_file(
 
 pub fn read_data_from_config_file(
     buffer: &mut String,
-    mut error_fn: Box<dyn FnMut() -> Result<(), std::io::Error>>,
+    prompt: HelpPrompt,
 ) -> Result<(), io::Error> {
     let config_path = get_filepath(get_home_path());
-    read_file(buffer, config_path, error_fn)?;
+    read_file(buffer, config_path, prompt)?;
 
     Ok(())
 }
