@@ -80,7 +80,17 @@ mod tests {
             Ok(())
         }
 
-        let timesheet = Rc::new(RefCell::new(Timesheet { repo_path: None }));
+        let timesheet = Rc::new(RefCell::new(Timesheet {
+            namespace: None,
+            repo_path: None,
+            name: None,
+            email: None,
+            client_name: None,
+            client_contact_person: None,
+            client_address: None,
+            po_number: None,
+            timesheet: None,
+        }));
         let mut_timesheet = timesheet.borrow_mut();
         let mut buffer = String::new();
 
@@ -102,7 +112,17 @@ mod tests {
             Ok(())
         }
 
-        let timesheet = Rc::new(RefCell::new(Timesheet { repo_path: None }));
+        let timesheet = Rc::new(RefCell::new(Timesheet {
+            namespace: None,
+            repo_path: None,
+            name: None,
+            email: None,
+            client_name: None,
+            client_contact_person: None,
+            client_address: None,
+            po_number: None,
+            timesheet: None,
+        }));
         let mut_timesheet = timesheet.borrow_mut();
         let mut buffer = String::new();
 

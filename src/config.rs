@@ -33,7 +33,7 @@ impl Init for Config {
         // create buffer to read
         let mut buffer = String::new();
         // pass a prompt for if the config file doesn't exist
-        let prompt = crate::help_prompt::HelpPrompt::onboarding;
+        let prompt = crate::help_prompt::onboarding;
 
         crate::file_reader::read_data_from_config_file(&mut buffer, prompt, mut_timesheet)
             .unwrap_or_else(|err| {
@@ -42,8 +42,12 @@ impl Init for Config {
             });
 
         println!("{:#?}", timesheet);
-
-        //if the file does exist parse the buffer
+        // if the buffer is empty, there is no existing file and timesheet
+        // state holds the data. Write this data to file.
+        if buffer.is_empty() {
+        } else {
+            // otherwise parse the file data into timesheet state
+        }
     }
 }
 

@@ -203,7 +203,18 @@ impl Cli<'_> {
     // The clones being references to the original reference means
     // that it can be passed into multiple functions
     pub fn run(&self) -> Result<(), clap::Error> {
-        let timesheet = Rc::new(RefCell::new(Timesheet { repo_path: None }));
+        // TODO - set default values instead of setting this with all these none values
+        let timesheet = Rc::new(RefCell::new(Timesheet {
+            namespace: None,
+            repo_path: None,
+            name: None,
+            email: None,
+            client_name: None,
+            client_contact_person: None,
+            client_address: None,
+            po_number: None,
+            timesheet: None,
+        }));
 
         let matches = &self.matches;
         let cli: Cli = self.parse_commands(&matches)?;
@@ -263,7 +274,17 @@ mod tests {
         Cli::run_command(
             response,
             mock_config,
-            &Rc::new(RefCell::new(Timesheet { repo_path: None })),
+            &Rc::new(RefCell::new(Timesheet {
+                namespace: None,
+                repo_path: None,
+                name: None,
+                email: None,
+                client_name: None,
+                client_contact_person: None,
+                client_address: None,
+                po_number: None,
+                timesheet: None,
+            })),
         );
     }
 
