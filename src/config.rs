@@ -28,18 +28,15 @@ pub trait Init {
 
 impl Init for Config {
     fn init(&self, _options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
-        // create mutable reference to timesheet using smart pointers
-        let mut_timesheet = timesheet.borrow_mut();
         // create buffer to read
         let mut buffer = String::new();
         // pass a prompt for if the config file doesn't exist
-        let prompt = crate::help_prompt::onboarding;
+        let prompt = crate::help_prompt::onboarding(Rc::clone(&timesheet));
 
-        crate::file_reader::read_data_from_config_file(&mut buffer, prompt, mut_timesheet)
-            .unwrap_or_else(|err| {
-                eprintln!("Error initialising timesheet-gen: {}", err);
-                std::process::exit(1);
-            });
+        crate::file_reader::read_data_from_config_file(&mut buffer, prompt).unwrap_or_else(|err| {
+            eprintln!("Error initialising timesheet-gen: {}", err);
+            std::process::exit(1);
+        });
 
         println!("{:#?}", timesheet);
         // if the buffer is empty, there is no existing file and timesheet

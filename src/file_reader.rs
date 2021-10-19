@@ -25,15 +25,14 @@ fn get_filepath(path: PathBuf) -> String {
 fn read_file(
     buffer: &mut String,
     path: String,
-    error_fn: fn(timesheet: RefMut<Timesheet>) -> Result<(), std::io::Error>,
-    timesheet: RefMut<Timesheet>,
+    mut error_fn: Box<dyn FnMut() -> Result<(), std::io::Error>>,
 ) -> Result<(), io::Error> {
     match File::open(&path) {
         Ok(mut file) => {
             file.read_to_string(buffer)?;
         }
         Err(_) => {
-            error_fn(timesheet)?;
+            error_fn()?;
         }
     };
 
@@ -42,11 +41,10 @@ fn read_file(
 
 pub fn read_data_from_config_file(
     buffer: &mut String,
-    error_fn: fn(timesheet: RefMut<Timesheet>) -> Result<(), std::io::Error>,
-    timesheet: RefMut<Timesheet>,
+    mut error_fn: Box<dyn FnMut() -> Result<(), std::io::Error>>,
 ) -> Result<(), io::Error> {
     let config_path = get_filepath(get_home_path());
-    read_file(buffer, config_path, error_fn, timesheet)?;
+    read_file(buffer, config_path, error_fn)?;
 
     Ok(())
 }

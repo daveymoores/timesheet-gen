@@ -2,14 +2,19 @@ use crate::timesheet::Timesheet;
 /// Help prompt handles all of the interactions with the user.
 /// It writes to the std output, and returns input data or a boolean
 use dialoguer::{Confirm, Editor, Input};
-use std::cell::RefMut;
+use std::cell::{RefCell, RefMut};
+use std::rc::Rc;
 
-pub fn onboarding(mut timesheet: RefMut<Timesheet>) -> Result<(), std::io::Error> {
-    add_client_details(confirm_found_repository_details(confirm_repository_path(
-        timesheet,
-    )?)?)?;
+pub fn onboarding(
+    mut timesheet: Rc<RefCell<Timesheet>>,
+) -> Box<dyn FnMut() -> Result<(), std::io::Error>> {
+    Box::new(move || {
+        add_client_details(confirm_found_repository_details(confirm_repository_path(
+            timesheet.borrow_mut(),
+        )?)?)?;
 
-    Ok(())
+        Ok(())
+    })
 }
 
 pub fn confirm_repository_path(
