@@ -92,11 +92,6 @@ mod tests {
 
         let mock_prompt = MockPrompt {};
 
-        let timesheet = Rc::new(RefCell::new(Timesheet {
-            ..Default::default()
-        }));
-
-        let mut_timesheet = timesheet.borrow_mut();
         let mut buffer = String::new();
 
         read_file(
@@ -122,16 +117,13 @@ mod tests {
 
         let mock_prompt = MockPrompt {};
 
-        let timesheet = Rc::new(RefCell::new(Timesheet {
-            ..Default::default()
-        }));
-        let mut_timesheet = timesheet.borrow_mut();
         let mut buffer = String::new();
 
         read_file(
             &mut buffer,
             String::from("./testing-utils/.timesheet-gen.txt"),
             mock_prompt,
-        );
+        )
+        .unwrap();
     }
 }

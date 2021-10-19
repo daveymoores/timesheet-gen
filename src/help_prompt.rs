@@ -55,7 +55,7 @@ impl HelpPrompt {
     }
 
     pub fn confirm_found_repository_details(self) -> Result<Self, Box<dyn std::error::Error>> {
-        self.timesheet.borrow_mut().find_repository_details()?;
+        self.timesheet.borrow_mut().find_repository_details_from()?;
 
         println!(
             "These are the details associated with this repository: \n\
