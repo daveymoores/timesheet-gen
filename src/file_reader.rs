@@ -1,4 +1,4 @@
-use crate::help_prompt::HelpPrompt;
+use crate::help_prompt::{HelpPrompt, Onboarding};
 use crate::timesheet::Timesheet;
 use std::cell::RefMut;
 use std::fs::File;
@@ -23,7 +23,14 @@ fn get_filepath(path: PathBuf) -> String {
 }
 
 /// Read config file or throw error and call error function
-fn read_file(buffer: &mut String, path: String, prompt: HelpPrompt) -> Result<(), io::Error> {
+fn read_file<T>(
+    buffer: &mut String,
+    path: String,
+    prompt: T,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    T: Onboarding,
+{
     match File::open(&path) {
         Ok(mut file) => {
             file.read_to_string(buffer)?;
@@ -36,10 +43,13 @@ fn read_file(buffer: &mut String, path: String, prompt: HelpPrompt) -> Result<()
     Ok(())
 }
 
-pub fn read_data_from_config_file(
+pub fn read_data_from_config_file<T>(
     buffer: &mut String,
-    prompt: HelpPrompt,
-) -> Result<(), io::Error> {
+    prompt: T,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    T: Onboarding,
+{
     let config_path = get_filepath(get_home_path());
     read_file(buffer, config_path, prompt)?;
 
@@ -50,6 +60,7 @@ pub fn read_data_from_config_file(
 mod tests {
     use super::*;
     use std::cell::RefCell;
+    use std::error::Error;
     use std::path::Path;
     use std::process::Command;
     use std::rc::Rc;
@@ -70,29 +81,28 @@ mod tests {
 
     #[test]
     fn read_file_returns_a_buffer() {
-        let mock_error_fn: Box<dyn FnMut() -> Result<(), std::io::Error>> = Box::new(|| {
-            assert!(false);
-            Ok(())
-        });
+        struct MockPrompt {}
+
+        impl Onboarding for MockPrompt {
+            fn onboarding(self) -> Result<(), Box<dyn Error>> {
+                assert!(false);
+                Ok(())
+            }
+        }
+
+        let mock_prompt = MockPrompt {};
 
         let timesheet = Rc::new(RefCell::new(Timesheet {
-            namespace: None,
-            repo_path: None,
-            name: None,
-            email: None,
-            client_name: None,
-            client_contact_person: None,
-            client_address: None,
-            po_number: None,
-            timesheet: None,
+            ..Default::default()
         }));
+
         let mut_timesheet = timesheet.borrow_mut();
         let mut buffer = String::new();
 
         read_file(
             &mut buffer,
             String::from("./testing-utils/.timesheet-gen.txt"),
-            mock_error_fn,
+            mock_prompt,
         )
         .unwrap();
 
@@ -101,21 +111,19 @@ mod tests {
 
     #[test]
     fn read_file_calls_the_error_function() {
-        let mock_error_fn: Box<dyn FnMut() -> Result<(), std::io::Error>> = Box::new(|| {
-            assert!(true);
-            Ok(())
-        });
+        struct MockPrompt {}
+
+        impl Onboarding for MockPrompt {
+            fn onboarding(self) -> Result<(), Box<dyn Error>> {
+                assert!(true);
+                Ok(())
+            }
+        }
+
+        let mock_prompt = MockPrompt {};
 
         let timesheet = Rc::new(RefCell::new(Timesheet {
-            namespace: None,
-            repo_path: None,
-            name: None,
-            email: None,
-            client_name: None,
-            client_contact_person: None,
-            client_address: None,
-            po_number: None,
-            timesheet: None,
+            ..Default::default()
         }));
         let mut_timesheet = timesheet.borrow_mut();
         let mut buffer = String::new();
@@ -123,7 +131,7 @@ mod tests {
         read_file(
             &mut buffer,
             String::from("./testing-utils/.timesheet-gen.txt"),
-            mock_error_fn,
+            mock_prompt,
         );
     }
 }

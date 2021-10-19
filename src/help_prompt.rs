@@ -3,10 +3,24 @@ use crate::timesheet::Timesheet;
 /// It writes to the std output, and returns input data or a boolean
 use dialoguer::{Confirm, Editor, Input};
 use std::cell::{RefCell, RefMut};
+use std::error::Error;
 use std::rc::Rc;
 
 pub struct HelpPrompt {
     timesheet: Rc<RefCell<Timesheet>>,
+}
+
+pub trait Onboarding {
+    fn onboarding(self) -> Result<(), Box<dyn std::error::Error>>;
+}
+
+impl Onboarding for HelpPrompt {
+    fn onboarding(self) -> Result<(), Box<dyn Error>> {
+        self.confirm_repository_path()?
+            .confirm_found_repository_details()?
+            .add_client_details()?;
+        Ok(())
+    }
 }
 
 impl HelpPrompt {
@@ -14,14 +28,7 @@ impl HelpPrompt {
         Self { timesheet }
     }
 
-    pub fn onboarding(self) -> Result<(), std::io::Error> {
-        self.confirm_repository_path()?
-            .confirm_found_repository_details()?
-            .add_client_details()?;
-        Ok(())
-    }
-
-    pub fn confirm_repository_path(self) -> Result<Self, std::io::Error> {
+    pub fn confirm_repository_path(self) -> Result<Self, Box<dyn std::error::Error>> {
         println!(
             "This looks like the first time you're running timesheet-gen. \n\
         Initialise timesheet-gen for current repository?"
@@ -47,8 +54,18 @@ impl HelpPrompt {
         Ok(self)
     }
 
-    pub fn confirm_found_repository_details(self) -> Result<Self, std::io::Error> {
-        println!("These are the details associated with this repository:");
+    pub fn confirm_found_repository_details(self) -> Result<Self, Box<dyn std::error::Error>> {
+        self.timesheet.borrow_mut().find_repository_details()?;
+
+        println!(
+            "These are the details associated with this repository: \n\
+        Project: {:?} \n\
+        Name: {:?} \n\
+        Email: {:?}",
+            &self.timesheet.borrow().namespace.clone().unwrap(),
+            &self.timesheet.borrow().email.clone().unwrap(),
+            &self.timesheet.borrow().name.clone().unwrap(),
+        );
 
         Ok(self)
     }
