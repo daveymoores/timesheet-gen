@@ -227,10 +227,10 @@ impl Cli<'_> {
             }
             Some(commands) => match commands {
                 Commands::Init => config.init(cli.options, Rc::clone(&timesheet)),
-                Commands::Make => config.make(cli.options),
-                Commands::Edit => config.edit(cli.options),
-                Commands::Remove => config.remove(cli.options),
-                Commands::RunMode => config.run_mode(cli.options),
+                Commands::Make => config.make(cli.options, Rc::clone(&timesheet)),
+                Commands::Edit => config.edit(cli.options, Rc::clone(&timesheet)),
+                Commands::Remove => config.remove(cli.options, Rc::clone(&timesheet)),
+                Commands::RunMode => config.run_mode(cli.options, Rc::clone(&timesheet)),
             },
         }
     }

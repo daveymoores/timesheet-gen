@@ -17,8 +17,9 @@ pub trait Onboarding {
 impl Onboarding for HelpPrompt {
     fn onboarding(self) -> Result<(), Box<dyn Error>> {
         self.confirm_repository_path()?
-            .confirm_found_repository_details()?
-            .add_client_details()?;
+            .search_for_repository_details()?
+            .add_client_details()?
+            .show_details();
         Ok(())
     }
 }
@@ -54,19 +55,9 @@ impl HelpPrompt {
         Ok(self)
     }
 
-    pub fn confirm_found_repository_details(self) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn search_for_repository_details(self) -> Result<Self, Box<dyn std::error::Error>> {
         self.timesheet.borrow_mut().find_repository_details_from()?;
-
-        println!(
-            "These are the details associated with this repository: \n\
-        Project: {:?} \n\
-        Name: {:?} \n\
-        Email: {:?}",
-            &self.timesheet.borrow().namespace.clone().unwrap(),
-            &self.timesheet.borrow().email.clone().unwrap(),
-            &self.timesheet.borrow().name.clone().unwrap(),
-        );
-
+        println!("Repository details found!");
         Ok(self)
     }
 
@@ -84,10 +75,36 @@ impl HelpPrompt {
 
             println!("Client address");
             if let Some(input) = Editor::new().edit("Enter an address").unwrap() {
-                self.timesheet.borrow_mut().set_client_contact_person(input);
+                self.timesheet.borrow_mut().set_client_address(input);
             }
         }
 
         Ok(self)
+    }
+
+    pub fn show_details(self) -> Self {
+        println!("These are the details associated with this repository:");
+
+        if let Some(namespace) = &self.timesheet.borrow().namespace.clone() {
+            println!("Project: {}", namespace);
+        }
+        if let Some(email) = &self.timesheet.borrow().email.clone() {
+            println!("Email: {}", email);
+        }
+        if let Some(name) = &self.timesheet.borrow().name.clone() {
+            println!("Name: {}", name);
+        }
+        if let Some(client_name) = &self.timesheet.borrow().client_name.clone() {
+            println!("Client name: {}", client_name);
+        }
+        if let Some(client_contact_person) = &self.timesheet.borrow().client_contact_person.clone()
+        {
+            println!("Client contact person: {}", client_contact_person);
+        }
+        if let Some(client_address) = &self.timesheet.borrow().client_address.clone() {
+            println!("Client address: {}", client_address);
+        }
+
+        self
     }
 }

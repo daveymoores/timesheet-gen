@@ -1,8 +1,10 @@
 use regex::{Captures, Match};
 use serde_json::{Map, Value};
+use std::cell::RefCell;
 use std::path::Path;
 use std::process;
 use std::process::{Command, Output};
+use std::rc::Rc;
 
 /// Holds the data from the config file. Config can access these values
 // and perform various operations on it
@@ -123,9 +125,9 @@ impl Timesheet {
         &mut self,
         output_path: Output,
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
-        let path_string = String::from_utf8(output_path.stdout)?;
+        let path_string: String = crate::utils::trim_output_from_utf8(output_path)?;
 
-        self.set_git_path(path_string.trim().to_owned() + &*String::from("/.git/").to_owned());
+        self.set_git_path(path_string.to_owned() + &*String::from("/.git/").to_owned());
 
         Ok(self)
     }
@@ -159,8 +161,8 @@ impl Timesheet {
         output_name: Output,
         output_email: Output,
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
-        self.set_name(String::from_utf8(output_name.stdout)?);
-        self.set_email(String::from_utf8(output_email.stdout)?);
+        self.set_name(crate::utils::trim_output_from_utf8(output_name)?);
+        self.set_email(crate::utils::trim_output_from_utf8(output_email)?);
 
         self.find_git_path_from_directory_from()?
             .find_namespace_from_git_path()?;
