@@ -1,10 +1,11 @@
 use crate::help_prompt::{HelpPrompt, Onboarding};
 use crate::timesheet::Timesheet;
-use std::cell::RefMut;
+use serde_json::{json, map::Map};
+use std::cell::{Ref, RefMut};
 use std::fs::File;
-use std::io;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::PathBuf;
+use std::{io, process};
 
 const CONFIG_FILE_NAME: &str = ".timesheet-gen.txt";
 
@@ -54,6 +55,34 @@ where
     read_file(buffer, config_path, prompt)?;
 
     Ok(())
+}
+
+pub fn write_config_file(timesheet: &Ref<Timesheet>) -> Result<(), Box<dyn std::error::Error>> {
+    let unwrapped_timesheet = json!({
+        "namespace": timesheet.namespace.as_ref().unwrap_or(&"None".to_string()),
+        "repo_path": timesheet.repo_path.as_ref().unwrap_or(&"None".to_string()),
+        "git_path": timesheet.git_path.as_ref().unwrap_or(&"None".to_string()),
+        "name": timesheet.name.as_ref().unwrap_or(&"None".to_string()),
+        "email": timesheet.email.as_ref().unwrap_or(&"None".to_string()),
+        "client_name": timesheet.client_name.as_ref().unwrap_or(&"None".to_string()),
+        "client_contact_person": timesheet.client_contact_person.as_ref().unwrap_or(&"None".to_string()),
+        "client_address": timesheet.client_address.as_ref().unwrap_or(&"None".to_string()),
+        "po_number": timesheet.po_number.as_ref().unwrap_or(&"None".to_string()),
+        "timesheet": timesheet.timesheet.as_ref().unwrap_or(&Map::new()),
+    });
+    let json = serde_json::to_string(&unwrapped_timesheet).unwrap();
+    let config_path = get_filepath(get_home_path());
+    let mut file = File::create(&config_path)?;
+
+    file.write_all(json.as_bytes())?;
+
+    println!(
+        "timesheet-gen initialised! \n\
+    Try 'timesheet-gen make' to create your first timesheet \n\
+    or 'timesheet-gen help' for more options."
+    );
+
+    process::exit(exitcode::OK);
 }
 
 #[cfg(test)]

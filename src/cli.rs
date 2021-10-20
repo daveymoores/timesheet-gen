@@ -284,25 +284,25 @@ mod tests {
     }
 
     impl Edit for MockConfig {
-        fn edit(&self, options: Vec<Option<String>>) {
+        fn edit(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
             assert!(true);
         }
     }
 
     impl Make for MockConfig {
-        fn make(&self, options: Vec<Option<String>>) {
+        fn make(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
             assert!(true);
         }
     }
 
     impl Remove for MockConfig {
-        fn remove(&self, options: Vec<Option<String>>) {
+        fn remove(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
             assert!(true);
         }
     }
 
     impl RunMode for MockConfig {
-        fn run_mode(&self, options: Vec<Option<String>>) {
+        fn run_mode(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
             assert!(true);
         }
     }

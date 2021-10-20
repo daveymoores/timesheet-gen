@@ -1,4 +1,5 @@
 use regex::{Captures, Match};
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::cell::RefCell;
 use std::path::Path;
@@ -9,7 +10,7 @@ use std::rc::Rc;
 /// Holds the data from the config file. Config can access these values
 // and perform various operations on it
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Timesheet {
     pub namespace: Option<String>,
     pub repo_path: Option<String>,
