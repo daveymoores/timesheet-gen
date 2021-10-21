@@ -18,7 +18,7 @@ pub fn get_home_path() -> PathBuf {
 }
 
 /// Create filepath to config file
-fn get_filepath(path: PathBuf) -> String {
+pub fn get_filepath(path: PathBuf) -> String {
     let home_path = path.to_str();
     home_path.unwrap().to_owned() + "/" + CONFIG_FILE_NAME
 }
@@ -57,7 +57,10 @@ where
     Ok(())
 }
 
-pub fn write_config_file(timesheet: &Ref<Timesheet>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn write_config_file(
+    timesheet: &Ref<Timesheet>,
+    config_path: String,
+) -> Result<(), Box<dyn std::error::Error>> {
     let unwrapped_timesheet = json!({
         "namespace": timesheet.namespace.as_ref().unwrap_or(&"None".to_string()),
         "repo_path": timesheet.repo_path.as_ref().unwrap_or(&"None".to_string()),
@@ -70,8 +73,8 @@ pub fn write_config_file(timesheet: &Ref<Timesheet>) -> Result<(), Box<dyn std::
         "po_number": timesheet.po_number.as_ref().unwrap_or(&"None".to_string()),
         "timesheet": timesheet.timesheet.as_ref().unwrap_or(&Map::new()),
     });
+
     let json = serde_json::to_string(&unwrapped_timesheet).unwrap();
-    let config_path = get_filepath(get_home_path());
     let mut file = File::create(&config_path)?;
 
     file.write_all(json.as_bytes())?;
@@ -154,5 +157,44 @@ mod tests {
             mock_prompt,
         )
         .unwrap();
+    }
+
+    #[test]
+    fn it_writes_a_config_file_when_file_exists() {
+        let mock_timesheet = RefCell::new(Timesheet {
+            ..Default::default()
+        });
+
+        let timesheet = mock_timesheet.borrow();
+
+        // creates mock directory that is destroyed when it goes out of scope
+        let dir = tempfile::tempdir().unwrap();
+        let mock_config_path = dir.path().join("my-temporary-note.txt");
+
+        let mut file = File::create(&mock_config_path).unwrap();
+        let string_path_from_tempdir = mock_config_path.to_str().unwrap().to_owned();
+        assert_eq!(
+            write_config_file(&timesheet, string_path_from_tempdir).unwrap(),
+            ()
+        );
+
+        drop(file);
+        dir.close().unwrap();
+    }
+
+    #[test]
+    fn it_throws_an_error_when_writing_config_if_file_doesnt_exist() {
+        let mock_timesheet = RefCell::new(Timesheet {
+            ..Default::default()
+        });
+
+        let timesheet = mock_timesheet.borrow();
+
+        // creates mock directory that is destroyed when it goes out of scope
+        let dir = tempfile::tempdir().unwrap();
+        let mock_config_path = dir.path().join("my-temporary-note.txt");
+
+        let string_path_from_tempdir = mock_config_path.to_str().unwrap().to_owned();
+        assert!(write_config_file(&timesheet, string_path_from_tempdir).is_err());
     }
 }

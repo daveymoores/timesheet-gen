@@ -45,10 +45,13 @@ impl Init for Config {
         // if the buffer is empty, there is no existing file and timesheet
         // state holds the data. Write this data to file.
         if buffer.is_empty() {
-            crate::file_reader::write_config_file(&timesheet.borrow()).unwrap_or_else(|err| {
-                eprintln!("Error writing data to file: {}", err);
-                std::process::exit(1);
-            });
+            let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
+            crate::file_reader::write_config_file(&timesheet.borrow(), config_path).unwrap_or_else(
+                |err| {
+                    eprintln!("Error writing data to file: {}", err);
+                    std::process::exit(1);
+                },
+            );
         } else {
             println!(
                 "timesheet-gen already initialised! \n\
@@ -82,10 +85,13 @@ impl Make for Config {
         // if the buffer is empty, there is no existing file and timesheet
         // state holds the data. Write this data to file.
         if buffer.is_empty() {
-            crate::file_reader::write_config_file(&timesheet.borrow()).unwrap_or_else(|err| {
-                eprintln!("Error writing data to file: {}", err);
-                std::process::exit(1);
-            });
+            let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
+            crate::file_reader::write_config_file(&timesheet.borrow(), config_path).unwrap_or_else(
+                |err| {
+                    eprintln!("Error writing data to file: {}", err);
+                    std::process::exit(1);
+                },
+            );
         } else {
             // otherwise parse the file data into timesheet state
         }
