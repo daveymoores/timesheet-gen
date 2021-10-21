@@ -5,6 +5,7 @@ mod config;
 mod file_reader;
 mod help_prompt;
 mod timesheet;
+mod utils;
 
 fn main() {
     let cli = cli::Cli::new();

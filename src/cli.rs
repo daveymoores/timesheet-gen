@@ -227,10 +227,10 @@ impl Cli<'_> {
             }
             Some(commands) => match commands {
                 Commands::Init => config.init(cli.options, Rc::clone(&timesheet)),
-                Commands::Make => config.make(cli.options),
-                Commands::Edit => config.edit(cli.options),
-                Commands::Remove => config.remove(cli.options),
-                Commands::RunMode => config.run_mode(cli.options),
+                Commands::Make => config.make(cli.options, Rc::clone(&timesheet)),
+                Commands::Edit => config.edit(cli.options, Rc::clone(&timesheet)),
+                Commands::Remove => config.remove(cli.options, Rc::clone(&timesheet)),
+                Commands::RunMode => config.run_mode(cli.options, Rc::clone(&timesheet)),
             },
         }
     }
@@ -284,25 +284,25 @@ mod tests {
     }
 
     impl Edit for MockConfig {
-        fn edit(&self, options: Vec<Option<String>>) {
+        fn edit(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
             assert!(true);
         }
     }
 
     impl Make for MockConfig {
-        fn make(&self, options: Vec<Option<String>>) {
+        fn make(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
             assert!(true);
         }
     }
 
     impl Remove for MockConfig {
-        fn remove(&self, options: Vec<Option<String>>) {
+        fn remove(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
             assert!(true);
         }
     }
 
     impl RunMode for MockConfig {
-        fn run_mode(&self, options: Vec<Option<String>>) {
+        fn run_mode(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
             assert!(true);
         }
     }
