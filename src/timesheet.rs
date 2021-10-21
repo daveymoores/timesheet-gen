@@ -170,6 +170,30 @@ impl Timesheet {
 
         Ok(self)
     }
+
+    pub fn exec_generate_timesheets_from_git_history(&mut self) {
+        let command = String::from("--author");
+
+        // can safely unwrap here as name would have been set in the previous step
+        let author = [command, self.name.as_ref().unwrap().to_string()].join("=");
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(self.git_path.as_ref().unwrap().to_string())
+            .arg("log")
+            .arg("--date=rfc")
+            .arg(author)
+            .arg("--all")
+            .output()
+            .expect("Failed to execute command");
+
+        self.generate_timesheets_from_git_history(output);
+    }
+
+    pub fn generate_timesheets_from_git_history(&mut self, _git_history: Output) {
+        let mut map = Map::new();
+        map.insert("foo".to_string(), Value::from("bar"));
+        self.set_timesheet(map);
+    }
 }
 
 #[cfg(test)]
@@ -177,6 +201,26 @@ mod tests {
     use super::*;
     use std::os::unix::process::ExitStatusExt;
     use std::process::ExitStatus;
+
+    #[test]
+    fn it_generates_a_timesheet_from_the_git_history() {
+        let mut timesheet = Timesheet {
+            ..Default::default()
+        };
+
+        let output = Output {
+            status: ExitStatus::from_raw(0),
+            stdout: vec![],
+            stderr: vec![],
+        };
+
+        timesheet.generate_timesheets_from_git_history(output);
+
+        let mut map = Map::new();
+        map.insert("foo".to_string(), Value::from("bar"));
+
+        assert_eq!(timesheet.timesheet.unwrap(), map);
+    }
 
     #[test]
     fn it_finds_namespace_from_git_path() {
