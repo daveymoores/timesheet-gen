@@ -3,8 +3,10 @@ use std::process;
 mod cli;
 mod config;
 mod date_parser;
+mod db;
 mod file_reader;
 mod help_prompt;
+mod link_builder;
 mod timesheet;
 mod utils;
 

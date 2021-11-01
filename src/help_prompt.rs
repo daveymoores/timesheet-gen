@@ -2,7 +2,7 @@ use crate::timesheet::Timesheet;
 /// Help prompt handles all of the interactions with the user.
 /// It writes to the std output, and returns input data or a boolean
 use dialoguer::{Confirm, Editor, Input};
-use std::cell::{RefCell, RefMut};
+use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
 
@@ -60,6 +60,7 @@ impl HelpPrompt {
             .borrow_mut()
             .find_repository_details_from()?
             .exec_generate_timesheets_from_git_history();
+
         println!("Repository details found!");
         Ok(self)
     }

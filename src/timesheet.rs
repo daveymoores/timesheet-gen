@@ -1,16 +1,10 @@
 use crate::date_parser::TimesheetYears;
-use chrono::{Date, DateTime, Datelike};
+use chrono::{DateTime, Datelike};
 use regex;
-use regex::{Captures, Match};
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
-use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
 use std::process;
 use std::process::{Command, Output};
-use std::rc::Rc;
-use vec_collections::VecSet;
 
 pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 
@@ -319,7 +313,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
         timesheet.parse_git_log_dates_from_git_history(std_output);
         let mut x = timesheet.git_log_dates.unwrap();
-        println!("{:?}", x);
+
         // to check the hashmap shape is correct, lets create an array
         // of the numeric values and order them. Not great but snapshot testing with hashmaps isn't a thing in rust...
         let mut k = vec![];

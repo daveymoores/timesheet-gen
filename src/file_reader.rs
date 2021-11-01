@@ -1,12 +1,12 @@
-use crate::help_prompt::{HelpPrompt, Onboarding};
+use crate::help_prompt::Onboarding;
 use crate::timesheet::Timesheet;
-use serde_json::{json, map::Map};
-use std::cell::{Ref, RefMut};
+use serde_json::json;
+use std::cell::Ref;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::{io, process};
+use std::process;
 
 const CONFIG_FILE_NAME: &str = ".timesheet-gen.txt";
 

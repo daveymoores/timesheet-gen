@@ -1,5 +1,6 @@
+use crate::link_builder;
 use crate::timesheet::Timesheet;
-use std::borrow::BorrowMut;
+use futures::TryFutureExt;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -20,7 +21,29 @@ impl New for Config {
     }
 }
 
-impl Config {}
+impl Config {
+    fn check_for_config_file(buffer: &mut String, timesheet: Rc<RefCell<Timesheet>>) {
+        // pass a prompt for if the config file doesn't exist
+        let prompt = crate::help_prompt::HelpPrompt::new(timesheet.clone());
+
+        crate::file_reader::read_data_from_config_file(buffer, prompt).unwrap_or_else(|err| {
+            eprintln!("Error initialising timesheet-gen: {}", err);
+            std::process::exit(exitcode::CANTCREAT);
+        });
+
+        // if the buffer is empty, there is no existing file and timesheet
+        // state holds the data. Write this data to file.
+        if buffer.is_empty() {
+            let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
+            crate::file_reader::write_config_file(&timesheet.borrow(), config_path).unwrap_or_else(
+                |err| {
+                    eprintln!("Error writing data to file: {}", err);
+                    std::process::exit(exitcode::CANTCREAT);
+                },
+            );
+        }
+    }
+}
 
 pub trait Init {
     /// Generate a config file with user variables
@@ -29,30 +52,11 @@ pub trait Init {
 
 impl Init for Config {
     fn init(&self, _options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
-        // clone this so that it doesn't get moved into help prompt
-        let timesheet_clone = Rc::clone(&timesheet);
-        // create buffer to read
+        // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        // pass a prompt for if the config file doesn't exist
-        let prompt = crate::help_prompt::HelpPrompt::new(timesheet_clone);
+        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));
 
-        crate::file_reader::read_data_from_config_file(&mut buffer, prompt).unwrap_or_else(|err| {
-            eprintln!("Error initialising timesheet-gen: {}", err);
-            std::process::exit(1);
-        });
-
-        //println!("{:#?}", timesheet);
-        // if the buffer is empty, there is no existing file and timesheet
-        // state holds the data. Write this data to file.
-        if buffer.is_empty() {
-            let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
-            crate::file_reader::write_config_file(&timesheet.borrow(), config_path).unwrap_or_else(
-                |err| {
-                    eprintln!("Error writing data to file: {}", err);
-                    std::process::exit(1);
-                },
-            );
-        } else {
+        if !buffer.is_empty() {
             println!(
                 "timesheet-gen already initialised! \n\
     Try 'timesheet-gen make' to create your first timesheet \n\
@@ -68,32 +72,20 @@ pub trait Make {
 }
 
 impl Make for Config {
-    fn make(&self, _options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
-        // clone this so that it doesn't get moved into help prompt
-        let timesheet_clone = Rc::clone(&timesheet);
-        // create buffer to read
+    #[tokio::main]
+    async fn make(&self, _options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+        // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        // pass a prompt for if the config file doesn't exist
-        let prompt = crate::help_prompt::HelpPrompt::new(timesheet_clone);
+        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));
 
-        crate::file_reader::read_data_from_config_file(&mut buffer, prompt).unwrap_or_else(|err| {
-            eprintln!("Error initialising timesheet-gen: {}", err);
-            std::process::exit(1);
-        });
-
-        // println!("{:#?}", timesheet);
-        // if the buffer is empty, there is no existing file and timesheet
-        // state holds the data. Write this data to file.
-        if buffer.is_empty() {
-            let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
-            crate::file_reader::write_config_file(&timesheet.borrow(), config_path).unwrap_or_else(
-                |err| {
-                    eprintln!("Error writing data to file: {}", err);
-                    std::process::exit(1);
-                },
-            );
-        } else {
-            // otherwise parse the file data into timesheet state
+        if !buffer.is_empty() {
+            // generate timesheet-gen.io link using existing config
+            link_builder::build_unique_uri(buffer)
+                .await
+                .unwrap_or_else(|err| {
+                    eprintln!("Error building unique link: {}", err);
+                    std::process::exit(exitcode::CANTCREAT);
+                });
         }
     }
 }
