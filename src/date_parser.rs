@@ -1,3 +1,4 @@
+use crate::timesheet::GitLogDates;
 use chrono::{Date, DateTime, Datelike, FixedOffset, NaiveDate, TimeZone, Utc};
 use serde_json::{to_string, Map, Value};
 use std::collections::{HashMap, HashSet};
@@ -62,13 +63,11 @@ fn parse_hours_from_date(
     vector
 }
 
-type TimesheetYear = HashMap<String, HashMap<String, Vec<HashMap<String, i32>>>>;
+pub type TimesheetYears = HashMap<String, HashMap<String, Vec<HashMap<String, i32>>>>;
 
 // TODO export types and replace here
-fn get_timesheet_map_from_date_hashmap(
-    date_map: HashMap<i32, HashMap<u32, HashSet<u32>>>,
-) -> TimesheetYear {
-    let timesheet: TimesheetYear = date_map
+pub(crate) fn get_timesheet_map_from_date_hashmap(date_map: GitLogDates) -> TimesheetYears {
+    let timesheet: TimesheetYears = date_map
         .into_iter()
         .map(|year_tuple| {
             let month_map: HashMap<String, Vec<HashMap<String, i32>>> = year_tuple
@@ -98,6 +97,7 @@ mod tests {
     use crate::date_parser::{
         get_days_from_month, get_timesheet_map_from_date_hashmap, parse_hours_from_date,
     };
+    use crate::timesheet::GitLogDates;
     use chrono::{Date, DateTime, FixedOffset, TimeZone};
     use serde_json::{json, Map, Value};
     use std::collections::{HashMap, HashSet};
@@ -140,7 +140,7 @@ mod tests {
     fn it_gets_date_map_from_date_hashmap() {
         // create hashmap that this expects
         //{2021: {10: {20, 23, 21}, 9: {8}}, 2020: {8: {1}}, 2019: {1: {3}}}
-        let date_hashmap: HashMap<i32, HashMap<u32, HashSet<u32>>> = vec![
+        let date_hashmap: GitLogDates = vec![
             (2020, vec![(8, vec![1])]),
             (2019, vec![(1, vec![3])]),
             (2021, vec![(10, vec![23, 20, 21]), (9, vec![8])]),

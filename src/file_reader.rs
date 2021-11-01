@@ -2,6 +2,7 @@ use crate::help_prompt::{HelpPrompt, Onboarding};
 use crate::timesheet::Timesheet;
 use serde_json::{json, map::Map};
 use std::cell::{Ref, RefMut};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -71,7 +72,7 @@ pub fn write_config_file(
         "client_contact_person": timesheet.client_contact_person.as_ref().unwrap_or(&"None".to_string()),
         "client_address": timesheet.client_address.as_ref().unwrap_or(&"None".to_string()),
         "po_number": timesheet.po_number.as_ref().unwrap_or(&"None".to_string()),
-        "timesheet": timesheet.timesheet.as_ref().unwrap_or(&Map::new()),
+        "timesheet": timesheet.timesheet.as_ref().unwrap_or(&HashMap::new()),
     });
 
     let json = serde_json::to_string(&unwrapped_timesheet).unwrap();

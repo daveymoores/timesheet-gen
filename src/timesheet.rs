@@ -1,3 +1,4 @@
+use crate::date_parser::TimesheetYears;
 use chrono::{Date, DateTime, Datelike};
 use regex;
 use regex::{Captures, Match};
@@ -11,7 +12,7 @@ use std::process::{Command, Output};
 use std::rc::Rc;
 use vec_collections::VecSet;
 
-type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
+pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 
 /// Holds the data from the config file. Config can access these values
 // and perform various operations on it
@@ -28,7 +29,7 @@ pub struct Timesheet {
     pub client_contact_person: Option<String>,
     pub client_address: Option<String>,
     pub po_number: Option<String>,
-    pub timesheet: Option<Map<String, Value>>,
+    pub timesheet: Option<TimesheetYears>,
 }
 
 impl Default for Timesheet {
@@ -82,7 +83,7 @@ impl Timesheet {
         self.po_number = Option::from(value);
     }
 
-    pub fn set_timesheet(&mut self, value: Map<String, Value>) {
+    pub fn set_timesheet(&mut self, value: TimesheetYears) {
         self.timesheet = Option::from(value);
     }
 
@@ -245,12 +246,25 @@ impl Timesheet {
         }
 
         self.set_git_log_dates(year_month_map);
+
+        let timesheet = match &self.git_log_dates {
+            Some(date_map) => {
+                crate::date_parser::get_timesheet_map_from_date_hashmap(date_map.clone())
+            }
+            None => {
+                eprintln!("No dates parsed from git log");
+                process::exit(exitcode::DATAERR);
+            }
+        };
+
+        self.set_timesheet(timesheet);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
     use std::os::unix::process::ExitStatusExt;
     use std::process::ExitStatus;
 
@@ -455,21 +469,24 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
             ..Default::default()
         };
 
-        let mut map = Map::new();
-        map.insert("foo".to_string(), Value::from("bar"));
+        let mut year_map: TimesheetYears = HashMap::new();
+        year_map.insert(
+            "foo".to_string(),
+            vec![(
+                "bar".to_string(),
+                vec![vec![("baz".to_string(), 8)]
+                    .into_iter()
+                    .collect::<HashMap<String, i32>>()],
+            )]
+            .into_iter()
+            .collect::<HashMap<String, Vec<HashMap<String, i32>>>>(),
+        );
 
-        ts.set_timesheet(map);
+        ts.set_timesheet(year_map);
         assert!(ts.timesheet.clone().unwrap().contains_key("foo"));
         assert_eq!(
-            ts.timesheet
-                .clone()
-                .unwrap()
-                .values()
-                .into_iter()
-                .next()
-                .unwrap()
-                .to_owned(),
-            Value::from("bar")
+            json!(ts.timesheet.clone()).to_string(),
+            "{\"foo\":{\"bar\":[{\"baz\":8}]}}"
         );
     }
 
