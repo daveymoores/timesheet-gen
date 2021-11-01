@@ -354,6 +354,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "smallvec"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ecab6c735a6bb4139c0caafd0cc3635748bbb3acf4550e8138122099251f309"
+
+[[package]]
+name = "sorted-iter"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cbe9135ed5fd05813a47006636308dc34f5df43e6be5bf3f76744669248c2c8b"
+
+[[package]]
 name = "strsim"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -427,6 +439,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "vec-collections",
 ]
 
 [[package]]
@@ -440,6 +453,18 @@ name = "unicode-xid"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
+
+[[package]]
+name = "vec-collections"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f2390c4dc8ae8640c57d067b1a3d40bc05c124cc6bc7394d761b53435d41b76"
+dependencies = [
+ "num-traits",
+ "serde",
+ "smallvec",
+ "sorted-iter",
+]
 
 [[package]]
 name = "vec_map"
