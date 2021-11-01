@@ -1,3 +1,4 @@
+use chrono::{Date, DateTime, Datelike};
 use regex;
 use regex::{Captures, Match};
 use serde::{Deserialize, Serialize};
@@ -10,7 +11,7 @@ use std::process::{Command, Output};
 use std::rc::Rc;
 use vec_collections::VecSet;
 
-type GitLogDates = HashMap<String, HashMap<String, HashSet<String>>>;
+type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 
 /// Holds the data from the config file. Config can access these values
 // and perform various operations on it
@@ -214,24 +215,31 @@ impl Timesheet {
         for cap in regex.captures_iter(&git_history) {
             // for each year insert the entry
             // if the value is empty, insert a new hashset, or insert a month into the hashset
+            let date_time = DateTime::parse_from_rfc2822(&cap[0]);
+            let date = date_time.unwrap().date();
+
+            let year = date.year();
+            let month = date.month();
+            let day = date.day();
+
             year_month_map
-                .entry(cap["year"].to_string())
+                .entry(year)
                 .and_modify(|year| {
-                    year.entry(cap["month"].to_string())
+                    year.entry(month)
                         .and_modify(|month| {
-                            month.insert(cap["day"].to_string());
+                            month.insert(day);
                         })
                         .or_insert_with_key(|_| {
-                            let mut x: HashSet<String> = HashSet::new();
-                            x.insert(cap["day"].to_string());
+                            let mut x: HashSet<u32> = HashSet::new();
+                            x.insert(day);
                             x
                         });
                 })
                 .or_insert_with_key(|_found_year| {
-                    let mut y: HashMap<String, HashSet<String>> = HashMap::new();
-                    let mut x: HashSet<String> = HashSet::new();
-                    x.insert(cap["day"].to_string());
-                    y.insert(cap["month"].to_string(), x);
+                    let mut y: HashMap<u32, HashSet<u32>> = HashMap::new();
+                    let mut x: HashSet<u32> = HashSet::new();
+                    x.insert(day);
+                    y.insert(month, x);
                     y
                 });
         }
@@ -254,7 +262,7 @@ mod tests {
 
         let std_output = "commit c2c1354f6e73073f6eb9a2273c550a38f0e624d7
 Author: Davey Moores <daveymoores@gmail.com>
-Date:   Thu, 23 Oct 2021 13:02:36 +0200
+Date:   Sat, 23 Oct 2021 13:02:36 +0200
 
     getting month, year and number of days in month from date string
 
@@ -284,33 +292,31 @@ Date:   Wed, 08 Sep 2021 11:06:17 +0200
 
 commit 9bc3e9720963d6aa06c1fd64cf826c8a0a6570a4
 Author: Davey Moores <daveymoores@gmail.com>
-Date:   Wed, 1 Aug 2020 11:06:17 +0200
+Date:   Sat, 1 Aug 2020 11:06:17 +0200
 
     initialise if config isn't found
 
 commit 9bc3e9720963d6aa06c1fd64cf826c8a0a6570a4
 Author: Davey Moores <daveymoores@gmail.com>
-Date:   Wed, 3 Jan 2019 11:06:17 +0200
+Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     initialise if config isn't found
 ".to_string();
 
         timesheet.parse_git_log_dates_from_git_history(std_output);
         let mut x = timesheet.git_log_dates.unwrap();
-
+        println!("{:?}", x);
         // to check the hashmap shape is correct, lets create an array
         // of the numeric values and order them. Not great but snapshot testing with hashmaps isn't a thing in rust...
         let mut k = vec![];
         for (key, value) in x.into_iter() {
-            k.push(key.parse::<u32>().unwrap().clone());
+            k.push(key.clone());
             for (key, value) in value.into_iter() {
-                let x = value
-                    .into_iter()
-                    .map(|x| x.parse().unwrap())
-                    .collect::<Vec<u32>>();
+                k.push(key as i32);
+                let x = value.into_iter().map(|x| x).collect::<Vec<u32>>();
 
                 for y in x {
-                    k.push(y);
+                    k.push(y as i32);
                 }
             }
         }
@@ -318,7 +324,7 @@ Date:   Wed, 3 Jan 2019 11:06:17 +0200
         // sort them as hashmaps and hashsets don't have an order
         k.sort();
 
-        let expected_array: Vec<u32> = vec![1, 3, 8, 20, 21, 23, 2019, 2020, 2021];
+        let expected_array: Vec<i32> = vec![1, 1, 3, 8, 8, 9, 10, 20, 21, 23, 2019, 2020, 2021];
         assert_eq!(k, expected_array);
     }
 
