@@ -65,7 +65,7 @@ fn parse_hours_from_date(
 pub type TimesheetYears = HashMap<String, HashMap<String, Vec<HashMap<String, i32>>>>;
 
 // TODO export types and replace here
-pub(crate) fn get_timesheet_map_from_date_hashmap(date_map: GitLogDates) -> TimesheetYears {
+pub fn get_timesheet_map_from_date_hashmap(date_map: GitLogDates) -> TimesheetYears {
     let timesheet: TimesheetYears = date_map
         .into_iter()
         .map(|year_tuple| {
@@ -96,6 +96,7 @@ mod tests {
     use crate::date_parser::{
         get_days_from_month, get_timesheet_map_from_date_hashmap, parse_hours_from_date,
     };
+    use crate::testing_helpers;
     use crate::timesheet::GitLogDates;
     use chrono::{Date, DateTime, FixedOffset, TimeZone};
     use serde_json::{json, Map, Value};
@@ -139,25 +140,9 @@ mod tests {
     #[test]
     #[ignore]
     fn it_gets_date_map_from_date_hashmap() {
-        // create hashmap that this expects
-        //{2021: {10: {20, 23, 21}, 9: {8}}, 2020: {8: {1}}, 2019: {1: {3}}}
-        let date_hashmap: GitLogDates = vec![
-            (2020, vec![(8, vec![1])]),
-            (2019, vec![(1, vec![3])]),
-            (2021, vec![(10, vec![23, 20, 21]), (9, vec![8])]),
-        ]
-        .into_iter()
-        .map(|x| {
-            let y: HashMap<u32, HashSet<u32>> =
-                x.1.into_iter()
-                    .map(|k| {
-                        let n: HashSet<u32> = k.1.into_iter().collect();
-                        (k.0, n)
-                    })
-                    .collect();
-            (x.0, y)
-        })
-        .collect();
+        // testing utility that returns
+        // {2021: {10: {20, 23, 21}, 9: {8}}, 2020: {8: {1}}, 2019: {1: {3}}}
+        let date_hashmap: GitLogDates = testing_helpers::get_timesheet_hashmap();
 
         let map = get_timesheet_map_from_date_hashmap(date_hashmap);
         let x: String = json!(map).to_string();

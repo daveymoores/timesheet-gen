@@ -134,7 +134,7 @@ impl Cli<'_> {
                     .long("month")
                     .value_name("xx")
                     .help(
-                        "sets the day value. When the month/year \n\
+                        "sets the month value. When the month \n\
                     isn't set, it defaults to the current day",
                     ))
                 .arg(&year_arg));
@@ -153,6 +153,7 @@ impl Cli<'_> {
         let mut options: Vec<Option<String>> = vec![];
         let command;
 
+        // provide fallback values if day/month/year isn't provided
         let date_time: DateTime<Local> = Local::now();
         let year = date_time.year().to_string();
         let month = date_time.month().to_string();
@@ -164,7 +165,8 @@ impl Cli<'_> {
             command = Some(Commands::Init);
         } else if let Some(make) = matches.subcommand_matches("make") {
             // set default value of current month
-            options.push(Some(make.value_of("month").unwrap_or(&*month).to_string()));
+            options.push(Some(make.value_of("month").unwrap_or(&month).to_string()));
+            options.push(Some(make.value_of("year").unwrap_or(&year).to_string()));
             command = Some(Commands::Make);
         } else if let Some(edit) = matches.subcommand_matches("edit") {
             // this will error out if the preceding date value isn't passed
@@ -371,22 +373,23 @@ mod tests {
     fn returns_a_default_option_for_make() {
         let date_time: DateTime<Local> = Local::now();
         let month = date_time.month();
+        let year = date_time.year() as u32;
 
         let cli: Cli = Cli::new_from(["exename", "make"].iter()).unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<u32>(result.options);
-        assert_eq!(values, vec![month]);
+        assert_eq!(values, vec![month, year]);
         assert_eq!(result.command.unwrap().clone(), Commands::Make);
     }
 
     #[test]
     fn returns_a_passed_value_for_make() {
-        let cli: Cli = Cli::new_from(["exename", "make", "-m5"].iter()).unwrap();
+        let cli: Cli = Cli::new_from(["exename", "make", "-m10", "-y2020"].iter()).unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<u32>(result.options);
-        assert_eq!(values, vec![5]);
+        assert_eq!(values, vec![10, 2020]);
     }
 
     #[test]

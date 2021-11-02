@@ -73,14 +73,15 @@ pub trait Make {
 
 impl Make for Config {
     #[tokio::main]
-    async fn make(&self, _options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+    async fn make(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+        println!("{:?}", options);
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));
 
         if !buffer.is_empty() {
             // generate timesheet-gen.io link using existing config
-            link_builder::build_unique_uri(buffer)
+            link_builder::build_unique_uri(buffer, options)
                 .await
                 .unwrap_or_else(|err| {
                     eprintln!("Error building unique link: {}", err);
