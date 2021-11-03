@@ -1,6 +1,7 @@
 use crate::db;
 use crate::timesheet::Timesheet;
-use chrono::{Datelike, Month, Utc};
+use bson::Document;
+use chrono::{DateTime, Datelike, Month, Utc};
 use futures::StreamExt;
 use mongodb::bson::doc;
 use num_traits::cast::FromPrimitive;
@@ -13,7 +14,11 @@ use std::error::Error;
 use std::fmt::format;
 use std::io::ErrorKind;
 use std::rc::Rc;
-use std::{io, process};
+use std::{env, io, process};
+
+type TimesheetHoursForMonth = Vec<HashMap<String, i32>>;
+
+const EXPIRE_TIME_SECONDS: i32 = 1800;
 
 fn get_string_month_year(
     month: &Option<String>,
@@ -50,7 +55,7 @@ fn get_string_month_year(
 fn find_month_from_timesheet<'a>(
     sheet: &'a Timesheet,
     options: &'a Vec<Option<String>>,
-) -> Result<&'a Vec<HashMap<String, i32>>, Box<dyn Error>> {
+) -> Result<&'a TimesheetHoursForMonth, Box<dyn Error>> {
     // safe to unwrap options here as it would have been caught above
     let timesheet_month = sheet
         .timesheet
@@ -74,34 +79,16 @@ fn find_month_from_timesheet<'a>(
     Ok(timesheet_month)
 }
 
-const EXPIRE_TIME_SECONDS: i32 = 1800;
-
-pub async fn build_unique_uri(
-    buffer: String,
-    options: Vec<Option<String>>,
-) -> Result<(), Box<dyn Error>> {
-    let month_year_string = get_string_month_year(&options[0], &options[1])?;
-    println!("Generating timesheet for {}...", month_year_string);
-
-    let sheet: Timesheet = serde_json::from_str(&buffer)?;
-
-    let timesheet_month = find_month_from_timesheet(&sheet, &options)?;
-    let hours: Vec<&i32> = timesheet_month
-        .into_iter()
-        .map(|x| x.get("hours").unwrap())
-        .collect();
-    let total_hours: i32 = hours.iter().map(|&i| i).sum();
-
-    let db = db::Db::new().await?;
-    let collection = db
-        .client
-        .database("timesheet-gen")
-        .collection("timesheet-temp-paths");
-
-    let random_path = db.generate_random_path(&collection).await?;
-
+fn build_document(
+    date: DateTime<Utc>,
+    sheet: &Timesheet,
+    random_path: &String,
+    month_year_string: &String,
+    total_hours: &i32,
+    timesheet_month: &TimesheetHoursForMonth,
+) -> Document {
     let document = doc! {
-        "creation_date": Utc::now(),
+        "creation_date": date,
         "random_path": &random_path,
         "name" : sheet.name.as_ref(),
         "email" : sheet.email.as_ref(),
@@ -113,6 +100,46 @@ pub async fn build_unique_uri(
         "total_hours" : total_hours,
         "month_year": month_year_string,
     };
+
+    document
+}
+
+fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> i32 {
+    let hours: Vec<&i32> = timesheet_month
+        .into_iter()
+        .map(|x| x.get("hours").unwrap())
+        .collect();
+
+    let total_hours: i32 = hours.iter().map(|&i| i).sum();
+    total_hours
+}
+
+pub async fn build_unique_uri(
+    buffer: String,
+    options: Vec<Option<String>>,
+) -> Result<(), Box<dyn Error>> {
+    let month_year_string = get_string_month_year(&options[0], &options[1])?;
+    println!("Generating timesheet for {}...", month_year_string);
+
+    let db = db::Db::new().await?;
+    let collection = db
+        .client
+        .database("timesheet-gen")
+        .collection("timesheet-temp-paths");
+
+    let sheet: Timesheet = serde_json::from_str(&buffer)?;
+
+    let timesheet_month = find_month_from_timesheet(&sheet, &options)?;
+    let total_hours = calculate_total_hours(&timesheet_month);
+    let random_path: String = db.generate_random_path(&collection).await?;
+    let document = build_document(
+        Utc::now(),
+        &sheet,
+        &random_path,
+        &month_year_string,
+        &total_hours,
+        &timesheet_month,
+    );
 
     // Check for existing index for TTL on the collection
     let index_names = collection.list_index_names().await?;
@@ -140,10 +167,16 @@ pub async fn build_unique_uri(
 
     collection.insert_one(document.clone(), None).await?;
 
-    println!(
-        "Timesheet now available for {} minutes @ http://localhost:8080/{}",
-        EXPIRE_TIME_SECONDS / 60,
+    let timesheet_gen_uri = format!(
+        "{}/{}",
+        env::var("TIMESHEET_GEN_URI").expect("You must set the TIMESHEET_GEN_URI environment var!"),
         &random_path
+    );
+
+    println!(
+        "Timesheet now available for {} minutes @ {}",
+        EXPIRE_TIME_SECONDS / 60,
+        timesheet_gen_uri
     );
 
     process::exit(exitcode::OK);
@@ -152,9 +185,16 @@ pub async fn build_unique_uri(
 #[cfg(test)]
 mod test {
     use crate::date_parser::get_timesheet_map_from_date_hashmap;
-    use crate::link_builder::{find_month_from_timesheet, get_string_month_year};
+    use crate::link_builder::{
+        build_document, calculate_total_hours, find_month_from_timesheet, get_string_month_year,
+        TimesheetHoursForMonth,
+    };
     use crate::testing_helpers;
     use crate::timesheet::{GitLogDates, Timesheet};
+    use chrono::{TimeZone, Utc};
+    use mongodb::bson::doc;
+    use serde_json::json;
+    use std::collections::HashMap;
 
     fn create_mock_timesheet() -> Timesheet {
         // testing utility that returns
@@ -168,6 +208,62 @@ mod test {
         };
 
         timesheet
+    }
+
+    fn create_mock_timesheet_hours_for_month() -> TimesheetHoursForMonth {
+        let month: TimesheetHoursForMonth = vec![
+            vec![("hours".to_string(), 8 as i32)].into_iter().collect(),
+            vec![("hours".to_string(), 8 as i32)].into_iter().collect(),
+            vec![("hours".to_string(), 8 as i32)].into_iter().collect(),
+        ];
+
+        month
+    }
+
+    #[test]
+    fn it_builds_document() {
+        let timesheet = Timesheet {
+            namespace: Option::from("Some project".to_string()),
+            name: Option::from("Barry Balls".to_string()),
+            email: Option::from("barry.balls@123.reg".to_string()),
+            client_name: Option::from("Alphabet".to_string()),
+            client_contact_person: Option::from("Jenny boomers".to_string()),
+            client_address: Option::from("Tron, Tron, Tron".to_string()),
+            ..Default::default()
+        };
+        let month = create_mock_timesheet_hours_for_month();
+
+        let doc = doc! {
+        "creation_date": Utc.ymd(2014, 11, 28).and_hms(12, 0, 9),
+        "random_path": "fbfxhs",
+        "name" : "Barry Balls",
+        "email" : "barry.balls@123.reg",
+        "namespace" : "Some project",
+        "client_name" :"Alphabet",
+        "client_contact_person" : "Jenny boomers",
+        "address" : "Tron, Tron, Tron",
+        "timesheet" : json!(month).to_string(),
+        "total_hours" : 36,
+        "month_year": "November, 2021",
+        };
+
+        assert_eq!(
+            build_document(
+                Utc.ymd(2014, 11, 28).and_hms(12, 0, 9),
+                &timesheet,
+                &"fbfxhs".to_string(),
+                &"November, 2021".to_string(),
+                &36,
+                &month
+            ),
+            doc
+        );
+    }
+
+    #[test]
+    fn it_calculates_total_hours() {
+        let month = create_mock_timesheet_hours_for_month();
+        assert_eq!(calculate_total_hours(&month), 24);
     }
 
     #[test]

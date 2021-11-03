@@ -62,6 +62,7 @@ fn parse_hours_from_date(
     vector
 }
 
+pub type TimesheetMonths = HashMap<String, Vec<HashMap<String, i32>>>;
 pub type TimesheetYears = HashMap<String, HashMap<String, Vec<HashMap<String, i32>>>>;
 
 // TODO export types and replace here
@@ -69,7 +70,7 @@ pub fn get_timesheet_map_from_date_hashmap(date_map: GitLogDates) -> TimesheetYe
     let timesheet: TimesheetYears = date_map
         .into_iter()
         .map(|year_tuple| {
-            let month_map: HashMap<String, Vec<HashMap<String, i32>>> = year_tuple
+            let month_map: TimesheetMonths = year_tuple
                 .1
                 .clone()
                 .into_iter()
