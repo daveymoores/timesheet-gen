@@ -74,7 +74,6 @@ pub trait Make {
 impl Make for Config {
     #[tokio::main]
     async fn make(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
-        println!("{:?}", options);
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));

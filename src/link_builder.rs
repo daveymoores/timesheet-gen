@@ -1,6 +1,7 @@
 use crate::db;
 use crate::timesheet::Timesheet;
 use chrono::{Datelike, Month, Utc};
+use futures::StreamExt;
 use mongodb::bson::doc;
 use num_traits::cast::FromPrimitive;
 use regex::Regex;
@@ -85,6 +86,11 @@ pub async fn build_unique_uri(
     let sheet: Timesheet = serde_json::from_str(&buffer)?;
 
     let timesheet_month = find_month_from_timesheet(&sheet, &options)?;
+    let hours: Vec<&i32> = timesheet_month
+        .into_iter()
+        .map(|x| x.get("hours").unwrap())
+        .collect();
+    let total_hours: i32 = hours.iter().map(|&i| i).sum();
 
     let db = db::Db::new().await?;
     let collection = db
@@ -104,6 +110,8 @@ pub async fn build_unique_uri(
         "client_contact_person" : sheet.client_contact_person.as_ref(),
         "address" : sheet.client_address.as_ref(),
         "timesheet" : json!(timesheet_month).to_string(),
+        "total_hours" : total_hours,
+        "month_year": month_year_string,
     };
 
     // Check for existing index for TTL on the collection
@@ -133,7 +141,7 @@ pub async fn build_unique_uri(
     collection.insert_one(document.clone(), None).await?;
 
     println!(
-        "Timesheet now available for {} minutes @ https://timesheet-gen.io/{}",
+        "Timesheet now available for {} minutes @ http://localhost:8080/{}",
         EXPIRE_TIME_SECONDS / 60,
         &random_path
     );
