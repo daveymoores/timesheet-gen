@@ -1,7 +1,7 @@
 extern crate clap;
 use crate::config;
 use crate::config::{Edit, Init, Make, New, Remove, RunMode};
-use crate::timesheet::Timesheet;
+use crate::timesheet;
 use chrono::prelude::*;
 use clap::{App, Arg, ArgMatches, Error};
 use std::cell::RefCell;
@@ -205,9 +205,7 @@ impl Cli<'_> {
     // The clones being references to the original reference means
     // that it can be passed into multiple functions
     pub fn run(&self) -> Result<(), clap::Error> {
-        let timesheet = Rc::new(RefCell::new(Timesheet {
-            ..Default::default()
-        }));
+        let timesheet = Rc::new(RefCell::new(timesheet::Timesheet::new()));
 
         let matches = &self.matches;
         let cli: Cli = self.parse_commands(&matches)?;
@@ -219,7 +217,7 @@ impl Cli<'_> {
         Ok(())
     }
 
-    pub fn run_command<T>(cli: Cli, config: T, timesheet: &Rc<RefCell<Timesheet>>)
+    pub fn run_command<T>(cli: Cli, config: T, timesheet: &Rc<RefCell<timesheet::Timesheet>>)
     where
         T: Init + Make + Edit + Remove + RunMode,
     {

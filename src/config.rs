@@ -1,6 +1,7 @@
 use crate::link_builder;
 use crate::timesheet::Timesheet;
 use futures::TryFutureExt;
+use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -22,7 +23,7 @@ impl New for Config {
 }
 
 impl Config {
-    fn check_for_config_file(buffer: &mut String, timesheet: Rc<RefCell<Timesheet>>) {
+    fn check_for_config_file(buffer: &mut String, mut timesheet: Rc<RefCell<Timesheet>>) {
         // pass a prompt for if the config file doesn't exist
         let prompt = crate::help_prompt::HelpPrompt::new(timesheet.clone());
 
@@ -41,6 +42,10 @@ impl Config {
                     std::process::exit(exitcode::CANTCREAT);
                 },
             );
+        } else {
+            // otherwise lets set the timesheet struct values
+            // and fetch a new batch of interaction data
+            timesheet.borrow_mut().set_values_from_buffer(&buffer);
         }
     }
 }
@@ -73,11 +78,13 @@ pub trait Make {
 
 impl Make for Config {
     #[tokio::main]
-    async fn make(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+    async fn make(&self, options: Vec<Option<String>>, mut timesheet: Rc<RefCell<Timesheet>>) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));
 
+        println!("{:?}", timesheet);
+        // if buffer is not empty, then read the file and generate the link
         if !buffer.is_empty() {
             // generate timesheet-gen.io link using existing config
             link_builder::build_unique_uri(buffer, options)

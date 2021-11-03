@@ -3,6 +3,7 @@ use chrono::{DateTime, Datelike};
 use regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::error::Error;
 use std::process;
 use std::process::{Command, Output};
 
@@ -45,6 +46,31 @@ impl Default for Timesheet {
 }
 
 impl Timesheet {
+    pub fn new() -> Self {
+        Timesheet {
+            ..Default::default()
+        }
+    }
+
+    pub fn set_values_from_buffer(&mut self, buffer: &String) -> Self {
+        let deserialized_sheet: Timesheet = serde_json::from_str(&buffer)
+            .expect("Initialisation of timesheet struct from buffer failed");
+
+        Self {
+            namespace: deserialized_sheet.namespace,
+            repo_path: deserialized_sheet.repo_path,
+            git_path: deserialized_sheet.git_path,
+            git_log_dates: deserialized_sheet.git_log_dates,
+            name: deserialized_sheet.name,
+            email: deserialized_sheet.email,
+            client_name: deserialized_sheet.client_name,
+            client_contact_person: deserialized_sheet.client_contact_person,
+            client_address: deserialized_sheet.client_address,
+            po_number: deserialized_sheet.po_number,
+            timesheet: deserialized_sheet.timesheet,
+        }
+    }
+
     pub fn set_namespace(&mut self, value: String) {
         self.namespace = Option::from(value);
     }
