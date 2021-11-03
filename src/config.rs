@@ -1,6 +1,7 @@
 use crate::link_builder;
 use crate::timesheet::Timesheet;
 use std::cell::RefCell;
+use std::process;
 use std::rc::Rc;
 
 /// Creates and modifies the config file. Config does not directly hold the information
@@ -43,10 +44,8 @@ impl Config {
         } else {
             // otherwise lets set the timesheet struct values
             // and fetch a new batch of interaction data
-            timesheet
-                .borrow_mut()
-                .set_values_from_buffer(&buffer)
-                .exec_generate_timesheets_from_git_history();
+            timesheet.borrow_mut().set_values_from_buffer(&buffer);
+            //.exec_generate_timesheets_from_git_history();
         }
     }
 }
@@ -109,7 +108,25 @@ impl Edit for Config {
         Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));
 
         // if buffer is not empty, then read timesheet, edit a value and write to file
-        if !buffer.is_empty() {}
+        if !buffer.is_empty() {
+            // otherwise lets set the timesheet struct values
+            // and fetch a new batch of interaction data
+            timesheet
+                .borrow_mut()
+                .update_hours_on_month_day_entry(&options)
+                .unwrap_or_else(|err| {
+                    eprintln!("Error editing timesheet: {}", err);
+                    process::exit(exitcode::DATAERR);
+                });
+
+            let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
+            crate::file_reader::write_config_file(&timesheet.borrow(), config_path).unwrap_or_else(
+                |err| {
+                    eprintln!("Error writing data to file: {}", err);
+                    std::process::exit(exitcode::CANTCREAT);
+                },
+            );
+        }
     }
 }
 

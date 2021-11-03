@@ -1,4 +1,5 @@
 use crate::date_parser::TimesheetYears;
+use crate::utils::{check_for_valid_day, check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Datelike};
 use regex;
 use serde::{Deserialize, Serialize};
@@ -202,7 +203,7 @@ impl Timesheet {
         Ok(self)
     }
 
-    pub fn exec_generate_timesheets_from_git_history(&mut self) {
+    pub fn exec_generate_timesheets_from_git_history(&mut self) -> &mut Self {
         let command = String::from("--author");
 
         // can safely unwrap here as name would have been set in the previous step
@@ -221,6 +222,8 @@ impl Timesheet {
             .unwrap_or_else(|_| "Parsing output failed".to_string());
 
         self.parse_git_log_dates_from_git_history(output_string);
+
+        self
     }
 
     pub fn parse_git_log_dates_from_git_history(&mut self, git_history: String) {
@@ -278,7 +281,30 @@ impl Timesheet {
         self.set_timesheet(timesheet);
     }
 
-    pub fn update_hours_on_month_day_entry(mut self, options: Vec<Option<String>>) {}
+    pub fn update_hours_on_month_day_entry(
+        &mut self,
+        options: &Vec<Option<String>>,
+    ) -> Result<&mut Self, Box<dyn std::error::Error>> {
+        let year_string = check_for_valid_year(&options[3])?;
+        let month_u32 = check_for_valid_month(&options[2])?;
+        let day_string = check_for_valid_day(&options[1], month_u32, year_string.parse().unwrap())?;
+
+        let hour: i32 = options[0].as_ref().unwrap().parse()?;
+        let day: usize = day_string.parse()?;
+
+        // TODO should handle this better when there isn't a month/year in timesheet
+        // update hour value
+        self.timesheet
+            .as_mut()
+            .unwrap()
+            .get_mut(year_string)
+            .ok_or("Passed year not found in timesheet data")?
+            .get_mut(&*month_u32.to_string())
+            .ok_or("Passed month not found in timesheet data")?[day]
+            .insert("hours".to_string(), hour);
+
+        Ok(self)
+    }
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 use crate::timesheet::GitLogDates;
 use crate::utils::get_days_from_month;
-use chrono::{NaiveDate, TimeZone, Utc};
+use chrono::{TimeZone, Utc};
 use std::collections::HashMap;
 use std::convert::TryInto;
 
