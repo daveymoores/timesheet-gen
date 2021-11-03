@@ -277,6 +277,8 @@ impl Timesheet {
 
         self.set_timesheet(timesheet);
     }
+
+    pub fn update_hours_on_month_day_entry(mut self, options: Vec<Option<String>>) {}
 }
 
 #[cfg(test)]

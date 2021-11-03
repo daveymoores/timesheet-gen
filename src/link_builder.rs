@@ -1,10 +1,10 @@
 use crate::db;
 use crate::timesheet::Timesheet;
+use crate::utils::{check_for_valid_month, check_for_valid_year};
 use bson::Document;
 use chrono::{DateTime, Month, Utc};
 use mongodb::bson::doc;
 use num_traits::cast::FromPrimitive;
-use regex::Regex;
 use serde_json::json;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -19,26 +19,8 @@ fn get_string_month_year(
     month: &Option<String>,
     year: &Option<String>,
 ) -> Result<String, Box<dyn Error>> {
-    let month_u32 = month
-        .as_ref()
-        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, format!("Month not found")))?
-        .parse::<u32>()?;
-
-    let year_string = year
-        .as_ref()
-        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, format!("Year not found")))?;
-
-    let year_regex = Regex::new(r"^((19|20)\d{2})$").unwrap();
-    let month_regex = Regex::new(r"^(1[0-2]|[1-9])$").unwrap();
-
-    if !year_regex.is_match(year_string) {
-        // into implements a conversion between &str and Box<dyn Error>
-        return Err("Not a real year".into());
-    }
-
-    if !month_regex.is_match(&*month_u32.to_string()) {
-        return Err("Not a real month".into());
-    }
+    let month_u32 = check_for_valid_month(month)?;
+    let year_string = check_for_valid_year(year)?;
 
     Ok(format!(
         "{}, {}",

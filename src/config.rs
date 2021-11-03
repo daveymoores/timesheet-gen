@@ -103,7 +103,7 @@ pub trait Edit {
 }
 
 impl Edit for Config {
-    fn edit(&self, _options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+    fn edit(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));

@@ -1,23 +1,8 @@
 use crate::timesheet::GitLogDates;
+use crate::utils::get_days_from_month;
 use chrono::{NaiveDate, TimeZone, Utc};
 use std::collections::HashMap;
 use std::convert::TryInto;
-
-pub fn get_days_from_month(year: i32, month: u32) -> u32 {
-    NaiveDate::from_ymd(
-        match month {
-            12 => year + 1,
-            _ => year,
-        },
-        match month {
-            12 => 1,
-            _ => month + 1,
-        },
-        1,
-    )
-    .signed_duration_since(NaiveDate::from_ymd(year, month, 1))
-    .num_days() as u32
-}
 
 fn return_worked_hours_from_worked_days(worked_days: &Vec<u32>, day: &u32) -> i32 {
     let worked_day = worked_days.contains(day);
@@ -95,7 +80,6 @@ mod tests {
     use crate::date_parser::{
         get_days_from_month, get_timesheet_map_from_date_hashmap, parse_hours_from_date,
     };
-    use crate::testing_helpers;
     use crate::timesheet::GitLogDates;
     use chrono::{Date, DateTime, FixedOffset, TimeZone};
     use serde_json::{json, Map, Value};
@@ -105,15 +89,6 @@ mod tests {
         let date_time = DateTime::parse_from_rfc2822("Tue, 19 Oct 2021 10:52:28 +0200");
         let date = date_time.unwrap().date();
         date
-    }
-
-    #[test]
-    fn it_finds_the_number_of_days_for_a_specific_month_and_year() {
-        assert_eq!(get_days_from_month(2021, 10), 31);
-        assert_eq!(get_days_from_month(1989, 2), 28);
-        assert_eq!(get_days_from_month(1945, 6), 30);
-        // leap year
-        assert_eq!(get_days_from_month(2024, 2), 29);
     }
 
     #[test]
