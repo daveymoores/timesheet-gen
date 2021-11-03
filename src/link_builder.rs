@@ -18,7 +18,10 @@ use std::{env, io, process};
 
 type TimesheetHoursForMonth = Vec<HashMap<String, i32>>;
 
-const EXPIRE_TIME_SECONDS: i32 = 1800;
+const EXPIRE_TIME_SECONDS: i32 = env::var("EXPIRE_TIME_SECONDS")
+    .expect("You must set the EXPIRE_TIME_SECONDS environment var!")
+    .parse()
+    .expect("Expire time can't be parsed to i32");
 
 fn get_string_month_year(
     month: &Option<String>,
