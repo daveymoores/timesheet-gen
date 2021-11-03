@@ -7,7 +7,6 @@ mod db;
 mod file_reader;
 mod help_prompt;
 mod link_builder;
-mod testing_helpers;
 mod timesheet;
 mod utils;
 

@@ -1,8 +1,7 @@
 use crate::db;
 use crate::timesheet::Timesheet;
 use bson::Document;
-use chrono::{DateTime, Datelike, Month, Utc};
-use futures::StreamExt;
+use chrono::{DateTime, Month, Utc};
 use mongodb::bson::doc;
 use num_traits::cast::FromPrimitive;
 use regex::Regex;
@@ -10,7 +9,6 @@ use serde_json::json;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::error::Error;
-use std::fmt::format;
 use std::io::ErrorKind;
 use std::rc::Rc;
 use std::{env, io, process};
@@ -191,17 +189,38 @@ mod test {
         build_document, calculate_total_hours, find_month_from_timesheet, get_string_month_year,
         TimesheetHoursForMonth,
     };
-    use crate::testing_helpers;
     use crate::timesheet::{GitLogDates, Timesheet};
     use chrono::{TimeZone, Utc};
     use mongodb::bson::doc;
     use serde_json::json;
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
+
+    pub fn get_timesheet_hashmap() -> GitLogDates {
+        let date_hashmap: GitLogDates = vec![
+            (2020, vec![(8, vec![1])]),
+            (2019, vec![(1, vec![3])]),
+            (2021, vec![(10, vec![23, 20, 21]), (9, vec![8])]),
+        ]
+        .into_iter()
+        .map(|x| {
+            let y: HashMap<u32, HashSet<u32>> =
+                x.1.into_iter()
+                    .map(|k| {
+                        let n: HashSet<u32> = k.1.into_iter().collect();
+                        (k.0, n)
+                    })
+                    .collect();
+            (x.0, y)
+        })
+        .collect();
+
+        date_hashmap
+    }
 
     fn create_mock_timesheet() -> Timesheet {
         // testing utility that returns
         // {2021: {10: {20, 23, 21}, 9: {8}}, 2020: {8: {1}}, 2019: {1: {3}}}
-        let date_hashmap: GitLogDates = testing_helpers::get_timesheet_hashmap();
+        let date_hashmap: GitLogDates = get_timesheet_hashmap();
         let timesheet = get_timesheet_map_from_date_hashmap(date_hashmap);
 
         let timesheet = Timesheet {

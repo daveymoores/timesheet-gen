@@ -1,9 +1,7 @@
 use crate::timesheet::GitLogDates;
-use chrono::{Date, FixedOffset, NaiveDate, TimeZone, Utc};
+use chrono::{NaiveDate, TimeZone, Utc};
 use std::collections::HashMap;
 use std::convert::TryInto;
-
-type YearTuple = (Date<FixedOffset>, i32, u32, u32);
 
 pub fn get_days_from_month(year: i32, month: u32) -> u32 {
     NaiveDate::from_ymd(
@@ -135,18 +133,5 @@ mod tests {
         assert_eq!(day_vec[5], weekday_map);
         assert_eq!(day_vec[1], weekend_map);
         assert_eq!(day_vec.len(), 31);
-    }
-
-    // TODO ignored because this fails as the keys are in a different order
-    #[test]
-    #[ignore]
-    fn it_gets_date_map_from_date_hashmap() {
-        // testing utility that returns
-        // {2021: {10: {20, 23, 21}, 9: {8}}, 2020: {8: {1}}, 2019: {1: {3}}}
-        let date_hashmap: GitLogDates = testing_helpers::get_timesheet_hashmap();
-
-        let map = get_timesheet_map_from_date_hashmap(date_hashmap);
-        let x: String = json!(map).to_string();
-        assert_eq!(x, "{\"2019\":{\"1\":[{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":8,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0}]},\"2020\":{\"8\":[{\"hours\":8,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0}]},\"2021\":{\"10\":[{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":8,\"weekend\":0},{\"hours\":8,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":8,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1}],\"9\":[{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":8,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":1},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0},{\"hours\":0,\"weekend\":0}]}}");
     }
 }

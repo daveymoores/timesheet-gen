@@ -3,7 +3,6 @@ use chrono::{DateTime, Datelike};
 use regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::error::Error;
 use std::process;
 use std::process::{Command, Output};
 
@@ -149,7 +148,7 @@ impl Timesheet {
             .output()
             .expect("Failed to find 'git_path'");
 
-        self.find_git_path_from_directory(output_path);
+        self.find_git_path_from_directory(output_path)?;
 
         Ok(self)
     }
@@ -184,7 +183,7 @@ impl Timesheet {
             .output()
             .expect("Failed to find 'user.email'");
 
-        self.find_repository_details(output_name, output_email);
+        self.find_repository_details(output_name, output_email)?;
 
         Ok(self)
     }
