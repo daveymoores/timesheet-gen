@@ -265,7 +265,7 @@ mod tests {
         Cli::run_command(
             response,
             mock_config,
-            &Rc::new(RefCell::new(Timesheet {
+            &Rc::new(RefCell::new(timesheet::Timesheet {
                 ..Default::default()
             })),
         );
@@ -278,31 +278,43 @@ mod tests {
         }
     }
     impl Init for MockConfig {
-        fn init(&self, options: Vec<Option<String>>, _timesheet: Rc<RefCell<Timesheet>>) {
+        fn init(
+            &self,
+            options: Vec<Option<String>>,
+            _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+        ) {
             assert!(true);
         }
     }
 
     impl Edit for MockConfig {
-        fn edit(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+        fn edit(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<timesheet::Timesheet>>) {
             assert!(true);
         }
     }
 
     impl Make for MockConfig {
-        fn make(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+        fn make(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<timesheet::Timesheet>>) {
             assert!(true);
         }
     }
 
     impl Remove for MockConfig {
-        fn remove(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+        fn remove(
+            &self,
+            options: Vec<Option<String>>,
+            timesheet: Rc<RefCell<timesheet::Timesheet>>,
+        ) {
             assert!(true);
         }
     }
 
     impl RunMode for MockConfig {
-        fn run_mode(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+        fn run_mode(
+            &self,
+            options: Vec<Option<String>>,
+            timesheet: Rc<RefCell<timesheet::Timesheet>>,
+        ) {
             assert!(true);
         }
     }
