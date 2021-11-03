@@ -88,7 +88,7 @@ impl Make for Config {
         // if buffer is not empty, then read the file and generate the link
         if !buffer.is_empty() {
             // generate timesheet-gen.io link using existing config
-            link_builder::build_unique_uri(buffer, options)
+            link_builder::build_unique_uri(Rc::clone(&timesheet), options)
                 .await
                 .unwrap_or_else(|err| {
                     eprintln!("Error building unique link: {}", err);

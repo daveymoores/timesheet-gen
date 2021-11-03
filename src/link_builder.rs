@@ -7,7 +7,6 @@ use mongodb::bson::doc;
 use num_traits::cast::FromPrimitive;
 use regex::Regex;
 use serde_json::json;
-use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::error::Error;
@@ -113,7 +112,7 @@ fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> i32 {
 }
 
 pub async fn build_unique_uri(
-    buffer: String,
+    timesheet: Rc<RefCell<Timesheet>>,
     options: Vec<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
     let month_year_string = get_string_month_year(&options[0], &options[1])?;
@@ -125,7 +124,7 @@ pub async fn build_unique_uri(
         .database("timesheet-gen")
         .collection("timesheet-temp-paths");
 
-    let sheet: Timesheet = serde_json::from_str(&buffer)?;
+    let sheet = timesheet.borrow_mut();
 
     let timesheet_month = find_month_from_timesheet(&sheet, &options)?;
     let total_hours = calculate_total_hours(&timesheet_month);
