@@ -18,11 +18,6 @@ use std::{env, io, process};
 
 type TimesheetHoursForMonth = Vec<HashMap<String, i32>>;
 
-const EXPIRE_TIME_SECONDS: i32 = env::var("EXPIRE_TIME_SECONDS")
-    .expect("You must set the EXPIRE_TIME_SECONDS environment var!")
-    .parse()
-    .expect("Expire time can't be parsed to i32");
-
 fn get_string_month_year(
     month: &Option<String>,
     year: &Option<String>,
@@ -147,6 +142,11 @@ pub async fn build_unique_uri(
     // Check for existing index for TTL on the collection
     let index_names = collection.list_index_names().await?;
 
+    let expire_time_seconds: i32 = env::var("expire_time_seconds")
+        .expect("You must set the expire_time_seconds environment var!")
+        .parse()
+        .expect("Expire time can't be parsed to i32");
+
     if !index_names.contains(&String::from("expiration_date")) {
         // create TTL index to expire documents after 30 minutes
         db.client
@@ -158,7 +158,7 @@ pub async fn build_unique_uri(
                         {
                             "key": { "creation_date": 1 },
                             "name": "expiration_date",
-                            "expireAfterSeconds": EXPIRE_TIME_SECONDS,
+                            "expireAfterSeconds": expire_time_seconds,
                             "unique": true
                         },
                     ]
@@ -170,15 +170,15 @@ pub async fn build_unique_uri(
 
     collection.insert_one(document.clone(), None).await?;
 
-    let timesheet_gen_uri = format!(
+    let timesheet_gen_uri: String = format!(
         "{}/{}",
-        env::var("TIMESHEET_GEN_URI").expect("You must set the TIMESHEET_GEN_URI environment var!"),
+        env::var("timesheet_gen_uri").expect("You must set the timesheet_gen_uri environment var!"),
         &random_path
     );
 
     println!(
         "Timesheet now available for {} minutes @ {}",
-        EXPIRE_TIME_SECONDS / 60,
+        expire_time_seconds / 60,
         timesheet_gen_uri
     );
 
