@@ -1,7 +1,6 @@
 use crate::link_builder;
 use crate::timesheet::Timesheet;
 use futures::TryFutureExt;
-use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -25,7 +24,7 @@ impl New for Config {
 impl Config {
     fn check_for_config_file(buffer: &mut String, mut timesheet: Rc<RefCell<Timesheet>>) {
         // pass a prompt for if the config file doesn't exist
-        let prompt = crate::help_prompt::HelpPrompt::new(timesheet.clone());
+        let prompt = crate::help_prompt::HelpPrompt::new(Rc::clone(&timesheet));
 
         crate::file_reader::read_data_from_config_file(buffer, prompt).unwrap_or_else(|err| {
             eprintln!("Error initialising timesheet-gen: {}", err);
@@ -45,7 +44,10 @@ impl Config {
         } else {
             // otherwise lets set the timesheet struct values
             // and fetch a new batch of interaction data
-            timesheet.borrow_mut().set_values_from_buffer(&buffer);
+            timesheet
+                .borrow_mut()
+                .set_values_from_buffer(&buffer)
+                .exec_generate_timesheets_from_git_history();
         }
     }
 }
@@ -83,7 +85,6 @@ impl Make for Config {
         let mut buffer = String::new();
         Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));
 
-        println!("{:?}", timesheet);
         // if buffer is not empty, then read the file and generate the link
         if !buffer.is_empty() {
             // generate timesheet-gen.io link using existing config

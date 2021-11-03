@@ -52,23 +52,22 @@ impl Timesheet {
         }
     }
 
-    pub fn set_values_from_buffer(&mut self, buffer: &String) -> Self {
+    pub fn set_values_from_buffer(&mut self, buffer: &String) -> &mut Timesheet {
         let deserialized_sheet: Timesheet = serde_json::from_str(&buffer)
             .expect("Initialisation of timesheet struct from buffer failed");
 
-        Self {
-            namespace: deserialized_sheet.namespace,
-            repo_path: deserialized_sheet.repo_path,
-            git_path: deserialized_sheet.git_path,
-            git_log_dates: deserialized_sheet.git_log_dates,
-            name: deserialized_sheet.name,
-            email: deserialized_sheet.email,
-            client_name: deserialized_sheet.client_name,
-            client_contact_person: deserialized_sheet.client_contact_person,
-            client_address: deserialized_sheet.client_address,
-            po_number: deserialized_sheet.po_number,
-            timesheet: deserialized_sheet.timesheet,
-        }
+        self.namespace = deserialized_sheet.namespace;
+        self.repo_path = deserialized_sheet.repo_path;
+        self.git_path = deserialized_sheet.git_path;
+        self.git_log_dates = deserialized_sheet.git_log_dates;
+        self.name = deserialized_sheet.name;
+        self.email = deserialized_sheet.email;
+        self.client_name = deserialized_sheet.client_name;
+        self.client_contact_person = deserialized_sheet.client_contact_person;
+        self.client_address = deserialized_sheet.client_address;
+        self.po_number = deserialized_sheet.po_number;
+        self.timesheet = deserialized_sheet.timesheet;
+        self
     }
 
     pub fn set_namespace(&mut self, value: String) {
