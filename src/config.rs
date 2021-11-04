@@ -22,6 +22,16 @@ impl New for Config {
 }
 
 impl Config {
+    fn write_to_config_file(timesheet: Rc<RefCell<Timesheet>>) {
+        let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
+        crate::file_reader::write_config_file(&timesheet.borrow(), config_path).unwrap_or_else(
+            |err| {
+                eprintln!("Error writing data to file: {}", err);
+                std::process::exit(exitcode::CANTCREAT);
+            },
+        );
+    }
+
     fn check_for_config_file(buffer: &mut String, timesheet: Rc<RefCell<Timesheet>>) {
         // pass a prompt for if the config file doesn't exist
         let prompt = crate::help_prompt::HelpPrompt::new(Rc::clone(&timesheet));
@@ -34,18 +44,14 @@ impl Config {
         // if the buffer is empty, there is no existing file and timesheet
         // state holds the data. Write this data to file.
         if buffer.is_empty() {
-            let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
-            crate::file_reader::write_config_file(&timesheet.borrow(), config_path).unwrap_or_else(
-                |err| {
-                    eprintln!("Error writing data to file: {}", err);
-                    std::process::exit(exitcode::CANTCREAT);
-                },
-            );
+            Config::write_to_config_file(timesheet);
         } else {
             // otherwise lets set the timesheet struct values
             // and fetch a new batch of interaction data
-            timesheet.borrow_mut().set_values_from_buffer(&buffer);
-            //.exec_generate_timesheets_from_git_history();
+            timesheet
+                .borrow_mut()
+                .set_values_from_buffer(&buffer)
+                .exec_generate_timesheets_from_git_history();
         }
     }
 }
@@ -119,13 +125,7 @@ impl Edit for Config {
                     process::exit(exitcode::DATAERR);
                 });
 
-            let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
-            crate::file_reader::write_config_file(&timesheet.borrow(), config_path).unwrap_or_else(
-                |err| {
-                    eprintln!("Error writing data to file: {}", err);
-                    std::process::exit(exitcode::CANTCREAT);
-                },
-            );
+            Config::write_to_config_file(timesheet);
         }
     }
 }

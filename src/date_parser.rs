@@ -12,6 +12,18 @@ fn return_worked_hours_from_worked_days(worked_days: &Vec<u32>, day: &u32) -> i3
     }
 }
 
+fn is_weekend(date_tuple: &(i32, u32, u32), day: u32) -> i32 {
+    let day_of_week_index = Utc
+        .ymd(date_tuple.0, date_tuple.1, day.try_into().unwrap())
+        .format("%u")
+        .to_string();
+
+    match day_of_week_index.parse().unwrap() {
+        6 | 7 => 1,
+        _ => 0,
+    }
+}
+
 fn parse_hours_from_date(
     date_tuple: (i32, u32, u32),
     worked_days: Vec<u32>,
@@ -22,22 +34,17 @@ fn parse_hours_from_date(
     let mut vector = vec![];
 
     for day in 1..date_tuple.2 + 1 {
+        let is_weekend = is_weekend(&date_tuple, day.clone());
         let mut day_map: HashMap<String, i32> = HashMap::new();
-
-        let day_of_week_index = Utc
-            .ymd(date_tuple.0, date_tuple.1, day.try_into().unwrap())
-            .format("%u")
-            .to_string();
-
-        let weekend = match day_of_week_index.parse().unwrap() {
-            6 | 7 => 1,
-            _ => 0,
-        };
-
         let hours_worked = return_worked_hours_from_worked_days(&worked_days, &day);
 
-        day_map.insert("weekend".to_string(), weekend);
+        // Each day denotes whether it is a weekend, what the hours worked are
+        // and whether it has been manually edited by the user to prevent these
+        // changes being overwritten when the data is synced
+        day_map.insert("weekend".to_string(), is_weekend);
         day_map.insert("hours".to_string(), hours_worked);
+        // all data is initially unedited
+        day_map.insert("user_edited".to_string(), 0);
 
         vector.push(day_map);
     }
@@ -78,7 +85,7 @@ pub fn get_timesheet_map_from_date_hashmap(date_map: GitLogDates) -> TimesheetYe
 #[cfg(test)]
 mod tests {
     use crate::date_parser::{
-        get_days_from_month, get_timesheet_map_from_date_hashmap, parse_hours_from_date,
+        get_days_from_month, get_timesheet_map_from_date_hashmap, is_weekend, parse_hours_from_date,
     };
     use crate::timesheet::GitLogDates;
     use chrono::{Date, DateTime, FixedOffset, TimeZone};
@@ -89,6 +96,18 @@ mod tests {
         let date_time = DateTime::parse_from_rfc2822("Tue, 19 Oct 2021 10:52:28 +0200");
         let date = date_time.unwrap().date();
         date
+    }
+
+    #[test]
+    fn is_weekend_returns_truthy_value_if_weekend() {
+        assert_eq!(is_weekend(&(2021, 11, 6), 6), 1);
+        assert_eq!(is_weekend(&(2021, 11, 28), 28), 1);
+    }
+
+    #[test]
+    fn is_weekend_returns_falsy_value_if_not_weekend() {
+        assert_eq!(is_weekend(&(2021, 11, 8), 8), 0);
+        assert_eq!(is_weekend(&(2021, 11, 23), 23), 0);
     }
 
     #[test]
