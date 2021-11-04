@@ -1,11 +1,13 @@
-use crate::date_parser::TimesheetYears;
+use crate::date_parser::{is_weekend, TimesheetYears};
 use crate::utils::{check_for_valid_day, check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Datelike};
 use regex;
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::process;
 use std::process::{Command, Output};
+use std::rc::Rc;
 
 pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 
@@ -270,7 +272,7 @@ impl Timesheet {
 
         let timesheet = match &self.git_log_dates {
             Some(date_map) => {
-                crate::date_parser::get_timesheet_map_from_date_hashmap(date_map.clone())
+                crate::date_parser::get_timesheet_map_from_date_hashmap(date_map.clone(), self)
             }
             None => {
                 eprintln!("No dates parsed from git log");
@@ -279,6 +281,45 @@ impl Timesheet {
         };
 
         self.set_timesheet(timesheet);
+    }
+
+    pub fn mutate_timesheet_entry(
+        &mut self,
+        year_string: &String,
+        month_u32: &u32,
+        day: usize,
+        entry: Vec<(String, i32)>,
+    ) -> Result<&mut Self, Box<dyn std::error::Error>> {
+        self.timesheet
+            .as_mut()
+            .unwrap()
+            .get_mut(year_string)
+            .ok_or("Passed year not found in timesheet data")?
+            .get_mut(&*month_u32.to_string())
+            .ok_or("Passed month not found in timesheet data")?[day]
+            .extend(entry);
+
+        Ok(self)
+    }
+
+    pub fn get_timesheet_entry(
+        &self,
+        year_string: &String,
+        month_u32: &u32,
+        day: usize,
+        entry: String,
+    ) -> Result<Option<&i32>, Box<dyn std::error::Error>> {
+        let value = self
+            .timesheet
+            .as_ref()
+            .unwrap()
+            .get(year_string)
+            .ok_or("Passed year not found in timesheet data")?
+            .get(&*month_u32.to_string())
+            .ok_or("Passed month not found in timesheet data")?[day]
+            .get(&*entry);
+
+        Ok(value)
     }
 
     pub fn update_hours_on_month_day_entry(
@@ -292,16 +333,26 @@ impl Timesheet {
         let hour: i32 = options[0].as_ref().unwrap().parse()?;
         let day: usize = day_string.parse()?;
 
-        // TODO should handle this better when there isn't a month/year in timesheet
+        let is_weekend =
+            match self.get_timesheet_entry(&year_string, &month_u32, day, "weekend".to_string()) {
+                Ok(result) => result,
+                Err(err) => {
+                    eprintln!("Error retrieving timesheet entry: {}", err);
+                    process::exit(exitcode::DATAERR);
+                }
+            };
+
         // update hour value
-        self.timesheet
-            .as_mut()
-            .unwrap()
-            .get_mut(year_string)
-            .ok_or("Passed year not found in timesheet data")?
-            .get_mut(&*month_u32.to_string())
-            .ok_or("Passed month not found in timesheet data")?[day]
-            .insert("hours".to_string(), hour);
+        self.mutate_timesheet_entry(
+            &year_string,
+            &month_u32,
+            day,
+            vec![
+                ("hours".to_string(), hour),
+                ("user_edited".to_string(), 1),
+                ("weekend".to_string(), *is_weekend.unwrap()),
+            ],
+        )?;
 
         Ok(self)
     }
@@ -313,6 +364,65 @@ mod tests {
     use serde_json::json;
     use std::os::unix::process::ExitStatusExt;
     use std::process::ExitStatus;
+
+    fn get_mock_year_map() -> TimesheetYears {
+        let mut year_map: TimesheetYears = HashMap::new();
+
+        year_map.insert(
+            "2021".to_string(),
+            vec![(
+                "11".to_string(),
+                vec![vec![("user_edited".to_string(), 1)]
+                    .into_iter()
+                    .collect::<HashMap<String, i32>>()],
+            )]
+            .into_iter()
+            .collect::<HashMap<String, Vec<HashMap<String, i32>>>>(),
+        );
+
+        year_map
+    }
+
+    #[test]
+    fn it_mutates_timesheet_entry() {
+        let mut ts = Timesheet {
+            ..Default::default()
+        };
+
+        let mut year_map = get_mock_year_map();
+        ts.set_timesheet(year_map);
+
+        ts.mutate_timesheet_entry(
+            &"2021".to_string(),
+            &11,
+            0,
+            vec![("user_edited".to_string(), 0)],
+        );
+
+        assert_eq!(
+            ts.get_timesheet_entry(&"2021".to_string(), &11, 0, "user_edited".to_string())
+                .unwrap()
+                .unwrap(),
+            &0 as &i32
+        );
+    }
+
+    #[test]
+    fn it_gets_timesheet_entry() {
+        let mut ts = Timesheet {
+            ..Default::default()
+        };
+
+        let mut year_map = get_mock_year_map();
+        ts.set_timesheet(year_map);
+
+        assert_eq!(
+            ts.get_timesheet_entry(&"2021".to_string(), &11, 0, "user_edited".to_string())
+                .unwrap()
+                .unwrap(),
+            &1 as &i32
+        );
+    }
 
     #[test]
     fn it_parses_git_log_dates_from_git_history() {

@@ -125,6 +125,8 @@ impl Edit for Config {
                     process::exit(exitcode::DATAERR);
                 });
 
+            // TODO give success message here
+            // TODO make sure edited values aren't overwritten
             Config::write_to_config_file(timesheet);
         }
     }
