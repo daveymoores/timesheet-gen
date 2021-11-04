@@ -126,25 +126,8 @@ impl Edit for Config {
                 });
 
             // TODO give success message here
-            // TODO make sure edited values aren't overwritten
             Config::write_to_config_file(timesheet);
         }
-    }
-}
-
-pub trait Remove {
-    /// Remove an entry within the timesheet
-    fn remove(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>);
-}
-
-impl Remove for Config {
-    fn remove(&self, _options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
-        // try to read config file. Write a new one if it doesn't exist
-        let mut buffer = String::new();
-        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));
-
-        // if buffer is not empty, then read timesheet, remove a value and write to file
-        if !buffer.is_empty() {}
     }
 }
 

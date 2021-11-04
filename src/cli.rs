@@ -1,6 +1,6 @@
 extern crate clap;
 use crate::config;
-use crate::config::{Edit, Init, Make, New, Remove, RunMode};
+use crate::config::{Edit, Init, Make, New, RunMode};
 use crate::timesheet;
 use chrono::prelude::*;
 use clap::{App, Arg, ArgMatches, Error};
@@ -178,6 +178,7 @@ impl Cli<'_> {
             command = Some(Commands::Edit);
         } else if let Some(remove) = matches.subcommand_matches("remove") {
             // same here...
+            options.push(Some("0".to_string()));
             options.push(Some(remove.value_of("day").unwrap_or(&day).to_string()));
             options.push(Some(remove.value_of("month").unwrap_or(&month).to_string()));
             options.push(Some(remove.value_of("year").unwrap_or(&year).to_string()));
@@ -219,7 +220,7 @@ impl Cli<'_> {
 
     pub fn run_command<T>(cli: Cli, config: T, timesheet: &Rc<RefCell<timesheet::Timesheet>>)
     where
-        T: Init + Make + Edit + Remove + RunMode,
+        T: Init + Make + Edit + RunMode,
     {
         match cli.command {
             None => {
@@ -229,7 +230,7 @@ impl Cli<'_> {
                 Commands::Init => config.init(cli.options, Rc::clone(&timesheet)),
                 Commands::Make => config.make(cli.options, Rc::clone(&timesheet)),
                 Commands::Edit => config.edit(cli.options, Rc::clone(&timesheet)),
-                Commands::Remove => config.remove(cli.options, Rc::clone(&timesheet)),
+                Commands::Remove => config.edit(cli.options, Rc::clone(&timesheet)),
                 Commands::RunMode => config.run_mode(cli.options, Rc::clone(&timesheet)),
             },
         }
@@ -256,7 +257,7 @@ mod tests {
     where
         I: Iterator<Item = T>,
         T: Into<OsString> + Clone,
-        K: Init + Make + Edit + Remove + RunMode,
+        K: Init + Make + Edit + RunMode,
     {
         let cli = Cli::new_from(commands).unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
