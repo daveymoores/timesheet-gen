@@ -121,8 +121,8 @@ pub async fn build_unique_uri(
     // Check for existing index for TTL on the collection
     let index_names = collection.list_index_names().await?;
 
-    let expire_time_seconds: i32 = env::var("expire_time_seconds")
-        .expect("You must set the expire_time_seconds environment var!")
+    let expire_time_seconds: i32 = env::var("EXPIRE_TIME_SECONDS")
+        .expect("You must set the EXPIRE_TIME_SECONDS environment var!")
         .parse()
         .expect("Expire time can't be parsed to i32");
 
@@ -151,7 +151,7 @@ pub async fn build_unique_uri(
 
     let timesheet_gen_uri: String = format!(
         "{}/{}",
-        env::var("timesheet_gen_uri").expect("You must set the timesheet_gen_uri environment var!"),
+        env::var("TIMESHEET_GEN_URI").expect("You must set the TIMESHEET_GEN_URI environment var!"),
         &random_path
     );
 

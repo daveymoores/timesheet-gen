@@ -300,16 +300,6 @@ mod tests {
         }
     }
 
-    impl Remove for MockConfig {
-        fn remove(
-            &self,
-            options: Vec<Option<String>>,
-            timesheet: Rc<RefCell<timesheet::Timesheet>>,
-        ) {
-            assert!(true);
-        }
-    }
-
     impl RunMode for MockConfig {
         fn run_mode(
             &self,
@@ -456,7 +446,7 @@ mod tests {
         let new_cli = cli.parse_commands(&cli.matches);
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<u32>(result.options);
-        assert_eq!(values, vec![21, 03, 2021]);
+        assert_eq!(values, vec![0, 21, 03, 2021]);
     }
 
     #[test]
