@@ -27,6 +27,8 @@ pub struct Timesheet {
     pub client_address: Option<String>,
     pub po_number: Option<String>,
     pub timesheet: Option<TimesheetYears>,
+    pub user_signature: Option<String>,
+    pub approver_signature: Option<String>,
 }
 
 impl Default for Timesheet {
@@ -43,6 +45,8 @@ impl Default for Timesheet {
             client_address: None,
             po_number: None,
             timesheet: None,
+            user_signature: None,
+            approver_signature: None,
         }
     }
 }
@@ -69,7 +73,17 @@ impl Timesheet {
         self.client_address = deserialized_sheet.client_address;
         self.po_number = deserialized_sheet.po_number;
         self.timesheet = deserialized_sheet.timesheet;
+        self.user_signature = deserialized_sheet.user_signature;
+        self.approver_signature = deserialized_sheet.approver_signature;
         self
+    }
+
+    pub fn set_user_signature(&mut self, value: String) {
+        self.user_signature = Option::from(value);
+    }
+
+    pub fn set_approver_signature(&mut self, value: String) {
+        self.approver_signature = Option::from(value);
     }
 
     pub fn set_namespace(&mut self, value: String) {
@@ -530,6 +544,32 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
         assert_eq!(
             timesheet.git_path.unwrap(),
             "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/".to_string()
+        );
+    }
+
+    #[test]
+    fn it_sets_user_signature() {
+        let mut timesheet = Timesheet {
+            ..Default::default()
+        };
+
+        timesheet.set_user_signature("user_signature".to_string());
+        assert_eq!(
+            timesheet.user_signature.unwrap(),
+            "user_signature".to_string()
+        );
+    }
+
+    #[test]
+    fn it_sets_approver_signature() {
+        let mut timesheet = Timesheet {
+            ..Default::default()
+        };
+
+        timesheet.set_approver_signature("approver_signature".to_string());
+        assert_eq!(
+            timesheet.approver_signature.unwrap(),
+            "approver_signature".to_string()
         );
     }
 
