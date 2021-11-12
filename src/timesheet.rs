@@ -1,7 +1,6 @@
 use crate::date_parser::TimesheetYears;
 use crate::utils::{check_for_valid_day, check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Datelike};
-use regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::process;
