@@ -42,7 +42,7 @@ impl Db {
 
         // if there is an existing timesheet with the random path, generate again
         if let Some(_) = cursor.try_next().await? {
-            &self.generate_random_path(collection);
+            let _ = &self.generate_random_path(collection);
         }
 
         Ok(random_path)
