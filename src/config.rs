@@ -146,8 +146,3 @@ impl RunMode for Config {
         if !buffer.is_empty() {}
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-}

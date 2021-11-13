@@ -1,12 +1,9 @@
 use crate::timesheet::{GitLogDates, Timesheet};
 use crate::utils::get_days_from_month;
 use chrono::{TimeZone, Utc};
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
-use std::error::Error;
 use std::process;
-use std::rc::Rc;
 
 fn return_worked_hours_from_worked_days(worked_days: &Vec<u32>, day: &u32) -> i32 {
     let worked_day = worked_days.contains(day);
@@ -147,19 +144,9 @@ pub fn get_timesheet_map_from_date_hashmap(
 #[cfg(test)]
 mod tests {
     use crate::date_parser::{
-        get_days_from_month, get_timesheet_map_from_date_hashmap, is_weekend,
-        parse_hours_from_date, return_worked_hours_from_worked_days,
+        is_weekend, parse_hours_from_date, return_worked_hours_from_worked_days,
     };
-    use crate::timesheet::GitLogDates;
-    use chrono::{Date, DateTime, FixedOffset, TimeZone};
-    use serde_json::{json, Map, Value};
-    use std::collections::{HashMap, HashSet};
-
-    fn mock_date_fixed_offset() -> Date<FixedOffset> {
-        let date_time = DateTime::parse_from_rfc2822("Tue, 19 Oct 2021 10:52:28 +0200");
-        let date = date_time.unwrap().date();
-        date
-    }
+    use std::collections::HashMap;
 
     #[test]
     fn it_returns_worked_hours_from_worked_days() {

@@ -95,8 +95,6 @@ mod tests {
     use std::cell::RefCell;
     use std::error::Error;
     use std::path::Path;
-    use std::process::Command;
-    use std::rc::Rc;
 
     #[test]
     fn get_filepath_returns_path_with_file_name() {
@@ -175,7 +173,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let mock_config_path = dir.path().join("my-temporary-note.txt");
 
-        let mut file = File::create(&mock_config_path).unwrap();
+        let file = File::create(&mock_config_path).unwrap();
         let string_path_from_tempdir = mock_config_path.to_str().unwrap().to_owned();
         assert_eq!(
             write_config_file(&timesheet, string_path_from_tempdir).unwrap(),

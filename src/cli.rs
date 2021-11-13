@@ -281,7 +281,7 @@ mod tests {
     impl Init for MockConfig {
         fn init(
             &self,
-            options: Vec<Option<String>>,
+            _options: Vec<Option<String>>,
             _timesheet: Rc<RefCell<timesheet::Timesheet>>,
         ) {
             assert!(true);
@@ -289,13 +289,21 @@ mod tests {
     }
 
     impl Edit for MockConfig {
-        fn edit(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<timesheet::Timesheet>>) {
+        fn edit(
+            &self,
+            _options: Vec<Option<String>>,
+            _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+        ) {
             assert!(true);
         }
     }
 
     impl Make for MockConfig {
-        fn make(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<timesheet::Timesheet>>) {
+        fn make(
+            &self,
+            _options: Vec<Option<String>>,
+            _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+        ) {
             assert!(true);
         }
     }
@@ -303,8 +311,8 @@ mod tests {
     impl RunMode for MockConfig {
         fn run_mode(
             &self,
-            options: Vec<Option<String>>,
-            timesheet: Rc<RefCell<timesheet::Timesheet>>,
+            _options: Vec<Option<String>>,
+            _timesheet: Rc<RefCell<timesheet::Timesheet>>,
         ) {
             assert!(true);
         }

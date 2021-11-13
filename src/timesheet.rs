@@ -1,13 +1,10 @@
-use crate::date_parser::{is_weekend, TimesheetYears};
+use crate::date_parser::TimesheetYears;
 use crate::utils::{check_for_valid_day, check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Datelike};
-use regex;
 use serde::{Deserialize, Serialize};
-use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::process;
 use std::process::{Command, Output};
-use std::rc::Rc;
 
 pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 
@@ -27,6 +24,8 @@ pub struct Timesheet {
     pub client_address: Option<String>,
     pub po_number: Option<String>,
     pub timesheet: Option<TimesheetYears>,
+    pub user_signature: Option<String>,
+    pub approver_signature: Option<String>,
 }
 
 impl Default for Timesheet {
@@ -43,6 +42,8 @@ impl Default for Timesheet {
             client_address: None,
             po_number: None,
             timesheet: None,
+            user_signature: None,
+            approver_signature: None,
         }
     }
 }
@@ -69,8 +70,22 @@ impl Timesheet {
         self.client_address = deserialized_sheet.client_address;
         self.po_number = deserialized_sheet.po_number;
         self.timesheet = deserialized_sheet.timesheet;
+        self.user_signature = deserialized_sheet.user_signature;
+        self.approver_signature = deserialized_sheet.approver_signature;
         self
     }
+
+    // pub fn set_user_signature(&mut self, value: String) {
+    //     self.user_signature = Option::from(value);
+    // }
+    //
+    // pub fn set_approver_signature(&mut self, value: String) {
+    //     self.approver_signature = Option::from(value);
+    // }
+    //
+    // pub fn set_po_number(&mut self, value: String) {
+    //     self.po_number = Option::from(value);
+    // }
 
     pub fn set_namespace(&mut self, value: String) {
         self.namespace = Option::from(value);
@@ -98,10 +113,6 @@ impl Timesheet {
 
     pub fn set_client_address(&mut self, value: String) {
         self.client_address = Option::from(value);
-    }
-
-    pub fn set_po_number(&mut self, value: String) {
-        self.po_number = Option::from(value);
     }
 
     pub fn set_timesheet(&mut self, value: TimesheetYears) {
@@ -335,7 +346,7 @@ impl Timesheet {
 
         let is_weekend =
             match self.get_timesheet_entry(&year_string, &month_u32, day, "weekend".to_string()) {
-                Ok(result) => result,
+                Ok(result) => result.cloned().unwrap(),
                 Err(err) => {
                     eprintln!("Error retrieving timesheet entry: {}", err);
                     process::exit(exitcode::DATAERR);
@@ -350,7 +361,7 @@ impl Timesheet {
             vec![
                 ("hours".to_string(), hour),
                 ("user_edited".to_string(), 1),
-                ("weekend".to_string(), *is_weekend.unwrap()),
+                ("weekend".to_string(), is_weekend),
             ],
         )?;
 
@@ -389,7 +400,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut year_map = get_mock_year_map();
+        let year_map = get_mock_year_map();
         ts.set_timesheet(year_map);
 
         ts.mutate_timesheet_entry(
@@ -397,7 +408,8 @@ mod tests {
             &11,
             0,
             vec![("user_edited".to_string(), 0)],
-        );
+        )
+        .unwrap();
 
         assert_eq!(
             ts.get_timesheet_entry(&"2021".to_string(), &11, 0, "user_edited".to_string())
@@ -413,7 +425,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut year_map = get_mock_year_map();
+        let year_map = get_mock_year_map();
         ts.set_timesheet(year_map);
 
         assert_eq!(
@@ -474,7 +486,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 ".to_string();
 
         timesheet.parse_git_log_dates_from_git_history(std_output);
-        let mut x = timesheet.git_log_dates.unwrap();
+        let x = timesheet.git_log_dates.unwrap();
 
         // to check the hashmap shape is correct, lets create an array
         // of the numeric values and order them. Not great but snapshot testing with hashmaps isn't a thing in rust...
@@ -505,7 +517,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
         };
 
         timesheet.set_git_path("/rust/timesheet-gen/.git/".to_string());
-        timesheet.find_namespace_from_git_path();
+        timesheet.find_namespace_from_git_path().unwrap();
         assert_eq!(timesheet.namespace.unwrap(), "timesheet-gen".to_string());
     }
 
@@ -526,12 +538,51 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
             stderr: vec![],
         };
 
-        timesheet.find_git_path_from_directory(output_path);
+        timesheet.find_git_path_from_directory(output_path).unwrap();
         assert_eq!(
             timesheet.git_path.unwrap(),
             "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/".to_string()
         );
     }
+
+    // #[test]
+    // #[ignore]
+    // fn it_sets_user_signature() {
+    //     let mut timesheet = Timesheet {
+    //         ..Default::default()
+    //     };
+    //
+    //     timesheet.set_user_signature("user_signature".to_string());
+    //     assert_eq!(
+    //         timesheet.user_signature.unwrap(),
+    //         "user_signature".to_string()
+    //     );
+    // }
+    //
+    // #[test]
+    // #[ignore]
+    // fn it_sets_approver_signature() {
+    //     let mut timesheet = Timesheet {
+    //         ..Default::default()
+    //     };
+    //
+    //     timesheet.set_approver_signature("approver_signature".to_string());
+    //     assert_eq!(
+    //         timesheet.approver_signature.unwrap(),
+    //         "approver_signature".to_string()
+    //     );
+    // }
+    //
+    // #[test]
+    // #[ignore]
+    // fn it_sets_po_number() {
+    //     let mut timesheet = Timesheet {
+    //         ..Default::default()
+    //     };
+    //
+    //     timesheet.set_po_number("po number".to_string());
+    //     assert_eq!(timesheet.po_number.unwrap(), "po number".to_string());
+    // }
 
     #[test]
     fn it_sets_namespace() {
@@ -607,16 +658,6 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
             timesheet.client_address.unwrap(),
             "client address".to_string()
         );
-    }
-
-    #[test]
-    fn it_sets_po_number() {
-        let mut timesheet = Timesheet {
-            ..Default::default()
-        };
-
-        timesheet.set_po_number("po number".to_string());
-        assert_eq!(timesheet.po_number.unwrap(), "po number".to_string());
     }
 
     #[test]
