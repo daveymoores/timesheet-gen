@@ -71,7 +71,7 @@ pub fn write_config_file(
         "client_name": timesheet.client_name.as_ref().unwrap_or(&"None".to_string()),
         "client_contact_person": timesheet.client_contact_person.as_ref().unwrap_or(&"None".to_string()),
         "client_address": timesheet.client_address.as_ref().unwrap_or(&"None".to_string()),
-        "po_number": timesheet.po_number.as_ref().unwrap_or(&"None".to_string()),
+        "project_number": timesheet.project_number.as_ref().unwrap_or(&"None".to_string()),
         "timesheet": timesheet.timesheet.as_ref().unwrap_or(&HashMap::new()),
     });
 

@@ -66,22 +66,45 @@ impl HelpPrompt {
     }
 
     pub fn add_client_details(self) -> Result<Self, std::io::Error> {
-        println!("Would you like to add a client to this repo?");
+        println!("Client company name");
+        let input: String = Input::new().interact_text()?;
+        self.timesheet.borrow_mut().set_client_name(input);
 
-        if Confirm::new().default(true).interact()? {
-            println!("Client name");
-            let input: String = Input::new().interact_text()?;
-            self.timesheet.borrow_mut().set_client_name(input);
+        println!("Client contact person");
+        let input: String = Input::new().interact_text()?;
+        self.timesheet.borrow_mut().set_client_contact_person(input);
 
-            println!("Client contact person");
-            let input: String = Input::new().interact_text()?;
-            self.timesheet.borrow_mut().set_client_contact_person(input);
-
-            println!("Client address");
-            if let Some(input) = Editor::new().edit("Enter an address").unwrap() {
-                self.timesheet.borrow_mut().set_client_address(input);
-            }
+        println!("Client address");
+        if let Some(input) = Editor::new().edit("Enter an address").unwrap() {
+            self.timesheet.borrow_mut().set_client_address(input);
         }
+
+        Ok(self)
+    }
+
+    pub fn prompt_for_manager_approval(self) -> Result<Self, Box<dyn Error>> {
+        println!("Does your timesheet need approval? (This will enable signing functionality, see https://timesheet-gen.io/docs/signing)");
+        if Confirm::new().default(true).interact()? {
+            self.timesheet.borrow_mut().set_requires_approval(true);
+
+            println!("Approvers name");
+            let input: String = Input::new().interact_text()?;
+            self.timesheet.borrow_mut().set_approvers_name(input);
+
+            println!("Approvers email");
+            let input: String = Input::new().interact_text()?;
+            self.timesheet.borrow_mut().set_approvers_name(input);
+        } else {
+            self.timesheet.borrow_mut().set_requires_approval(false);
+        }
+
+        Ok(self)
+    }
+
+    pub fn add_project_number(self) -> Result<Self, Box<dyn Error>> {
+        println!("Project number");
+        let input: String = Input::new().interact_text()?;
+        self.timesheet.borrow_mut().set_approvers_name(input);
 
         Ok(self)
     }

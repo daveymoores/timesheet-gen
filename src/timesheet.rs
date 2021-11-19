@@ -22,8 +22,11 @@ pub struct Timesheet {
     pub client_name: Option<String>,
     pub client_contact_person: Option<String>,
     pub client_address: Option<String>,
-    pub po_number: Option<String>,
+    pub project_number: Option<String>,
     pub timesheet: Option<TimesheetYears>,
+    pub requires_approval: Option<bool>,
+    pub approvers_name: Option<String>,
+    pub approvers_email: Option<String>,
     pub user_signature: Option<String>,
     pub approver_signature: Option<String>,
 }
@@ -40,8 +43,11 @@ impl Default for Timesheet {
             client_name: None,
             client_contact_person: None,
             client_address: None,
-            po_number: None,
+            project_number: None,
             timesheet: None,
+            requires_approval: None,
+            approvers_name: None,
+            approvers_email: None,
             user_signature: None,
             approver_signature: None,
         }
@@ -55,6 +61,7 @@ impl Timesheet {
         }
     }
 
+    /// Get values from buffer and set these to the Timesheet struct fields
     pub fn set_values_from_buffer(&mut self, buffer: &String) -> &mut Timesheet {
         let deserialized_sheet: Timesheet = serde_json::from_str(&buffer)
             .expect("Initialisation of timesheet struct from buffer failed");
@@ -68,24 +75,31 @@ impl Timesheet {
         self.client_name = deserialized_sheet.client_name;
         self.client_contact_person = deserialized_sheet.client_contact_person;
         self.client_address = deserialized_sheet.client_address;
-        self.po_number = deserialized_sheet.po_number;
+        self.project_number = deserialized_sheet.project_number;
         self.timesheet = deserialized_sheet.timesheet;
         self.user_signature = deserialized_sheet.user_signature;
         self.approver_signature = deserialized_sheet.approver_signature;
+        self.requires_approval = deserialized_sheet.requires_approval;
+        self.approvers_name = deserialized_sheet.approvers_name;
+        self.approvers_email = deserialized_sheet.approvers_email;
         self
     }
 
-    // pub fn set_user_signature(&mut self, value: String) {
-    //     self.user_signature = Option::from(value);
-    // }
-    //
-    // pub fn set_approver_signature(&mut self, value: String) {
-    //     self.approver_signature = Option::from(value);
-    // }
-    //
-    // pub fn set_po_number(&mut self, value: String) {
-    //     self.po_number = Option::from(value);
-    // }
+    pub fn set_approvers_name(&mut self, value: String) {
+        self.approvers_name = Option::from(value);
+    }
+
+    pub fn set_approvers_email(&mut self, value: String) {
+        self.approvers_email = Option::from(value);
+    }
+
+    pub fn set_requires_approval(&mut self, value: bool) {
+        self.requires_approval = Option::from(value);
+    }
+
+    pub fn set_project_number(&mut self, value: String) {
+        self.project_number = Option::from(value);
+    }
 
     pub fn set_namespace(&mut self, value: String) {
         self.namespace = Option::from(value);
@@ -545,44 +559,51 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
         );
     }
 
-    // #[test]
-    // #[ignore]
-    // fn it_sets_user_signature() {
-    //     let mut timesheet = Timesheet {
-    //         ..Default::default()
-    //     };
-    //
-    //     timesheet.set_user_signature("user_signature".to_string());
-    //     assert_eq!(
-    //         timesheet.user_signature.unwrap(),
-    //         "user_signature".to_string()
-    //     );
-    // }
-    //
-    // #[test]
-    // #[ignore]
-    // fn it_sets_approver_signature() {
-    //     let mut timesheet = Timesheet {
-    //         ..Default::default()
-    //     };
-    //
-    //     timesheet.set_approver_signature("approver_signature".to_string());
-    //     assert_eq!(
-    //         timesheet.approver_signature.unwrap(),
-    //         "approver_signature".to_string()
-    //     );
-    // }
-    //
-    // #[test]
-    // #[ignore]
-    // fn it_sets_po_number() {
-    //     let mut timesheet = Timesheet {
-    //         ..Default::default()
-    //     };
-    //
-    //     timesheet.set_po_number("po number".to_string());
-    //     assert_eq!(timesheet.po_number.unwrap(), "po number".to_string());
-    // }
+    #[test]
+    fn it_sets_requires_approval() {
+        let mut timesheet = Timesheet {
+            ..Default::default()
+        };
+
+        timesheet.set_requires_approval(true);
+        assert_eq!(timesheet.requires_approval.unwrap(), true);
+    }
+
+    #[test]
+    fn it_sets_approvers_email() {
+        let mut timesheet = Timesheet {
+            ..Default::default()
+        };
+
+        timesheet.set_approvers_email("approver@gmail.com".to_string());
+        assert_eq!(
+            timesheet.approvers_email.unwrap(),
+            "approver@gmail.com".to_string()
+        );
+    }
+
+    #[test]
+    fn it_sets_approvers_name() {
+        let mut timesheet = Timesheet {
+            ..Default::default()
+        };
+
+        timesheet.set_approvers_name("Mr Approver".to_string());
+        assert_eq!(timesheet.approvers_name.unwrap(), "Mr Approver".to_string());
+    }
+
+    #[test]
+    fn it_sets_project_number() {
+        let mut timesheet = Timesheet {
+            ..Default::default()
+        };
+
+        timesheet.set_project_number("Project number".to_string());
+        assert_eq!(
+            timesheet.project_number.unwrap(),
+            "Project number".to_string()
+        );
+    }
 
     #[test]
     fn it_sets_namespace() {

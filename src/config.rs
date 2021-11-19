@@ -91,6 +91,8 @@ impl Make for Config {
 
         // if buffer is not empty, then read timesheet and generate the link
         if !buffer.is_empty() {
+            // set po number and approver
+
             // generate timesheet-gen.io link using existing config
             link_builder::build_unique_uri(Rc::clone(&timesheet), options)
                 .await
@@ -108,7 +110,7 @@ pub trait Edit {
 }
 
 impl Edit for Config {
-    fn edit(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+    fn edit(&self, options: Vec<Option<String>>, mut timesheet: Rc<RefCell<Timesheet>>) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));
