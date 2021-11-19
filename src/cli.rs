@@ -1,6 +1,7 @@
 extern crate clap;
 use crate::config;
 use crate::config::{Edit, Init, Make, New, RunMode};
+use crate::help_prompt::HelpPrompt;
 use crate::timesheet;
 use chrono::prelude::*;
 use clap::{App, Arg, ArgMatches, Error};
@@ -212,14 +213,19 @@ impl Cli<'_> {
         let cli: Cli = self.parse_commands(&matches)?;
 
         let config: config::Config = config::Config::new();
+        let prompt = crate::help_prompt::HelpPrompt::new(Rc::clone(&timesheet));
 
-        Self::run_command(cli, config, &timesheet);
+        Self::run_command(cli, config, &timesheet, prompt);
 
         Ok(())
     }
 
-    pub fn run_command<T>(cli: Cli, config: T, timesheet: &Rc<RefCell<timesheet::Timesheet>>)
-    where
+    pub fn run_command<T>(
+        cli: Cli,
+        config: T,
+        timesheet: &Rc<RefCell<timesheet::Timesheet>>,
+        prompt: HelpPrompt,
+    ) where
         T: Init + Make + Edit + RunMode,
     {
         match cli.command {
@@ -227,11 +233,11 @@ impl Cli<'_> {
                 panic!("The programme shouldn't be able to get here");
             }
             Some(commands) => match commands {
-                Commands::Init => config.init(cli.options, Rc::clone(&timesheet)),
-                Commands::Make => config.make(cli.options, Rc::clone(&timesheet)),
-                Commands::Edit => config.edit(cli.options, Rc::clone(&timesheet)),
-                Commands::Remove => config.edit(cli.options, Rc::clone(&timesheet)),
-                Commands::RunMode => config.run_mode(cli.options, Rc::clone(&timesheet)),
+                Commands::Init => config.init(cli.options, Rc::clone(&timesheet), prompt),
+                Commands::Make => config.make(cli.options, Rc::clone(&timesheet), prompt),
+                Commands::Edit => config.edit(cli.options, Rc::clone(&timesheet), prompt),
+                Commands::Remove => config.edit(cli.options, Rc::clone(&timesheet), prompt),
+                Commands::RunMode => config.run_mode(cli.options, Rc::clone(&timesheet), prompt),
             },
         }
     }
@@ -262,6 +268,10 @@ mod tests {
         let cli = Cli::new_from(commands).unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
         let response = new_cli.unwrap();
+        let prompt =
+            crate::help_prompt::HelpPrompt::new(Rc::new(RefCell::new(timesheet::Timesheet {
+                ..Default::default()
+            })));
 
         Cli::run_command(
             response,
@@ -269,6 +279,7 @@ mod tests {
             &Rc::new(RefCell::new(timesheet::Timesheet {
                 ..Default::default()
             })),
+            prompt,
         );
     }
 
@@ -283,6 +294,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+            _prompt: HelpPrompt,
         ) {
             assert!(true);
         }
@@ -293,6 +305,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+            _prompt: HelpPrompt,
         ) {
             assert!(true);
         }
@@ -303,6 +316,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+            _prompt: HelpPrompt,
         ) {
             assert!(true);
         }
@@ -313,6 +327,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+            _prompt: HelpPrompt,
         ) {
             assert!(true);
         }

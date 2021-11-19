@@ -19,6 +19,7 @@ impl Onboarding for HelpPrompt {
         self.confirm_repository_path()?
             .search_for_repository_details()?
             .add_client_details()?
+            .prompt_for_manager_approval()?
             .show_details();
         Ok(())
     }
@@ -93,7 +94,7 @@ impl HelpPrompt {
 
             println!("Approvers email");
             let input: String = Input::new().interact_text()?;
-            self.timesheet.borrow_mut().set_approvers_name(input);
+            self.timesheet.borrow_mut().set_approvers_email(input);
         } else {
             self.timesheet.borrow_mut().set_requires_approval(false);
         }
@@ -104,7 +105,7 @@ impl HelpPrompt {
     pub fn add_project_number(self) -> Result<Self, Box<dyn Error>> {
         println!("Project number");
         let input: String = Input::new().interact_text()?;
-        self.timesheet.borrow_mut().set_approvers_name(input);
+        self.timesheet.borrow_mut().set_project_number(input);
 
         Ok(self)
     }
@@ -130,6 +131,12 @@ impl HelpPrompt {
         }
         if let Some(client_address) = &self.timesheet.borrow().client_address.clone() {
             println!("Client address: {}", client_address);
+        }
+        if let Some(approvers_name) = &self.timesheet.borrow().approvers_name.clone() {
+            println!("Approvers name: {}", approvers_name);
+        }
+        if let Some(approvers_email) = &self.timesheet.borrow().approvers_email.clone() {
+            println!("Approvers email: {}", approvers_email);
         }
 
         self

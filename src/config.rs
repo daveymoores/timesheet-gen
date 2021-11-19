@@ -1,3 +1,4 @@
+use crate::help_prompt::HelpPrompt;
 use crate::link_builder;
 use crate::timesheet::Timesheet;
 use std::cell::RefCell;
@@ -32,10 +33,12 @@ impl Config {
         );
     }
 
-    fn check_for_config_file(buffer: &mut String, timesheet: Rc<RefCell<Timesheet>>) {
+    fn check_for_config_file(
+        buffer: &mut String,
+        timesheet: Rc<RefCell<Timesheet>>,
+        prompt: HelpPrompt,
+    ) {
         // pass a prompt for if the config file doesn't exist
-        let prompt = crate::help_prompt::HelpPrompt::new(Rc::clone(&timesheet));
-
         crate::file_reader::read_data_from_config_file(buffer, prompt).unwrap_or_else(|err| {
             eprintln!("Error initialising timesheet-gen: {}", err);
             std::process::exit(exitcode::CANTCREAT);
@@ -58,14 +61,24 @@ impl Config {
 
 pub trait Init {
     /// Generate a config file with user variables
-    fn init(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>);
+    fn init(
+        &self,
+        options: Vec<Option<String>>,
+        timesheet: Rc<RefCell<Timesheet>>,
+        prompt: HelpPrompt,
+    );
 }
 
 impl Init for Config {
-    fn init(&self, _options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+    fn init(
+        &self,
+        _options: Vec<Option<String>>,
+        timesheet: Rc<RefCell<Timesheet>>,
+        prompt: HelpPrompt,
+    ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));
+        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
 
         if !buffer.is_empty() {
             println!(
@@ -79,20 +92,29 @@ impl Init for Config {
 
 pub trait Make {
     /// Edit a day entry within the timesheet
-    fn make(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>);
+    fn make(
+        &self,
+        options: Vec<Option<String>>,
+        timesheet: Rc<RefCell<Timesheet>>,
+        prompt: HelpPrompt,
+    );
 }
 
 impl Make for Config {
     #[tokio::main]
-    async fn make(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+    async fn make(
+        &self,
+        options: Vec<Option<String>>,
+        timesheet: Rc<RefCell<Timesheet>>,
+        prompt: HelpPrompt,
+    ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));
+        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
 
         // if buffer is not empty, then read timesheet and generate the link
         if !buffer.is_empty() {
-            // set po number and approver
-
+            prompt.add_project_number();
             // generate timesheet-gen.io link using existing config
             link_builder::build_unique_uri(Rc::clone(&timesheet), options)
                 .await
@@ -106,14 +128,24 @@ impl Make for Config {
 
 pub trait Edit {
     /// Generate a config file with user variables
-    fn edit(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>);
+    fn edit(
+        &self,
+        options: Vec<Option<String>>,
+        timesheet: Rc<RefCell<Timesheet>>,
+        prompt: HelpPrompt,
+    );
 }
 
 impl Edit for Config {
-    fn edit(&self, options: Vec<Option<String>>, mut timesheet: Rc<RefCell<Timesheet>>) {
+    fn edit(
+        &self,
+        options: Vec<Option<String>>,
+        timesheet: Rc<RefCell<Timesheet>>,
+        prompt: HelpPrompt,
+    ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));
+        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
 
         // if buffer is not empty, then read timesheet, edit a value and write to file
         if !buffer.is_empty() {
@@ -135,14 +167,24 @@ impl Edit for Config {
 
 pub trait RunMode {
     /// Specify a run mode
-    fn run_mode(&self, options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>);
+    fn run_mode(
+        &self,
+        options: Vec<Option<String>>,
+        timesheet: Rc<RefCell<Timesheet>>,
+        prompt: HelpPrompt,
+    );
 }
 
 impl RunMode for Config {
-    fn run_mode(&self, _options: Vec<Option<String>>, timesheet: Rc<RefCell<Timesheet>>) {
+    fn run_mode(
+        &self,
+        _options: Vec<Option<String>>,
+        timesheet: Rc<RefCell<Timesheet>>,
+        prompt: HelpPrompt,
+    ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet));
+        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
 
         // if buffer is not empty, then read timesheet, change the run-mode and write to file
         if !buffer.is_empty() {}
