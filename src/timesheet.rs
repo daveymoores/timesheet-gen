@@ -11,7 +11,7 @@ pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 /// Holds the data from the config file. Config can access these values
 // and perform various operations on it
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Timesheet {
     pub namespace: Option<String>,
     pub repo_path: Option<String>,
@@ -89,26 +89,8 @@ impl Timesheet {
     }
 
     /// Get values from buffer and set these to the Timesheet struct fields
-    pub fn set_values_from_buffer(&mut self, buffer: &String) -> &mut Timesheet {
-        let deserialized_sheet: Timesheet = serde_json::from_str(&buffer)
-            .expect("Initialisation of timesheet struct from buffer failed");
-
-        self.namespace = deserialized_sheet.namespace;
-        self.repo_path = deserialized_sheet.repo_path;
-        self.git_path = deserialized_sheet.git_path;
-        self.git_log_dates = deserialized_sheet.git_log_dates;
-        self.name = deserialized_sheet.name;
-        self.email = deserialized_sheet.email;
-        self.client_name = deserialized_sheet.client_name;
-        self.client_contact_person = deserialized_sheet.client_contact_person;
-        self.client_address = deserialized_sheet.client_address;
-        self.project_number = deserialized_sheet.project_number;
-        self.timesheet = deserialized_sheet.timesheet;
-        self.user_signature = deserialized_sheet.user_signature;
-        self.approver_signature = deserialized_sheet.approver_signature;
-        self.requires_approval = deserialized_sheet.requires_approval;
-        self.approvers_name = deserialized_sheet.approvers_name;
-        self.approvers_email = deserialized_sheet.approvers_email;
+    pub fn set_values_from_buffer(&mut self, timesheet: &mut Timesheet) -> &mut Timesheet {
+        *self = timesheet.clone();
         self
     }
 
@@ -414,8 +396,6 @@ impl Timesheet {
 mod tests {
     use super::*;
     use serde_json::json;
-    use std::fs::File;
-    use std::io::Read;
     use std::os::unix::process::ExitStatusExt;
     use std::process::ExitStatus;
 
@@ -439,22 +419,20 @@ mod tests {
 
     #[test]
     fn it_sets_values_from_buffer() {
-        let mut ts = Timesheet {
+        let mut timesheet = Timesheet {
             ..Default::default()
         };
 
-        let mut buffer = String::new();
-
-        match File::open("./testing-utils/.timesheet-gen.txt") {
-            Ok(mut file) => {
-                file.read_to_string(&mut buffer).unwrap();
-            }
-            Err(_) => {
-                eprintln!("Can't get testing utils config file");
-            }
+        let mut ts = Timesheet {
+            namespace: Option::from("timesheet-gen".to_string()),
+            git_path: Option::from(".".to_string()),
+            repo_path: Option::from(
+                "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/".to_string(),
+            ),
+            ..Default::default()
         };
 
-        ts.set_values_from_buffer(&buffer);
+        timesheet.set_values_from_buffer(&mut ts);
         let x: Vec<&String> = ts.iter().map(|y| y.as_ref().unwrap()).collect();
         println!("{:?}", x);
         assert_eq!(

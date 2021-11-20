@@ -1,324 +1,660 @@
-{
-  "namespace": "timesheet-gen",
-  "repo_path": ".",
-  "git_path": "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/",
-  "name": "Davey Moores",
-  "email": "daveymoores@gmail.com",
-  "client_name": "Code D'azur",
-  "client_contact_person": "Terry Van Horne",
-  "client_address": "Oostelijke Handelskade 751 \n1019 BW \nAmsterdam",
-  "po_number": "None",
-  "timesheet": {
-    "2021": {
-      "10": [
-        {
-          "hours": 0,
-          "weekend": 0,
-          "user_edited": 0
-        },
-        {
-          "weekend": 1,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "weekend": 1,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "user_edited": 0,
-          "hours": 0,
-          "weekend": 0
-        },
-        {
-          "weekend": 0,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "hours": 0,
-          "user_edited": 0,
-          "weekend": 0
-        },
-        {
-          "hours": 0,
-          "weekend": 0,
-          "user_edited": 0
-        },
-        {
-          "hours": 0,
-          "user_edited": 0,
-          "weekend": 0
-        },
-        {
-          "hours": 0,
-          "weekend": 1,
-          "user_edited": 0
-        },
-        {
-          "weekend": 1,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "weekend": 0,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "hours": 8,
-          "weekend": 0,
-          "user_edited": 0
-        },
-        {
-          "hours": 8,
-          "weekend": 0,
-          "user_edited": 0
-        },
-        {
-          "user_edited": 0,
-          "weekend": 0,
-          "hours": 8
-        },
-        {
-          "weekend": 0,
-          "user_edited": 0,
-          "hours": 0
-        },
-        {
-          "hours": 0,
-          "weekend": 1,
-          "user_edited": 0
-        },
-        {
-          "hours": 0,
-          "weekend": 1,
-          "user_edited": 0
-        },
-        {
-          "hours": 0,
-          "user_edited": 0,
-          "weekend": 0
-        },
-        {
-          "hours": 8,
-          "user_edited": 0,
-          "weekend": 0
-        },
-        {
-          "hours": 8,
-          "weekend": 0,
-          "user_edited": 0
-        },
-        {
-          "weekend": 0,
-          "user_edited": 0,
-          "hours": 8
-        },
-        {
-          "weekend": 0,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "hours": 0,
-          "user_edited": 0,
-          "weekend": 1
-        },
-        {
-          " weekend": 1,
-          "user_edited": 0,
-          "hours": 0
-        },
-        {
-          "weekend": 0,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          " weekend": 0,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "user_edited": 0,
-          "weekend": 0,
-          "hours": 0
-        },
-        {
-          "user_edited": 0,
-          "hours": 0,
-          "weekend": 0
-        },
-        {
-          "weekend": 0,
-          "user_edited": 0,
-          "hours": 0
-        },
-        {
-          "weekend": 1,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "hours": 0,
-          "weekend": 1,
-          "user_edited": 0
+[
+  {
+    "client": "Waymo",
+    "repositories": [
+      {
+        "namespace": "timesheet-gen",
+        "repo_path": ".",
+        "git_path": "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/",
+        "name": "Davey Moores",
+        "email": "daveymoores@gmail.com",
+        "client_name": "Waymo",
+        "client_contact_person": "Terry Van Horne",
+        "client_address": "Oostelijke Handelskade 751 \n1019 BW \nAmsterdam",
+        "po_number": "None",
+        "timesheet": {
+          "2021": {
+            "10": [
+              {
+                "hours": 0,
+                "weekend": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "user_edited": 0,
+                "hours": 0,
+                "weekend": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "user_edited": 0,
+                "weekend": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "user_edited": 0,
+                "weekend": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 1,
+                "user_edited": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 8,
+                "weekend": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 8,
+                "weekend": 0,
+                "user_edited": 0
+              },
+              {
+                "user_edited": 0,
+                "weekend": 0,
+                "hours": 8
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 1,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 1,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "user_edited": 0,
+                "weekend": 0
+              },
+              {
+                "hours": 8,
+                "user_edited": 0,
+                "weekend": 0
+              },
+              {
+                "hours": 8,
+                "weekend": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 8
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "user_edited": 0,
+                "weekend": 1
+              },
+              {
+                " weekend": 1,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                " weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "user_edited": 0,
+                "weekend": 0,
+                "hours": 0
+              },
+              {
+                "user_edited": 0,
+                "hours": 0,
+                "weekend": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 1,
+                "user_edited": 0
+              }
+            ],
+            "11": [
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 8
+              },
+              {
+                "weekend": 0,
+                "hours": 8,
+                "user_edited": 0
+              },
+              {
+                "hours": 8,
+                "user_edited": 0,
+                "weekend": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 8,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 8,
+                "user_edited": 0,
+                "weekend": 1
+              },
+              {
+                "hours": 0,
+                "user_edited": 0,
+                "weekend": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 0,
+                "user_edited": 0
+              },
+              {
+                "user_edited": 0,
+                "weekend": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 1,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "hours": 0,
+                "user_edited": 0,
+                "weekend": 1
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "user_edited": 0,
+                "weekend": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 1,
+                "user_edited": 0
+              },
+              {
+                "weekend": 1,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "user_edited": 0,
+                "hours": 0,
+                "weekend": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "user_edited": 0,
+                "weekend": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              }
+            ]
+          }
         }
-      ],
-      "11": [
-        {
-          "weekend": 0,
-          "user_edited": 0,
-          "hours": 8
-        },
-        {
-          "weekend": 0,
-          "hours": 8,
-          "user_edited": 0
-        },
-        {
-          "hours": 8,
-          "user_edited": 0,
-          "weekend": 0
-        },
-        {
-          "weekend": 0,
-          "hours": 8,
-          "user_edited": 0
-        },
-        {
-          "weekend": 0,
-          "user_edited": 0,
-          "hours": 0
-        },
-        {
-          "weekend": 1,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "hours": 8,
-          "user_edited": 0,
-          "weekend": 1
-        },
-        {
-          "hours": 0,
-          "user_edited": 0,
-          "weekend": 0
-        },
-        {
-          "weekend": 0,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "weekend": 0,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "hours": 0,
-          "weekend": 0,
-          "user_edited": 0
-        },
-        {
-          "user_edited": 0,
-          "weekend": 0,
-          "hours": 0
-        },
-        {
-          "weekend": 1,
-          "user_edited": 0,
-          "hours": 0
-        },
-        {
-          "hours": 0,
-          "user_edited": 0,
-          "weekend": 1
-        },
-        {
-          "weekend": 0,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "user_edited": 0,
-          "weekend": 0,
-          "hours": 0
-        },
-        {
-          "weekend": 0,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "weekend": 0,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "weekend": 0,
-          "user_edited": 0,
-          "hours": 0
-        },
-        {
-          "hours": 0,
-          "weekend": 1,
-          "user_edited": 0
-        },
-        {
-          "weekend": 1,
-          "user_edited": 0,
-          "hours": 0
-        },
-        {
-          "user_edited": 0,
-          "hours": 0,
-          "weekend": 0
-        },
-        {
-          "weekend": 0,
-          "user_edited": 0,
-          "hours": 0
-        },
-        {
-          "weekend": 0,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "weekend": 0,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "weekend": 0,
-          "user_edited": 0,
-          "hours": 0
-        },
-        {
-          "weekend": 1,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "weekend": 1,
-          "hours": 0,
-          "user_edited": 0
-        },
-        {
-          "user_edited": 0,
-          "weekend": 0,
-          "hours": 0
-        },
-        {
-          "weekend": 0,
-          "user_edited": 0,
-          "hours": 0
+      }
+    ]
+  },
+  {
+    "client": "Alphabet",
+    "repositories": [
+      {
+        "namespace": "timesheet-gen",
+        "repo_path": ".",
+        "git_path": "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/",
+        "name": "Davey Moores",
+        "email": "daveymoores@gmail.com",
+        "client_name": "Alphabet",
+        "client_contact_person": "Terry Van Horne",
+        "client_address": "Oostelijke Handelskade 751 \n1019 BW \nAmsterdam",
+        "po_number": "None",
+        "timesheet": {
+          "2021": {
+            "10": [
+              {
+                "hours": 0,
+                "weekend": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "user_edited": 0,
+                "hours": 0,
+                "weekend": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "user_edited": 0,
+                "weekend": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "user_edited": 0,
+                "weekend": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 1,
+                "user_edited": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 8,
+                "weekend": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 8,
+                "weekend": 0,
+                "user_edited": 0
+              },
+              {
+                "user_edited": 0,
+                "weekend": 0,
+                "hours": 8
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 1,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 1,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "user_edited": 0,
+                "weekend": 0
+              },
+              {
+                "hours": 8,
+                "user_edited": 0,
+                "weekend": 0
+              },
+              {
+                "hours": 8,
+                "weekend": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 8
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "user_edited": 0,
+                "weekend": 1
+              },
+              {
+                " weekend": 1,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                " weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "user_edited": 0,
+                "weekend": 0,
+                "hours": 0
+              },
+              {
+                "user_edited": 0,
+                "hours": 0,
+                "weekend": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 1,
+                "user_edited": 0
+              }
+            ],
+            "11": [
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 8
+              },
+              {
+                "weekend": 0,
+                "hours": 8,
+                "user_edited": 0
+              },
+              {
+                "hours": 8,
+                "user_edited": 0,
+                "weekend": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 8,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 8,
+                "user_edited": 0,
+                "weekend": 1
+              },
+              {
+                "hours": 0,
+                "user_edited": 0,
+                "weekend": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 0,
+                "user_edited": 0
+              },
+              {
+                "user_edited": 0,
+                "weekend": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 1,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "hours": 0,
+                "user_edited": 0,
+                "weekend": 1
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "user_edited": 0,
+                "weekend": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "hours": 0,
+                "weekend": 1,
+                "user_edited": 0
+              },
+              {
+                "weekend": 1,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "user_edited": 0,
+                "hours": 0,
+                "weekend": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "weekend": 1,
+                "hours": 0,
+                "user_edited": 0
+              },
+              {
+                "user_edited": 0,
+                "weekend": 0,
+                "hours": 0
+              },
+              {
+                "weekend": 0,
+                "user_edited": 0,
+                "hours": 0
+              }
+            ]
+          }
         }
-      ]
-    }
+      }
+    ]
   }
-}
+]

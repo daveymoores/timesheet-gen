@@ -1,6 +1,7 @@
 use crate::help_prompt::HelpPrompt;
 use crate::link_builder;
 use crate::timesheet::Timesheet;
+use serde::Deserialize;
 use std::cell::RefCell;
 use std::process;
 use std::rc::Rc;
@@ -8,6 +9,12 @@ use std::rc::Rc;
 /// Creates and modifies the config file. Config does not directly hold the information
 /// contained in the config file, but provides the various operations that can be
 /// performed on it. The data is a stored within the Timesheet struct.
+
+#[derive(Debug, Deserialize)]
+struct TimesheetConfig {
+    client: String,
+    repositories: Vec<Timesheet>,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Config {}
@@ -33,7 +40,45 @@ impl Config {
         );
     }
 
+    fn check_for_repo_in_buffer(
+        self,
+        deserialized_sheet: &mut Vec<TimesheetConfig>,
+    ) -> Result<Option<&Timesheet>, Box<dyn std::error::Error>> {
+        let mut temp_timesheet = Timesheet {
+            git_path: Option::from(".".to_string()),
+            ..Default::default()
+        };
+
+        temp_timesheet
+            .find_git_path_from_directory_from()?
+            .find_namespace_from_git_path()?;
+
+        let namespace: String = temp_timesheet.namespace.unwrap();
+
+        let found_timesheet = deserialized_sheet.iter().find(|client| {
+            match client
+                .repositories
+                .iter()
+                .find(|repository| repository.namespace.as_ref().unwrap() == &namespace)
+            {
+                Some(_) => true,
+                None => false,
+            }
+        });
+
+        if let Some(timesheet_config) = found_timesheet {
+            let timesheet: Option<&Timesheet> = timesheet_config
+                .repositories
+                .iter()
+                .find(|timesheet| timesheet.namespace.as_ref().unwrap() == &namespace);
+            return Ok(timesheet);
+        }
+
+        Ok(None)
+    }
+
     fn check_for_config_file(
+        self,
         buffer: &mut String,
         timesheet: Rc<RefCell<Timesheet>>,
         prompt: HelpPrompt,
@@ -44,17 +89,35 @@ impl Config {
             std::process::exit(exitcode::CANTCREAT);
         });
 
-        // if the buffer is empty, there is no existing file and timesheet
-        // state holds the data. Write this data to file.
+        // if the buffer is empty, there is no existing file, user has been onboarded
+        // and timesheet state holds the data. Write this data to file.
         if buffer.is_empty() {
             Config::write_to_config_file(timesheet);
-        } else {
+            return;
+        }
+
+        // check whether this repository exists under any clients
+        // if it does pass timesheet values to Timesheet
+        let mut deserialized_sheet: Vec<TimesheetConfig> = serde_json::from_str(&buffer)
+            .expect("Initialisation of timesheet struct from buffer failed");
+
+        if let Some(ts) = self
+            .check_for_repo_in_buffer(&mut deserialized_sheet)
+            .unwrap_or_else(|err| {
+                eprintln!("Error trying to read from config file: {}", err);
+                std::process::exit(exitcode::DATAERR);
+            })
+        {
+            let mut ts_clone = ts.clone();
             // otherwise lets set the timesheet struct values
             // and fetch a new batch of interaction data
             timesheet
                 .borrow_mut()
-                .set_values_from_buffer(&buffer)
+                .set_values_from_buffer(&mut ts_clone)
                 .exec_generate_timesheets_from_git_history();
+        } else {
+            //if it doesn't, onboard them
+            println!("Looks like this repository hasn't been initialised yet. Would you like to add it to any of these existing clients?");
         }
     }
 }
@@ -78,7 +141,7 @@ impl Init for Config {
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
+        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
 
         if !buffer.is_empty() {
             println!(
@@ -110,7 +173,7 @@ impl Make for Config {
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
+        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
 
         // if buffer is not empty, then read timesheet and generate the link
         if !buffer.is_empty() {
@@ -144,7 +207,7 @@ impl Edit for Config {
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
+        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
 
         // if buffer is not empty, then read timesheet, edit a value and write to file
         if !buffer.is_empty() {
@@ -183,9 +246,35 @@ impl RunMode for Config {
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        Config::check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
+        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
 
         // if buffer is not empty, then read timesheet, change the run-mode and write to file
         if !buffer.is_empty() {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::config::{Config, New, TimesheetConfig};
+    use crate::timesheet::Timesheet;
+
+    #[test]
+    fn it_checks_for_repo_in_buffer_and_returns_a_timesheet() {
+        let mut deserialized_sheet = vec![TimesheetConfig {
+            client: "alphabet".to_string(),
+            repositories: vec![Timesheet {
+                namespace: Option::from("timesheet-gen".to_string()),
+                ..Default::default()
+            }],
+        }];
+        let config: Config = Config::new();
+        let timesheet = config
+            .check_for_repo_in_buffer(&mut deserialized_sheet)
+            .unwrap();
+
+        assert_eq!(
+            *timesheet.unwrap().namespace.as_ref().unwrap(),
+            "timesheet-gen".to_string()
+        )
     }
 }

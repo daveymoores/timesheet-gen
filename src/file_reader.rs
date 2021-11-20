@@ -62,18 +62,26 @@ pub fn write_config_file(
     timesheet: &Ref<Timesheet>,
     config_path: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let unwrapped_timesheet = json!({
-        "namespace": timesheet.namespace.as_ref().unwrap_or(&"None".to_string()),
-        "repo_path": timesheet.repo_path.as_ref().unwrap_or(&"None".to_string()),
-        "git_path": timesheet.git_path.as_ref().unwrap_or(&"None".to_string()),
-        "name": timesheet.name.as_ref().unwrap_or(&"None".to_string()),
-        "email": timesheet.email.as_ref().unwrap_or(&"None".to_string()),
-        "client_name": timesheet.client_name.as_ref().unwrap_or(&"None".to_string()),
-        "client_contact_person": timesheet.client_contact_person.as_ref().unwrap_or(&"None".to_string()),
-        "client_address": timesheet.client_address.as_ref().unwrap_or(&"None".to_string()),
-        "project_number": timesheet.project_number.as_ref().unwrap_or(&"None".to_string()),
-        "timesheet": timesheet.timesheet.as_ref().unwrap_or(&HashMap::new()),
-    });
+    let unwrapped_timesheet = json!([{
+        "client": timesheet.client_name.as_ref().unwrap_or(&"None".to_string()),
+        "repositories": [{
+            "namespace": timesheet.namespace.as_ref().unwrap_or(&"None".to_string()),
+            "repo_path": timesheet.repo_path.as_ref().unwrap_or(&"None".to_string()),
+            "git_path": timesheet.git_path.as_ref().unwrap_or(&"None".to_string()),
+            "name": timesheet.name.as_ref().unwrap_or(&"None".to_string()),
+            "email": timesheet.email.as_ref().unwrap_or(&"None".to_string()),
+            "client_name": timesheet.client_name.as_ref().unwrap_or(&"None".to_string()),
+            "client_contact_person": timesheet.client_contact_person.as_ref().unwrap_or(&"None".to_string()),
+            "client_address": timesheet.client_address.as_ref().unwrap_or(&"None".to_string()),
+            "project_number": timesheet.project_number.as_ref().unwrap_or(&"None".to_string()),
+            "timesheet": timesheet.timesheet.as_ref().unwrap_or(&HashMap::new()),
+            "requires_approval": timesheet.requires_approval.as_ref().unwrap_or(&false),
+            "approvers_name": timesheet.approvers_name.as_ref().unwrap_or(&"None".to_string()),
+            "approvers_email": timesheet.approvers_email.as_ref().unwrap_or(&"None".to_string()),
+            "user_signature": "None".to_string(),
+            "approver_signature": "None".to_string(),
+        }],
+    }]);
 
     let json = serde_json::to_string(&unwrapped_timesheet).unwrap();
     let mut file = File::create(&config_path)?;
@@ -127,7 +135,7 @@ mod tests {
 
         read_file(
             &mut buffer,
-            String::from("./testing-utils/.timesheet-gen.txt"),
+            String::from("./testing-utils/.hello.txt"),
             mock_prompt,
         )
         .unwrap();
@@ -152,7 +160,7 @@ mod tests {
 
         read_file(
             &mut buffer,
-            String::from("./testing-utils/.timesheet-gen.txt"),
+            String::from("./testing-utils/.timesheet.txt"),
             mock_prompt,
         )
         .unwrap();
