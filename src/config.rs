@@ -114,7 +114,6 @@ impl Make for Config {
 
         // if buffer is not empty, then read timesheet and generate the link
         if !buffer.is_empty() {
-            prompt.add_project_number();
             // generate timesheet-gen.io link using existing config
             link_builder::build_unique_uri(Rc::clone(&timesheet), options)
                 .await

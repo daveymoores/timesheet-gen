@@ -54,10 +54,37 @@ impl Default for Timesheet {
     }
 }
 
+struct Iter<'a> {
+    inner: &'a Timesheet,
+    index: u8,
+}
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = &'a Option<String>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let ret = match self.index {
+            0 => &self.inner.namespace,
+            1 => &self.inner.repo_path,
+            2 => &self.inner.git_path,
+            _ => return None,
+        };
+        self.index += 1;
+        Some(ret)
+    }
+}
+
 impl Timesheet {
     pub fn new() -> Self {
         Timesheet {
             ..Default::default()
+        }
+    }
+
+    fn iter(&self) -> Iter<'_> {
+        Iter {
+            inner: self,
+            index: 0,
         }
     }
 
@@ -387,6 +414,8 @@ impl Timesheet {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::fs::File;
+    use std::io::Read;
     use std::os::unix::process::ExitStatusExt;
     use std::process::ExitStatus;
 
@@ -406,6 +435,36 @@ mod tests {
         );
 
         year_map
+    }
+
+    #[test]
+    fn it_sets_values_from_buffer() {
+        let mut ts = Timesheet {
+            ..Default::default()
+        };
+
+        let mut buffer = String::new();
+
+        match File::open("./testing-utils/.timesheet-gen.txt") {
+            Ok(mut file) => {
+                file.read_to_string(&mut buffer).unwrap();
+            }
+            Err(_) => {
+                eprintln!("Can't get testing utils config file");
+            }
+        };
+
+        ts.set_values_from_buffer(&buffer);
+        let x: Vec<&String> = ts.iter().map(|y| y.as_ref().unwrap()).collect();
+        println!("{:?}", x);
+        assert_eq!(
+            x,
+            [
+                &"timesheet-gen".to_string(),
+                &".".to_string(),
+                &"/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/".to_string()
+            ]
+        );
     }
 
     #[test]
