@@ -45,7 +45,7 @@ impl Config {
         deserialized_sheet: &mut Vec<TimesheetConfig>,
     ) -> Result<Option<&Timesheet>, Box<dyn std::error::Error>> {
         let mut temp_timesheet = Timesheet {
-            git_path: Option::from(".".to_string()),
+            repo_path: Option::from(".".to_string()),
             ..Default::default()
         };
 
@@ -267,6 +267,7 @@ mod tests {
                 ..Default::default()
             }],
         }];
+
         let config: Config = Config::new();
         let timesheet = config
             .check_for_repo_in_buffer(&mut deserialized_sheet)

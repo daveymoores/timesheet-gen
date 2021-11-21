@@ -439,8 +439,8 @@ mod tests {
             x,
             [
                 &"timesheet-gen".to_string(),
+                &"/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/".to_string(),
                 &".".to_string(),
-                &"/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/".to_string()
             ]
         );
     }
