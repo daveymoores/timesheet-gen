@@ -11,8 +11,15 @@ use std::rc::Rc;
 /// performed on it. The data is a stored within the Timesheet struct.
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Client {
+    pub client_name: String,
+    pub client_address: String,
+    pub client_contact_person: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TimesheetConfig {
-    pub client: String,
+    pub client: Client,
     pub repositories: Vec<Timesheet>,
 }
 
@@ -274,13 +281,17 @@ impl RunMode for Config {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{Config, New, TimesheetConfig};
+    use crate::config::{Client, Config, New, TimesheetConfig};
     use crate::timesheet::Timesheet;
 
     #[test]
     fn it_checks_for_repo_in_buffer_and_returns_a_timesheet() {
         let mut deserialized_config = vec![TimesheetConfig {
-            client: "alphabet".to_string(),
+            client: Client {
+                client_name: "alphabet".to_string(),
+                client_address: "Spaghetti Way, USA".to_string(),
+                client_contact_person: "John Smith".to_string(),
+            },
             repositories: vec![Timesheet {
                 namespace: Option::from("timesheet-gen".to_string()),
                 ..Default::default()

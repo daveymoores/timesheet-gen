@@ -94,60 +94,74 @@ impl Timesheet {
         self
     }
 
-    pub fn set_approvers_name(&mut self, value: String) {
+    pub fn set_approvers_name(&mut self, value: String) -> &mut Self {
         self.approvers_name = Option::from(value);
+        self
     }
 
-    pub fn set_approvers_email(&mut self, value: String) {
+    pub fn set_approvers_email(&mut self, value: String) -> &mut Self {
         self.approvers_email = Option::from(value);
+        self
     }
 
-    pub fn set_requires_approval(&mut self, value: bool) {
+    pub fn set_requires_approval(&mut self, value: bool) -> &mut Self {
         self.requires_approval = Option::from(value);
+        self
     }
 
-    pub fn set_project_number(&mut self, value: String) {
+    pub fn set_project_number(&mut self, value: String) -> &mut Self {
         self.project_number = Option::from(value);
+        self
     }
 
-    pub fn set_namespace(&mut self, value: String) {
+    pub fn set_namespace(&mut self, value: String) -> &mut Self {
         self.namespace = Option::from(value);
+        self
     }
 
-    pub fn set_repo_path(&mut self, value: String) {
+    pub fn set_repo_path(&mut self, value: String) -> &mut Self {
         self.repo_path = Option::from(value);
+        self
     }
 
-    pub fn set_name(&mut self, value: String) {
+    pub fn set_name(&mut self, value: String) -> &mut Self {
         self.name = Option::from(value);
+        self
     }
 
-    pub fn set_email(&mut self, value: String) {
+    pub fn set_email(&mut self, value: String) -> &mut Self {
         self.email = Option::from(value);
+        self
     }
 
-    pub fn set_client_name(&mut self, value: String) {
+    pub fn set_client_name(&mut self, value: String) -> &mut Self {
         self.client_name = Option::from(value);
+        self
     }
 
-    pub fn set_client_contact_person(&mut self, value: String) {
+    pub fn set_client_contact_person(&mut self, value: String) -> &mut Self {
         self.client_contact_person = Option::from(value);
+        self
     }
 
-    pub fn set_client_address(&mut self, value: String) {
+    pub fn set_client_address(&mut self, value: String) -> &mut Self {
         self.client_address = Option::from(value);
+        self
     }
 
-    pub fn set_timesheet(&mut self, value: TimesheetYears) {
+    pub fn set_timesheet(&mut self, value: TimesheetYears) -> &mut Self {
         self.timesheet = Option::from(value);
+        self
     }
 
-    pub fn set_git_path(&mut self, value: String) {
+    pub fn set_git_path(&mut self, value: String) -> &mut Self {
         self.git_path = Option::from(value);
+        self
     }
 
-    pub fn set_git_log_dates(&mut self, value: GitLogDates) {
+    pub fn set_git_log_dates(&mut self, value: GitLogDates) -> &mut Self {
         self.git_log_dates = Option::from(value);
+        self
     }
 
     pub fn find_namespace_from_git_path(

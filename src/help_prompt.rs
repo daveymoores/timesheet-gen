@@ -16,11 +16,25 @@ pub trait Onboarding {
     fn onboarding(&self) -> Result<(), Box<dyn std::error::Error>>;
 }
 
+pub trait ExistingClientOnboarding {
+    fn existing_client_onboarding(&self) -> Result<(), Box<dyn std::error::Error>>;
+}
+
 impl Onboarding for HelpPrompt {
     fn onboarding(&self) -> Result<(), Box<dyn Error>> {
         self.confirm_repository_path()?
             .search_for_repository_details()?
             .add_client_details()?
+            .prompt_for_manager_approval()?
+            .show_details();
+        Ok(())
+    }
+}
+
+impl ExistingClientOnboarding for HelpPrompt {
+    fn existing_client_onboarding(&self) -> Result<(), Box<dyn std::error::Error>> {
+        self.confirm_repository_path()?
+            .search_for_repository_details()?
             .prompt_for_manager_approval()?
             .show_details();
         Ok(())
@@ -52,16 +66,31 @@ impl HelpPrompt {
 
         let mut clients: Vec<String> = deserialized_config
             .iter()
-            .map(|client| client.client.clone())
+            .map(|client| client.client.client_name.clone())
             .collect();
-        clients.push(no_client_value);
+        clients.push(no_client_value.clone());
 
         let selection: usize = Select::new().items(&clients).interact()?;
         let client_name = &clients[selection];
 
-        self.timesheet
-            .borrow_mut()
-            .set_client_name(client_name.clone());
+        // if this is a new client, onboard as normal
+        if client_name == &no_client_value {
+            self.onboarding()?;
+        } else {
+            // otherwise pre-populate the client details
+            let client = deserialized_config
+                .iter()
+                .find(|client| &client.client.client_name.clone() == client_name)
+                .unwrap();
+
+            self.timesheet
+                .borrow_mut()
+                .set_client_name(client.client.client_name.clone())
+                .set_client_address(client.client.client_address.clone())
+                .set_client_contact_person(client.client.client_contact_person.clone());
+
+            self.existing_client_onboarding()?;
+        }
 
         Ok(())
     }

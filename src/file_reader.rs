@@ -1,4 +1,4 @@
-use crate::config::TimesheetConfig;
+use crate::config::{Client, TimesheetConfig};
 use crate::help_prompt::Onboarding;
 use crate::timesheet::Timesheet;
 use serde_json::json;
@@ -80,7 +80,17 @@ pub fn serialize_config(
     deserialized_config: Option<Vec<TimesheetConfig>>,
     timesheet: Ref<Timesheet>,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let ts_client = timesheet.client_name.clone().unwrap_or("None".to_string());
+    let ts_client = Client {
+        client_name: timesheet.client_name.clone().unwrap_or("None".to_string()),
+        client_address: timesheet
+            .client_address
+            .clone()
+            .unwrap_or("None".to_string()),
+        client_contact_person: timesheet
+            .client_contact_person
+            .clone()
+            .unwrap_or("None".to_string()),
+    };
 
     let ts_namespace = timesheet.namespace.clone().unwrap_or("None".to_string());
 
@@ -96,7 +106,7 @@ pub fn serialize_config(
             let config_data: Vec<TimesheetConfig> = config
                 .into_iter()
                 .map(|client| {
-                    if &client.client == &ts_client {
+                    if &client.client.client_name == &ts_client.client_name {
                         return TimesheetConfig {
                             client: ts_client.clone(),
                             repositories: client
@@ -236,7 +246,11 @@ mod tests {
     #[test]
     fn it_finds_and_updates_a_client() {
         let deserialized_config = vec![TimesheetConfig {
-            client: "alphabet".to_string(),
+            client: Client {
+                client_name: "alphabet".to_string(),
+                client_address: "Spaghetti Way, USA".to_string(),
+                client_contact_person: "John Smith".to_string(),
+            },
             repositories: vec![Timesheet {
                 namespace: Option::from("timesheet-gen".to_string()),
                 ..Default::default()
