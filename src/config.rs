@@ -1,7 +1,7 @@
 use crate::help_prompt::HelpPrompt;
 use crate::link_builder;
 use crate::timesheet::Timesheet;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::process;
 use std::rc::Rc;
@@ -10,10 +10,10 @@ use std::rc::Rc;
 /// contained in the config file, but provides the various operations that can be
 /// performed on it. The data is a stored within the Timesheet struct.
 
-#[derive(Debug, Deserialize)]
-struct TimesheetConfig {
-    client: String,
-    repositories: Vec<Timesheet>,
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TimesheetConfig {
+    pub client: String,
+    pub repositories: Vec<Timesheet>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -30,19 +30,22 @@ impl New for Config {
 }
 
 impl Config {
-    fn write_to_config_file(timesheet: Rc<RefCell<Timesheet>>) {
+    /// Find and update client if sheet exists, otherwise write a new one
+    fn write_to_config_file(
+        timesheet: Rc<RefCell<Timesheet>>,
+        deserialized_config: Option<Vec<TimesheetConfig>>,
+    ) {
         let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
-        crate::file_reader::write_config_file(&timesheet.borrow(), config_path).unwrap_or_else(
-            |err| {
+        crate::file_reader::write_config_file(deserialized_config, timesheet.borrow(), config_path)
+            .unwrap_or_else(|err| {
                 eprintln!("Error writing data to file: {}", err);
                 std::process::exit(exitcode::CANTCREAT);
-            },
-        );
+            });
     }
 
     fn check_for_repo_in_buffer(
         self,
-        deserialized_sheet: &mut Vec<TimesheetConfig>,
+        deserialized_config: &mut Vec<TimesheetConfig>,
     ) -> Result<Option<&Timesheet>, Box<dyn std::error::Error>> {
         let mut temp_timesheet = Timesheet {
             repo_path: Option::from(".".to_string()),
@@ -55,7 +58,7 @@ impl Config {
 
         let namespace: String = temp_timesheet.namespace.unwrap();
 
-        let found_timesheet = deserialized_sheet.iter().find(|client| {
+        let found_timesheet = deserialized_config.iter().find(|client| {
             match client
                 .repositories
                 .iter()
@@ -92,17 +95,17 @@ impl Config {
         // if the buffer is empty, there is no existing file, user has been onboarded
         // and timesheet state holds the data. Write this data to file.
         if buffer.is_empty() {
-            Config::write_to_config_file(timesheet);
+            Config::write_to_config_file(timesheet, None);
             return;
         }
 
-        // check whether this repository exists under any clients
+        // ..if the there is an existing config file, check whether the current repository exists under any clients
         // if it does pass timesheet values to Timesheet
-        let mut deserialized_sheet: Vec<TimesheetConfig> = serde_json::from_str(&buffer)
+        let mut deserialized_config: Vec<TimesheetConfig> = serde_json::from_str(&buffer)
             .expect("Initialisation of timesheet struct from buffer failed");
 
         if let Some(ts) = self
-            .check_for_repo_in_buffer(&mut deserialized_sheet)
+            .check_for_repo_in_buffer(&mut deserialized_config)
             .unwrap_or_else(|err| {
                 eprintln!("Error trying to read from config file: {}", err);
                 std::process::exit(exitcode::DATAERR);
@@ -115,6 +118,8 @@ impl Config {
                 .borrow_mut()
                 .set_values_from_buffer(&mut ts_clone)
                 .exec_generate_timesheets_from_git_history();
+
+            Config::write_to_config_file(timesheet, Option::from(deserialized_config));
         } else {
             //if it doesn't, onboard them
             println!("Looks like this repository hasn't been initialised yet. Would you like to add it to any of these existing clients?");
@@ -222,7 +227,7 @@ impl Edit for Config {
                 });
 
             // TODO give success message here
-            Config::write_to_config_file(timesheet);
+            Config::write_to_config_file(timesheet, None);
         }
     }
 }

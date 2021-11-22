@@ -1,10 +1,11 @@
+use crate::config::TimesheetConfig;
 use crate::help_prompt::Onboarding;
 use crate::timesheet::Timesheet;
 use serde_json::json;
 use std::cell::Ref;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
+use std::ops::Deref;
 use std::path::PathBuf;
 use std::process;
 
@@ -59,31 +60,52 @@ where
 }
 
 pub fn write_config_file(
-    timesheet: &Ref<Timesheet>,
+    deserialized_config: Option<Vec<TimesheetConfig>>,
+    timesheet: Ref<Timesheet>,
     config_path: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let unwrapped_timesheet = json!([{
-        "client": timesheet.client_name.as_ref().unwrap_or(&"None".to_string()),
-        "repositories": [{
-            "namespace": timesheet.namespace.as_ref().unwrap_or(&"None".to_string()),
-            "repo_path": timesheet.repo_path.as_ref().unwrap_or(&"None".to_string()),
-            "git_path": timesheet.git_path.as_ref().unwrap_or(&"None".to_string()),
-            "name": timesheet.name.as_ref().unwrap_or(&"None".to_string()),
-            "email": timesheet.email.as_ref().unwrap_or(&"None".to_string()),
-            "client_name": timesheet.client_name.as_ref().unwrap_or(&"None".to_string()),
-            "client_contact_person": timesheet.client_contact_person.as_ref().unwrap_or(&"None".to_string()),
-            "client_address": timesheet.client_address.as_ref().unwrap_or(&"None".to_string()),
-            "project_number": timesheet.project_number.as_ref().unwrap_or(&"None".to_string()),
-            "timesheet": timesheet.timesheet.as_ref().unwrap_or(&HashMap::new()),
-            "requires_approval": timesheet.requires_approval.as_ref().unwrap_or(&false),
-            "approvers_name": timesheet.approvers_name.as_ref().unwrap_or(&"None".to_string()),
-            "approvers_email": timesheet.approvers_email.as_ref().unwrap_or(&"None".to_string()),
-            "user_signature": "None".to_string(),
-            "approver_signature": "None".to_string(),
-        }],
-    }]);
+    let ts_client = timesheet.client_name.clone().unwrap_or("None".to_string());
 
-    let json = serde_json::to_string(&unwrapped_timesheet).unwrap();
+    let ts_namespace = timesheet.namespace.clone().unwrap_or("None".to_string());
+
+    // if the client and namespace exists, update it with current timesheet
+    let config_data = match deserialized_config {
+        None => {
+            json!([{
+                "client": &ts_client,
+                "repositories": [timesheet.deref()],
+            }])
+        }
+        Some(config) => {
+            let config_data: Vec<TimesheetConfig> = config
+                .into_iter()
+                .map(|client| {
+                    if &client.client == &ts_client {
+                        return TimesheetConfig {
+                            client: ts_client.clone(),
+                            repositories: client
+                                .clone()
+                                .repositories
+                                .into_iter()
+                                .map(|repository| {
+                                    if repository.namespace.as_ref().unwrap() == &ts_namespace {
+                                        return timesheet.deref().to_owned();
+                                    }
+
+                                    repository
+                                })
+                                .collect(),
+                        };
+                    }
+                    client
+                })
+                .collect();
+
+            json!(config_data)
+        }
+    };
+
+    let json = serde_json::to_string(&config_data).unwrap();
     let mut file = File::create(&config_path)?;
 
     file.write_all(json.as_bytes())?;
@@ -184,7 +206,7 @@ mod tests {
         let file = File::create(&mock_config_path).unwrap();
         let string_path_from_tempdir = mock_config_path.to_str().unwrap().to_owned();
         assert_eq!(
-            write_config_file(&timesheet, string_path_from_tempdir).unwrap(),
+            write_config_file(None, timesheet, string_path_from_tempdir).unwrap(),
             ()
         );
 
@@ -206,6 +228,6 @@ mod tests {
         let mock_config_path = dir.path().join("my-temporary-note.txt");
 
         let string_path_from_tempdir = mock_config_path.to_str().unwrap().to_owned();
-        assert!(write_config_file(&timesheet, string_path_from_tempdir).is_err());
+        assert!(write_config_file(None, timesheet, string_path_from_tempdir).is_err());
     }
 }
