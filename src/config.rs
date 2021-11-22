@@ -36,11 +36,18 @@ impl Config {
         deserialized_config: Option<Vec<TimesheetConfig>>,
     ) {
         let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
-        crate::file_reader::write_config_file(deserialized_config, timesheet.borrow(), config_path)
+        let json = crate::file_reader::serialize_config(deserialized_config, timesheet.borrow())
             .unwrap_or_else(|err| {
-                eprintln!("Error writing data to file: {}", err);
+                eprintln!("Error serializing json: {}", err);
                 std::process::exit(exitcode::CANTCREAT);
             });
+
+        crate::file_reader::write_json_to_config_file(json, config_path).unwrap_or_else(|err| {
+            eprintln!("Error writing data to file: {}", err);
+            std::process::exit(exitcode::CANTCREAT);
+        });
+
+        process::exit(exitcode::OK)
     }
 
     fn check_for_repo_in_buffer(
@@ -265,7 +272,7 @@ mod tests {
 
     #[test]
     fn it_checks_for_repo_in_buffer_and_returns_a_timesheet() {
-        let mut deserialized_sheet = vec![TimesheetConfig {
+        let mut deserialized_config = vec![TimesheetConfig {
             client: "alphabet".to_string(),
             repositories: vec![Timesheet {
                 namespace: Option::from("timesheet-gen".to_string()),
@@ -275,7 +282,7 @@ mod tests {
 
         let config: Config = Config::new();
         let timesheet = config
-            .check_for_repo_in_buffer(&mut deserialized_sheet)
+            .check_for_repo_in_buffer(&mut deserialized_config)
             .unwrap();
 
         assert_eq!(

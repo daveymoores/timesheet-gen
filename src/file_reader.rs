@@ -7,7 +7,6 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Deref;
 use std::path::PathBuf;
-use std::process;
 
 const CONFIG_FILE_NAME: &str = ".timesheet-gen.txt";
 
@@ -59,11 +58,27 @@ where
     Ok(())
 }
 
-pub fn write_config_file(
-    deserialized_config: Option<Vec<TimesheetConfig>>,
-    timesheet: Ref<Timesheet>,
+pub fn write_json_to_config_file(
+    json: String,
     config_path: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let mut file = File::create(config_path)?;
+
+    file.write_all(json.as_bytes())?;
+
+    println!(
+        "timesheet-gen initialised! \n\
+    Try 'timesheet-gen make' to create your first timesheet \n\
+    or 'timesheet-gen help' for more options."
+    );
+
+    Ok(())
+}
+
+pub fn serialize_config(
+    deserialized_config: Option<Vec<TimesheetConfig>>,
+    timesheet: Ref<Timesheet>,
+) -> Result<String, Box<dyn std::error::Error>> {
     let ts_client = timesheet.client_name.clone().unwrap_or("None".to_string());
 
     let ts_namespace = timesheet.namespace.clone().unwrap_or("None".to_string());
@@ -105,18 +120,9 @@ pub fn write_config_file(
         }
     };
 
-    let json = serde_json::to_string(&config_data).unwrap();
-    let mut file = File::create(&config_path)?;
+    let json = serde_json::to_string(&config_data)?;
 
-    file.write_all(json.as_bytes())?;
-
-    println!(
-        "timesheet-gen initialised! \n\
-    Try 'timesheet-gen make' to create your first timesheet \n\
-    or 'timesheet-gen help' for more options."
-    );
-
-    process::exit(exitcode::OK);
+    Ok(json)
 }
 
 #[cfg(test)]
@@ -191,7 +197,6 @@ mod tests {
     // These tests write temp files and seem to screw up the test runner
     // Ignore for now...
     #[test]
-    #[ignore]
     fn it_writes_a_config_file_when_file_exists() {
         let mock_timesheet = RefCell::new(Timesheet {
             ..Default::default()
@@ -204,18 +209,17 @@ mod tests {
         let mock_config_path = dir.path().join("my-temporary-note.txt");
 
         let file = File::create(&mock_config_path).unwrap();
-        let string_path_from_tempdir = mock_config_path.to_str().unwrap().to_owned();
-        assert_eq!(
-            write_config_file(None, timesheet, string_path_from_tempdir).unwrap(),
-            ()
-        );
+        let string_path_from_temp_dir = mock_config_path.to_str().unwrap().to_owned();
+
+        let json = serialize_config(None, timesheet).unwrap();
+
+        assert!(write_json_to_config_file(json, string_path_from_temp_dir).is_ok());
 
         drop(file);
         dir.close().unwrap();
     }
 
     #[test]
-    #[ignore]
     fn it_throws_an_error_when_writing_config_if_file_doesnt_exist() {
         let mock_timesheet = RefCell::new(Timesheet {
             ..Default::default()
@@ -223,11 +227,39 @@ mod tests {
 
         let timesheet = mock_timesheet.borrow();
 
-        // creates mock directory that is destroyed when it goes out of scope
-        let dir = tempfile::tempdir().unwrap();
-        let mock_config_path = dir.path().join("my-temporary-note.txt");
+        let json = serialize_config(None, timesheet).unwrap();
 
-        let string_path_from_tempdir = mock_config_path.to_str().unwrap().to_owned();
-        assert!(write_config_file(None, timesheet, string_path_from_tempdir).is_err());
+        assert!(write_json_to_config_file(json, "./a/fake/path".to_string()).is_err());
+    }
+
+    #[test]
+    fn it_finds_and_updates_a_client() {
+        let deserialized_config = vec![TimesheetConfig {
+            client: "alphabet".to_string(),
+            repositories: vec![Timesheet {
+                namespace: Option::from("timesheet-gen".to_string()),
+                ..Default::default()
+            }],
+        }];
+
+        let mock_timesheet = RefCell::new(Timesheet {
+            client_name: Option::from("alphabet".to_string()),
+            namespace: Option::from("timesheet-gen".to_string()),
+            client_contact_person: Option::from("John Jones".to_string()),
+            ..Default::default()
+        });
+
+        let timesheet = mock_timesheet.borrow();
+
+        let json = serialize_config(Option::from(deserialized_config), timesheet).unwrap();
+        let value: Vec<TimesheetConfig> = serde_json::from_str(&*json).unwrap();
+
+        assert_eq!(
+            value[0].repositories[0]
+                .client_contact_person
+                .as_ref()
+                .unwrap(),
+            &"John Jones".to_string()
+        );
     }
 }
