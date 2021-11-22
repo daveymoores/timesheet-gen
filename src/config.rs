@@ -1,6 +1,7 @@
 use crate::help_prompt::HelpPrompt;
 use crate::link_builder;
 use crate::timesheet::Timesheet;
+use mongodb::error::ErrorKind::Command;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::process;
@@ -119,17 +120,23 @@ impl Config {
             })
         {
             let mut ts_clone = ts.clone();
-            // otherwise lets set the timesheet struct values
-            // and fetch a new batch of interaction data
+            // ...and fetch a new batch of interaction data
             timesheet
                 .borrow_mut()
                 .set_values_from_buffer(&mut ts_clone)
                 .exec_generate_timesheets_from_git_history();
 
             Config::write_to_config_file(timesheet, Option::from(deserialized_config));
+            crate::help_prompt::HelpPrompt::repo_already_initialised();
         } else {
-            //if it doesn't, onboard them
-            println!("Looks like this repository hasn't been initialised yet. Would you like to add it to any of these existing clients?");
+            // if it doesn't, onboard them and check whether current repo
+            // should exist under an existing client
+            prompt
+                .prompt_for_client(deserialized_config)
+                .unwrap_or_else(|err| {
+                    eprintln!("Couldn't find client: {}", err);
+                    std::process::exit(exitcode::CANTCREAT);
+                });
         }
     }
 }
@@ -154,14 +161,6 @@ impl Init for Config {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
-
-        if !buffer.is_empty() {
-            println!(
-                "timesheet-gen already initialised! \n\
-    Try 'timesheet-gen make' to create your first timesheet \n\
-    or 'timesheet-gen help' for more options."
-            );
-        }
     }
 }
 

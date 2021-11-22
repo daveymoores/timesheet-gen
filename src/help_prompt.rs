@@ -1,7 +1,9 @@
+use crate::config::TimesheetConfig;
 use crate::timesheet::Timesheet;
 /// Help prompt handles all of the interactions with the user.
 /// It writes to the std output, and returns input data or a boolean
-use dialoguer::{Confirm, Editor, Input};
+use dialoguer::{Confirm, Editor, Input, MultiSelect, Select};
+use num_traits::ToPrimitive;
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
@@ -28,6 +30,39 @@ impl Onboarding for HelpPrompt {
 impl HelpPrompt {
     pub fn new(timesheet: Rc<RefCell<Timesheet>>) -> Self {
         Self { timesheet }
+    }
+
+    pub fn repo_already_initialised() {
+        println!(
+            "timesheet-gen has already been initialised for this repository! \n\
+    Try 'timesheet-gen make' to create your first timesheet \n\
+    or 'timesheet-gen help' for more options."
+        );
+    }
+
+    pub fn prompt_for_client(
+        self,
+        deserialized_config: Vec<TimesheetConfig>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        println!(
+            "Looks like this repository hasn't been initialised yet.\n\
+        Would you like to add it to any of these existing clients?"
+        );
+
+        let mut clients: Vec<&String> = deserialized_config
+            .iter()
+            .map(|client| &client.client)
+            .collect();
+        clients.push(&"Create a new client".to_string());
+
+        let selection: usize = Select::new().items(&clients).interact()?;
+        let client_name = clients[selection];
+
+        self.timesheet
+            .borrow_mut()
+            .set_client_name(client_name.clone());
+
+        Ok(())
     }
 
     pub fn confirm_repository_path(self) -> Result<Self, Box<dyn std::error::Error>> {
