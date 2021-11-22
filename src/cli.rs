@@ -9,6 +9,8 @@ use std::cell::RefCell;
 use std::ffi::OsString;
 use std::rc::Rc;
 
+pub type RcHelpPrompt = Rc<RefCell<HelpPrompt>>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Commands {
     Init,
@@ -214,8 +216,9 @@ impl Cli<'_> {
 
         let config: config::Config = config::Config::new();
         let prompt = crate::help_prompt::HelpPrompt::new(Rc::clone(&timesheet));
+        let rc_prompt: RcHelpPrompt = Rc::new(RefCell::new(prompt));
 
-        Self::run_command(cli, config, &timesheet, prompt);
+        Self::run_command(cli, config, &timesheet, &rc_prompt);
 
         Ok(())
     }
@@ -224,7 +227,7 @@ impl Cli<'_> {
         cli: Cli,
         config: T,
         timesheet: &Rc<RefCell<timesheet::Timesheet>>,
-        prompt: HelpPrompt,
+        prompt: &RcHelpPrompt,
     ) where
         T: Init + Make + Edit + RunMode,
     {
@@ -233,11 +236,21 @@ impl Cli<'_> {
                 panic!("The programme shouldn't be able to get here");
             }
             Some(commands) => match commands {
-                Commands::Init => config.init(cli.options, Rc::clone(&timesheet), prompt),
-                Commands::Make => config.make(cli.options, Rc::clone(&timesheet), prompt),
-                Commands::Edit => config.edit(cli.options, Rc::clone(&timesheet), prompt),
-                Commands::Remove => config.edit(cli.options, Rc::clone(&timesheet), prompt),
-                Commands::RunMode => config.run_mode(cli.options, Rc::clone(&timesheet), prompt),
+                Commands::Init => {
+                    config.init(cli.options, Rc::clone(&timesheet), Rc::clone(prompt))
+                }
+                Commands::Make => {
+                    config.make(cli.options, Rc::clone(&timesheet), Rc::clone(prompt))
+                }
+                Commands::Edit => {
+                    config.edit(cli.options, Rc::clone(&timesheet), Rc::clone(prompt))
+                }
+                Commands::Remove => {
+                    config.edit(cli.options, Rc::clone(&timesheet), Rc::clone(prompt))
+                }
+                Commands::RunMode => {
+                    config.run_mode(cli.options, Rc::clone(&timesheet), Rc::clone(prompt))
+                }
             },
         }
     }
@@ -273,13 +286,15 @@ mod tests {
                 ..Default::default()
             })));
 
+        let rc_prompt = Rc::new(RefCell::new(prompt));
+
         Cli::run_command(
             response,
             mock_config,
             &Rc::new(RefCell::new(timesheet::Timesheet {
                 ..Default::default()
             })),
-            prompt,
+            &rc_prompt,
         );
     }
 
@@ -294,7 +309,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _timesheet: Rc<RefCell<timesheet::Timesheet>>,
-            _prompt: HelpPrompt,
+            _prompt: RcHelpPrompt,
         ) {
             assert!(true);
         }
@@ -305,7 +320,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _timesheet: Rc<RefCell<timesheet::Timesheet>>,
-            _prompt: HelpPrompt,
+            _prompt: RcHelpPrompt,
         ) {
             assert!(true);
         }
@@ -316,7 +331,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _timesheet: Rc<RefCell<timesheet::Timesheet>>,
-            _prompt: HelpPrompt,
+            _prompt: RcHelpPrompt,
         ) {
             assert!(true);
         }
@@ -327,7 +342,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _timesheet: Rc<RefCell<timesheet::Timesheet>>,
-            _prompt: HelpPrompt,
+            _prompt: RcHelpPrompt,
         ) {
             assert!(true);
         }

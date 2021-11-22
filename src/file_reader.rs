@@ -2,11 +2,12 @@ use crate::config::TimesheetConfig;
 use crate::help_prompt::Onboarding;
 use crate::timesheet::Timesheet;
 use serde_json::json;
-use std::cell::Ref;
+use std::cell::{Ref, RefCell};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Deref;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 const CONFIG_FILE_NAME: &str = ".timesheet-gen.txt";
 
@@ -28,7 +29,7 @@ pub fn get_filepath(path: PathBuf) -> String {
 fn read_file<T>(
     buffer: &mut String,
     path: String,
-    prompt: T,
+    prompt: Rc<RefCell<T>>,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     T: Onboarding,
@@ -38,7 +39,7 @@ where
             file.read_to_string(buffer)?;
         }
         Err(_) => {
-            prompt.onboarding()?;
+            prompt.borrow_mut().onboarding()?;
         }
     };
 
@@ -47,7 +48,7 @@ where
 
 pub fn read_data_from_config_file<T>(
     buffer: &mut String,
-    prompt: T,
+    prompt: Rc<RefCell<T>>,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     T: Onboarding,
@@ -148,16 +149,17 @@ mod tests {
 
     #[test]
     fn read_file_returns_a_buffer() {
+        #[derive(Clone)]
         struct MockPrompt {}
 
         impl Onboarding for MockPrompt {
-            fn onboarding(self) -> Result<(), Box<dyn Error>> {
+            fn onboarding(&self) -> Result<(), Box<dyn Error>> {
                 assert!(false);
                 Ok(())
             }
         }
 
-        let mock_prompt = MockPrompt {};
+        let mock_prompt = Rc::new(RefCell::new(MockPrompt {}));
 
         let mut buffer = String::new();
 
@@ -173,16 +175,17 @@ mod tests {
 
     #[test]
     fn read_file_calls_the_error_function() {
+        #[derive(Clone)]
         struct MockPrompt {}
 
         impl Onboarding for MockPrompt {
-            fn onboarding(self) -> Result<(), Box<dyn Error>> {
+            fn onboarding(&self) -> Result<(), Box<dyn Error>> {
                 assert!(true);
                 Ok(())
             }
         }
 
-        let mock_prompt = MockPrompt {};
+        let mock_prompt = Rc::new(RefCell::new(MockPrompt {}));
 
         let mut buffer = String::new();
 
@@ -194,8 +197,6 @@ mod tests {
         .unwrap();
     }
 
-    // These tests write temp files and seem to screw up the test runner
-    // Ignore for now...
     #[test]
     fn it_writes_a_config_file_when_file_exists() {
         let mock_timesheet = RefCell::new(Timesheet {

@@ -1,7 +1,6 @@
-use crate::help_prompt::HelpPrompt;
+use crate::cli::RcHelpPrompt;
 use crate::link_builder;
 use crate::timesheet::Timesheet;
-use mongodb::error::ErrorKind::Command;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::process;
@@ -92,13 +91,15 @@ impl Config {
         self,
         buffer: &mut String,
         timesheet: Rc<RefCell<Timesheet>>,
-        prompt: HelpPrompt,
+        prompt: RcHelpPrompt,
     ) {
         // pass a prompt for if the config file doesn't exist
-        crate::file_reader::read_data_from_config_file(buffer, prompt).unwrap_or_else(|err| {
-            eprintln!("Error initialising timesheet-gen: {}", err);
-            std::process::exit(exitcode::CANTCREAT);
-        });
+        crate::file_reader::read_data_from_config_file(buffer, prompt.clone()).unwrap_or_else(
+            |err| {
+                eprintln!("Error initialising timesheet-gen: {}", err);
+                std::process::exit(exitcode::CANTCREAT);
+            },
+        );
 
         // if the buffer is empty, there is no existing file, user has been onboarded
         // and timesheet state holds the data. Write this data to file.
@@ -125,13 +126,11 @@ impl Config {
                 .borrow_mut()
                 .set_values_from_buffer(&mut ts_clone)
                 .exec_generate_timesheets_from_git_history();
-
-            Config::write_to_config_file(timesheet, Option::from(deserialized_config));
-            crate::help_prompt::HelpPrompt::repo_already_initialised();
         } else {
             // if it doesn't, onboard them and check whether current repo
             // should exist under an existing client
             prompt
+                .borrow_mut()
                 .prompt_for_client(deserialized_config)
                 .unwrap_or_else(|err| {
                     eprintln!("Couldn't find client: {}", err);
@@ -147,7 +146,7 @@ pub trait Init {
         &self,
         options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
-        prompt: HelpPrompt,
+        prompt: RcHelpPrompt,
     );
 }
 
@@ -156,11 +155,13 @@ impl Init for Config {
         &self,
         _options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
-        prompt: HelpPrompt,
+        prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
+
+        crate::help_prompt::HelpPrompt::repo_already_initialised();
     }
 }
 
@@ -170,7 +171,7 @@ pub trait Make {
         &self,
         options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
-        prompt: HelpPrompt,
+        prompt: RcHelpPrompt,
     );
 }
 
@@ -180,14 +181,21 @@ impl Make for Config {
         &self,
         options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
-        prompt: HelpPrompt,
+        prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
+        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt.clone());
 
         // if buffer is not empty, then read timesheet and generate the link
         if !buffer.is_empty() {
+            prompt
+                .borrow_mut()
+                .add_project_number()
+                .unwrap_or_else(|err| {
+                    eprintln!("Error parsing project number: {}", err);
+                    std::process::exit(exitcode::CANTCREAT);
+                });
             // generate timesheet-gen.io link using existing config
             link_builder::build_unique_uri(Rc::clone(&timesheet), options)
                 .await
@@ -205,7 +213,7 @@ pub trait Edit {
         &self,
         options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
-        prompt: HelpPrompt,
+        prompt: RcHelpPrompt,
     );
 }
 
@@ -214,7 +222,7 @@ impl Edit for Config {
         &self,
         options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
-        prompt: HelpPrompt,
+        prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
@@ -244,7 +252,7 @@ pub trait RunMode {
         &self,
         options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
-        prompt: HelpPrompt,
+        prompt: RcHelpPrompt,
     );
 }
 
@@ -253,11 +261,11 @@ impl RunMode for Config {
         &self,
         _options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
-        prompt: HelpPrompt,
+        prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
+        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), Rc::clone(&prompt));
 
         // if buffer is not empty, then read timesheet, change the run-mode and write to file
         if !buffer.is_empty() {}

@@ -2,22 +2,22 @@ use crate::config::TimesheetConfig;
 use crate::timesheet::Timesheet;
 /// Help prompt handles all of the interactions with the user.
 /// It writes to the std output, and returns input data or a boolean
-use dialoguer::{Confirm, Editor, Input, MultiSelect, Select};
-use num_traits::ToPrimitive;
+use dialoguer::{Confirm, Editor, Input, Select};
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
 
+#[derive(Debug, Clone)]
 pub struct HelpPrompt {
     timesheet: Rc<RefCell<Timesheet>>,
 }
 
 pub trait Onboarding {
-    fn onboarding(self) -> Result<(), Box<dyn std::error::Error>>;
+    fn onboarding(&self) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 impl Onboarding for HelpPrompt {
-    fn onboarding(self) -> Result<(), Box<dyn Error>> {
+    fn onboarding(&self) -> Result<(), Box<dyn Error>> {
         self.confirm_repository_path()?
             .search_for_repository_details()?
             .add_client_details()?
@@ -41,22 +41,23 @@ impl HelpPrompt {
     }
 
     pub fn prompt_for_client(
-        self,
+        &self,
         deserialized_config: Vec<TimesheetConfig>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!(
             "Looks like this repository hasn't been initialised yet.\n\
         Would you like to add it to any of these existing clients?"
         );
+        let no_client_value = "Create a new client".to_string();
 
-        let mut clients: Vec<&String> = deserialized_config
+        let mut clients: Vec<String> = deserialized_config
             .iter()
-            .map(|client| &client.client)
+            .map(|client| client.client.clone())
             .collect();
-        clients.push(&"Create a new client".to_string());
+        clients.push(no_client_value);
 
         let selection: usize = Select::new().items(&clients).interact()?;
-        let client_name = clients[selection];
+        let client_name = &clients[selection];
 
         self.timesheet
             .borrow_mut()
@@ -65,7 +66,7 @@ impl HelpPrompt {
         Ok(())
     }
 
-    pub fn confirm_repository_path(self) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn confirm_repository_path(&self) -> Result<&Self, Box<dyn std::error::Error>> {
         println!(
             "This looks like the first time you're running timesheet-gen. \n\
         Initialise timesheet-gen for current repository?"
@@ -91,7 +92,7 @@ impl HelpPrompt {
         Ok(self)
     }
 
-    pub fn search_for_repository_details(self) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn search_for_repository_details(&self) -> Result<&Self, Box<dyn std::error::Error>> {
         self.timesheet
             .borrow_mut()
             .find_repository_details_from()?
@@ -101,7 +102,7 @@ impl HelpPrompt {
         Ok(self)
     }
 
-    pub fn add_client_details(self) -> Result<Self, std::io::Error> {
+    pub fn add_client_details(&self) -> Result<&Self, std::io::Error> {
         println!("Client company name");
         let input: String = Input::new().interact_text()?;
         self.timesheet.borrow_mut().set_client_name(input);
@@ -118,7 +119,7 @@ impl HelpPrompt {
         Ok(self)
     }
 
-    pub fn prompt_for_manager_approval(self) -> Result<Self, Box<dyn Error>> {
+    pub fn prompt_for_manager_approval(&self) -> Result<&Self, Box<dyn Error>> {
         println!("Does your timesheet need approval? (This will enable signing functionality, see https://timesheet-gen.io/docs/signing)");
         if Confirm::new().default(true).interact()? {
             self.timesheet.borrow_mut().set_requires_approval(true);
@@ -137,15 +138,18 @@ impl HelpPrompt {
         Ok(self)
     }
 
-    pub fn add_project_number(self) -> Result<Self, Box<dyn Error>> {
-        println!("Project number");
-        let input: String = Input::new().interact_text()?;
-        self.timesheet.borrow_mut().set_project_number(input);
+    pub fn add_project_number(&self) -> Result<&Self, Box<dyn Error>> {
+        println!("Does this timesheet require a project/PO number?");
+        if Confirm::new().default(true).interact()? {
+            println!("Project number");
+            let input: String = Input::new().interact_text()?;
+            self.timesheet.borrow_mut().set_project_number(input);
+        }
 
         Ok(self)
     }
 
-    pub fn show_details(self) -> Self {
+    pub fn show_details(&self) -> &Self {
         println!("These are the details associated with this repository:");
 
         if let Some(namespace) = &self.timesheet.borrow().namespace.clone() {
