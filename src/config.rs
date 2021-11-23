@@ -128,12 +128,10 @@ impl Config {
 
             client_repositories
                 .borrow_mut()
-                .set_values_from_buffer(ts_clone.1);
+                .set_values_from_buffer(ts_clone.1)
+                .exec_generate_timesheets_from_git_history();
             // ...and fetch a new batch of interaction data
-            repository
-                .borrow_mut()
-                .set_values_from_buffer(ts_clone.0)
-                .exec_generate_timesheets_from_git_history(client_repositories.clone());
+            repository.borrow_mut().set_values_from_buffer(ts_clone.0);
         } else {
             // if it doesn't, onboard them and check whether current repo
             // should exist under an existing client

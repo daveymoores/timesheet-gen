@@ -256,40 +256,13 @@ impl Repository {
         Ok(self)
     }
 
-    pub fn exec_generate_timesheets_from_git_history(
-        &mut self,
-        _client_repositories: Rc<RefCell<ClientRepositories>>,
-    ) -> &mut Self {
-        let command = String::from("--author");
-
-        // can safely unwrap here as name would have been set in the previous step
-        let author = [command, self.name.as_ref().unwrap().to_string()].join("=");
-
-        let output = Command::new("git")
-            .arg("-C")
-            .arg(self.git_path.as_ref().unwrap().to_string())
-            .arg("log")
-            .arg("--date=rfc")
-            .arg(author)
-            .arg("--all")
-            .output()
-            .expect("Failed to execute command");
-
-        let output_string = crate::utils::trim_output_from_utf8(output)
-            .unwrap_or_else(|_| "Parsing output failed".to_string());
-
-        self.parse_git_log_dates_from_git_history(output_string);
-
-        self
-    }
-
     pub fn parse_git_log_dates_from_git_history(&mut self, git_history: String) {
         let mut year_month_map: GitLogDates = HashMap::new();
 
         let regex = regex::Regex::new(
             r"([a-zA-Z]{3}),\s(?P<day>\d{1,2})\s(?P<month>[a-zA-Z]{3})\s(?P<year>\d{4})\s(\d+:?){3}\s([+-]?\d{4})",
         )
-        .unwrap();
+            .unwrap();
 
         for cap in regex.captures_iter(&git_history) {
             // for each year insert the entry
