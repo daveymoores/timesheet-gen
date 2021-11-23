@@ -8,6 +8,7 @@ mod file_reader;
 mod help_prompt;
 mod link_builder;
 mod timesheet;
+mod timesheet_config;
 mod utils;
 
 fn main() {

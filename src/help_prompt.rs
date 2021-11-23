@@ -1,5 +1,5 @@
-use crate::config::TimesheetConfig;
 use crate::timesheet::Timesheet;
+use crate::timesheet_config::TimesheetConfig;
 /// Help prompt handles all of the interactions with the user.
 /// It writes to the std output, and returns input data or a boolean
 use dialoguer::{Confirm, Editor, Input, Select};
@@ -66,7 +66,7 @@ impl HelpPrompt {
 
         let mut clients: Vec<String> = deserialized_config
             .iter()
-            .map(|client| client.client.client_name.clone())
+            .map(|client| client.client.as_ref().unwrap().client_name.clone())
             .collect();
         clients.push(no_client_value.clone());
 
@@ -80,14 +80,16 @@ impl HelpPrompt {
             // otherwise pre-populate the client details
             let client = deserialized_config
                 .iter()
-                .find(|client| &client.client.client_name.clone() == client_name)
+                .find(|client| &client.client.as_ref().unwrap().client_name.clone() == client_name)
                 .unwrap();
+
+            let unwrapped_client = client.client.as_ref().unwrap();
 
             self.timesheet
                 .borrow_mut()
-                .set_client_name(client.client.client_name.clone())
-                .set_client_address(client.client.client_address.clone())
-                .set_client_contact_person(client.client.client_contact_person.clone());
+                .set_client_name(unwrapped_client.client_name.clone())
+                .set_client_address(unwrapped_client.client_address.clone())
+                .set_client_contact_person(unwrapped_client.client_contact_person.clone());
 
             self.existing_client_onboarding()?;
         }

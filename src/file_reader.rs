@@ -1,6 +1,6 @@
-use crate::config::{Client, TimesheetConfig};
 use crate::help_prompt::Onboarding;
 use crate::timesheet::Timesheet;
+use crate::timesheet_config::{Client, TimesheetConfig};
 use serde_json::json;
 use std::cell::{Ref, RefCell};
 use std::fs::File;
@@ -106,21 +106,24 @@ pub fn serialize_config(
             let config_data: Vec<TimesheetConfig> = config
                 .into_iter()
                 .map(|client| {
-                    if &client.client.client_name == &ts_client.client_name {
+                    if &client.client.as_ref().unwrap().client_name == &ts_client.client_name {
                         return TimesheetConfig {
-                            client: ts_client.clone(),
-                            repositories: client
-                                .clone()
-                                .repositories
-                                .into_iter()
-                                .map(|repository| {
-                                    if repository.namespace.as_ref().unwrap() == &ts_namespace {
-                                        return timesheet.deref().to_owned();
-                                    }
+                            client: Option::from(ts_client.clone()),
+                            repositories: Some(
+                                client
+                                    .clone()
+                                    .repositories
+                                    .unwrap()
+                                    .into_iter()
+                                    .map(|repository| {
+                                        if repository.namespace.as_ref().unwrap() == &ts_namespace {
+                                            return timesheet.deref().to_owned();
+                                        }
 
-                                    repository
-                                })
-                                .collect(),
+                                        repository
+                                    })
+                                    .collect(),
+                            ),
                         };
                     }
                     client
@@ -246,15 +249,15 @@ mod tests {
     #[test]
     fn it_finds_and_updates_a_client() {
         let deserialized_config = vec![TimesheetConfig {
-            client: Client {
+            client: Option::from(Client {
                 client_name: "alphabet".to_string(),
                 client_address: "Spaghetti Way, USA".to_string(),
                 client_contact_person: "John Smith".to_string(),
-            },
-            repositories: vec![Timesheet {
+            }),
+            repositories: Option::from(vec![Timesheet {
                 namespace: Option::from("timesheet-gen".to_string()),
                 ..Default::default()
-            }],
+            }]),
         }];
 
         let mock_timesheet = RefCell::new(Timesheet {
@@ -270,7 +273,7 @@ mod tests {
         let value: Vec<TimesheetConfig> = serde_json::from_str(&*json).unwrap();
 
         assert_eq!(
-            value[0].repositories[0]
+            value[0].repositories.as_ref().unwrap()[0]
                 .client_contact_person
                 .as_ref()
                 .unwrap(),

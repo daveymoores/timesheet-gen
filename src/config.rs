@@ -1,7 +1,7 @@
 use crate::cli::RcHelpPrompt;
 use crate::link_builder;
 use crate::timesheet::Timesheet;
-use serde::{Deserialize, Serialize};
+use crate::timesheet_config::TimesheetConfig;
 use std::cell::RefCell;
 use std::process;
 use std::rc::Rc;
@@ -9,19 +9,6 @@ use std::rc::Rc;
 /// Creates and modifies the config file. Config does not directly hold the information
 /// contained in the config file, but provides the various operations that can be
 /// performed on it. The data is a stored within the Timesheet struct.
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Client {
-    pub client_name: String,
-    pub client_address: String,
-    pub client_contact_person: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct TimesheetConfig {
-    pub client: Client,
-    pub repositories: Vec<Timesheet>,
-}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Config {}
@@ -72,9 +59,11 @@ impl Config {
 
         let namespace: String = temp_timesheet.namespace.unwrap();
 
-        let found_timesheet = deserialized_config.iter().find(|client| {
+        let found_timesheet_config = deserialized_config.iter().find(|client| {
             match client
                 .repositories
+                .as_ref()
+                .unwrap()
                 .iter()
                 .find(|repository| repository.namespace.as_ref().unwrap() == &namespace)
             {
@@ -83,11 +72,13 @@ impl Config {
             }
         });
 
-        if let Some(timesheet_config) = found_timesheet {
+        if let Some(timesheet_config) = found_timesheet_config {
             let timesheet: Option<&Timesheet> = timesheet_config
                 .repositories
-                .iter()
-                .find(|timesheet| timesheet.namespace.as_ref().unwrap() == &namespace);
+                .as_ref()
+                .unwrap()
+                .into_iter()
+                .find(|ts| ts.namespace.as_ref().unwrap() == &namespace);
             return Ok(timesheet);
         }
 
@@ -281,21 +272,22 @@ impl RunMode for Config {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::{Client, Config, New, TimesheetConfig};
+    use crate::config::{Config, New};
     use crate::timesheet::Timesheet;
+    use crate::timesheet_config::{Client, TimesheetConfig};
 
     #[test]
     fn it_checks_for_repo_in_buffer_and_returns_a_timesheet() {
         let mut deserialized_config = vec![TimesheetConfig {
-            client: Client {
+            client: Option::from(Client {
                 client_name: "alphabet".to_string(),
                 client_address: "Spaghetti Way, USA".to_string(),
                 client_contact_person: "John Smith".to_string(),
-            },
-            repositories: vec![Timesheet {
+            }),
+            repositories: Option::from(vec![Timesheet {
                 namespace: Option::from("timesheet-gen".to_string()),
                 ..Default::default()
-            }],
+            }]),
         }];
 
         let config: Config = Config::new();
