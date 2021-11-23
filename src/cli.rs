@@ -3,6 +3,7 @@ use crate::config;
 use crate::config::{Edit, Init, Make, New, RunMode};
 use crate::help_prompt::HelpPrompt;
 use crate::timesheet;
+use crate::timesheet_config::TimesheetConfig;
 use chrono::prelude::*;
 use clap::{App, Arg, ArgMatches, Error};
 use std::cell::RefCell;
@@ -210,6 +211,7 @@ impl Cli<'_> {
     // that it can be passed into multiple functions
     pub fn run(&self) -> Result<(), clap::Error> {
         let timesheet = Rc::new(RefCell::new(timesheet::Timesheet::new()));
+        let timesheet_config = Rc::new(RefCell::new(TimesheetConfig::new()));
 
         let matches = &self.matches;
         let cli: Cli = self.parse_commands(&matches)?;
@@ -218,7 +220,7 @@ impl Cli<'_> {
         let prompt = crate::help_prompt::HelpPrompt::new(Rc::clone(&timesheet));
         let rc_prompt: RcHelpPrompt = Rc::new(RefCell::new(prompt));
 
-        Self::run_command(cli, config, &timesheet, &rc_prompt);
+        Self::run_command(cli, config, &timesheet, &timesheet_config, &rc_prompt);
 
         Ok(())
     }
@@ -227,6 +229,7 @@ impl Cli<'_> {
         cli: Cli,
         config: T,
         timesheet: &Rc<RefCell<timesheet::Timesheet>>,
+        timesheet_config: &Rc<RefCell<TimesheetConfig>>,
         prompt: &RcHelpPrompt,
     ) where
         T: Init + Make + Edit + RunMode,
@@ -236,21 +239,36 @@ impl Cli<'_> {
                 panic!("The programme shouldn't be able to get here");
             }
             Some(commands) => match commands {
-                Commands::Init => {
-                    config.init(cli.options, Rc::clone(&timesheet), Rc::clone(prompt))
-                }
-                Commands::Make => {
-                    config.make(cli.options, Rc::clone(&timesheet), Rc::clone(prompt))
-                }
-                Commands::Edit => {
-                    config.edit(cli.options, Rc::clone(&timesheet), Rc::clone(prompt))
-                }
-                Commands::Remove => {
-                    config.edit(cli.options, Rc::clone(&timesheet), Rc::clone(prompt))
-                }
-                Commands::RunMode => {
-                    config.run_mode(cli.options, Rc::clone(&timesheet), Rc::clone(prompt))
-                }
+                Commands::Init => config.init(
+                    cli.options,
+                    Rc::clone(&timesheet),
+                    Rc::clone(timesheet_config),
+                    Rc::clone(prompt),
+                ),
+                Commands::Make => config.make(
+                    cli.options,
+                    Rc::clone(&timesheet),
+                    Rc::clone(timesheet_config),
+                    Rc::clone(prompt),
+                ),
+                Commands::Edit => config.edit(
+                    cli.options,
+                    Rc::clone(&timesheet),
+                    Rc::clone(timesheet_config),
+                    Rc::clone(prompt),
+                ),
+                Commands::Remove => config.edit(
+                    cli.options,
+                    Rc::clone(&timesheet),
+                    Rc::clone(timesheet_config),
+                    Rc::clone(prompt),
+                ),
+                Commands::RunMode => config.run_mode(
+                    cli.options,
+                    Rc::clone(&timesheet),
+                    Rc::clone(timesheet_config),
+                    Rc::clone(prompt),
+                ),
             },
         }
     }
@@ -260,6 +278,7 @@ impl Cli<'_> {
 mod tests {
     use super::*;
     use crate::config::New;
+    use crate::timesheet::Timesheet;
     use std::fmt::Debug;
     use std::str::FromStr;
 
@@ -286,14 +305,16 @@ mod tests {
                 ..Default::default()
             })));
 
+        let timesheet = Rc::new(RefCell::new(Timesheet::new()));
+        let timesheet_config = Rc::new(RefCell::new(TimesheetConfig::new()));
+
         let rc_prompt = Rc::new(RefCell::new(prompt));
 
         Cli::run_command(
             response,
             mock_config,
-            &Rc::new(RefCell::new(timesheet::Timesheet {
-                ..Default::default()
-            })),
+            &timesheet,
+            &timesheet_config,
             &rc_prompt,
         );
     }
@@ -309,6 +330,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+            _timesheet_config: Rc<RefCell<TimesheetConfig>>,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -320,6 +342,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+            _timesheet_config: Rc<RefCell<TimesheetConfig>>,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -331,6 +354,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+            _timesheet_config: Rc<RefCell<TimesheetConfig>>,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -342,6 +366,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+            _timesheet_config: Rc<RefCell<TimesheetConfig>>,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);

@@ -124,10 +124,7 @@ impl HelpPrompt {
     }
 
     pub fn search_for_repository_details(&self) -> Result<&Self, Box<dyn std::error::Error>> {
-        self.timesheet
-            .borrow_mut()
-            .find_repository_details_from()?
-            .exec_generate_timesheets_from_git_history();
+        self.timesheet.borrow_mut().find_repository_details_from()?;
 
         println!("Repository details found!");
         Ok(self)

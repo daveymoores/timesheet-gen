@@ -36,3 +36,13 @@ impl New for TimesheetConfig {
         }
     }
 }
+
+impl TimesheetConfig {
+    pub fn set_values_from_buffer(
+        &mut self,
+        timesheet_config: &TimesheetConfig,
+    ) -> &mut TimesheetConfig {
+        *self = timesheet_config.clone();
+        self
+    }
+}

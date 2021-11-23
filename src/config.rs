@@ -47,7 +47,7 @@ impl Config {
     fn check_for_repo_in_buffer(
         self,
         deserialized_config: &mut Vec<TimesheetConfig>,
-    ) -> Result<Option<&Timesheet>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<(&Timesheet, &TimesheetConfig)>, Box<dyn std::error::Error>> {
         let mut temp_timesheet = Timesheet {
             repo_path: Option::from(".".to_string()),
             ..Default::default()
@@ -72,14 +72,17 @@ impl Config {
             }
         });
 
-        if let Some(timesheet_config) = found_timesheet_config {
-            let timesheet: Option<&Timesheet> = timesheet_config
+        if let Some(ts_config) = found_timesheet_config {
+            let timesheet: Option<&Timesheet> = ts_config
                 .repositories
                 .as_ref()
                 .unwrap()
                 .into_iter()
                 .find(|ts| ts.namespace.as_ref().unwrap() == &namespace);
-            return Ok(timesheet);
+
+            if let Some(ts) = timesheet {
+                return Ok(Option::from((ts, ts_config)));
+            }
         }
 
         Ok(None)
@@ -89,6 +92,7 @@ impl Config {
         self,
         buffer: &mut String,
         timesheet: Rc<RefCell<Timesheet>>,
+        timesheet_config: Rc<RefCell<TimesheetConfig>>,
         prompt: RcHelpPrompt,
     ) {
         // pass a prompt for if the config file doesn't exist
@@ -111,19 +115,25 @@ impl Config {
         let mut deserialized_config: Vec<TimesheetConfig> = serde_json::from_str(&buffer)
             .expect("Initialisation of timesheet struct from buffer failed");
 
-        if let Some(ts) = self
+        if let Some(ts_tuple) = self
             .check_for_repo_in_buffer(&mut deserialized_config)
             .unwrap_or_else(|err| {
                 eprintln!("Error trying to read from config file: {}", err);
                 std::process::exit(exitcode::DATAERR);
             })
         {
-            let mut ts_clone = ts.clone();
+            // if it exists, get the client + repos and the repo we're editing
+            // and update the git log data based on both repositories
+            let ts_clone = ts_tuple.clone();
+
+            timesheet_config
+                .borrow_mut()
+                .set_values_from_buffer(ts_clone.1);
             // ...and fetch a new batch of interaction data
             timesheet
                 .borrow_mut()
-                .set_values_from_buffer(&mut ts_clone)
-                .exec_generate_timesheets_from_git_history();
+                .set_values_from_buffer(ts_clone.0)
+                .exec_generate_timesheets_from_git_history(timesheet_config.clone());
         } else {
             // if it doesn't, onboard them and check whether current repo
             // should exist under an existing client
@@ -144,6 +154,7 @@ pub trait Init {
         &self,
         options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
+        timesheet_config: Rc<RefCell<TimesheetConfig>>,
         prompt: RcHelpPrompt,
     );
 }
@@ -153,11 +164,12 @@ impl Init for Config {
         &self,
         _options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
+        timesheet_config: Rc<RefCell<TimesheetConfig>>,
         prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
+        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), timesheet_config, prompt);
 
         crate::help_prompt::HelpPrompt::repo_already_initialised();
     }
@@ -169,6 +181,7 @@ pub trait Make {
         &self,
         options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
+        timesheet_config: Rc<RefCell<TimesheetConfig>>,
         prompt: RcHelpPrompt,
     );
 }
@@ -179,11 +192,17 @@ impl Make for Config {
         &self,
         options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
+        timesheet_config: Rc<RefCell<TimesheetConfig>>,
         prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt.clone());
+        self.check_for_config_file(
+            &mut buffer,
+            Rc::clone(&timesheet),
+            timesheet_config,
+            prompt.clone(),
+        );
 
         // if buffer is not empty, then read timesheet and generate the link
         if !buffer.is_empty() {
@@ -211,6 +230,7 @@ pub trait Edit {
         &self,
         options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
+        timesheet_config: Rc<RefCell<TimesheetConfig>>,
         prompt: RcHelpPrompt,
     );
 }
@@ -220,11 +240,12 @@ impl Edit for Config {
         &self,
         options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
+        timesheet_config: Rc<RefCell<TimesheetConfig>>,
         prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), prompt);
+        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), timesheet_config, prompt);
 
         // if buffer is not empty, then read timesheet, edit a value and write to file
         if !buffer.is_empty() {
@@ -250,6 +271,7 @@ pub trait RunMode {
         &self,
         options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
+        timesheet_config: Rc<RefCell<TimesheetConfig>>,
         prompt: RcHelpPrompt,
     );
 }
@@ -259,11 +281,17 @@ impl RunMode for Config {
         &self,
         _options: Vec<Option<String>>,
         timesheet: Rc<RefCell<Timesheet>>,
+        timesheet_config: Rc<RefCell<TimesheetConfig>>,
         prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        self.check_for_config_file(&mut buffer, Rc::clone(&timesheet), Rc::clone(&prompt));
+        self.check_for_config_file(
+            &mut buffer,
+            Rc::clone(&timesheet),
+            timesheet_config,
+            Rc::clone(&prompt),
+        );
 
         // if buffer is not empty, then read timesheet, change the run-mode and write to file
         if !buffer.is_empty() {}
@@ -277,7 +305,7 @@ mod tests {
     use crate::timesheet_config::{Client, TimesheetConfig};
 
     #[test]
-    fn it_checks_for_repo_in_buffer_and_returns_a_timesheet() {
+    fn it_checks_for_repo_in_buffer_and_returns_a_tuple() {
         let mut deserialized_config = vec![TimesheetConfig {
             client: Option::from(Client {
                 client_name: "alphabet".to_string(),
@@ -291,13 +319,15 @@ mod tests {
         }];
 
         let config: Config = Config::new();
-        let timesheet = config
+        let option = config
             .check_for_repo_in_buffer(&mut deserialized_config)
             .unwrap();
 
-        assert_eq!(
-            *timesheet.unwrap().namespace.as_ref().unwrap(),
-            "timesheet-gen".to_string()
-        )
+        if let Some((timesheet, _timesheet_config)) = option {
+            assert_eq!(
+                *timesheet.namespace.as_ref().unwrap(),
+                "timesheet-gen".to_string()
+            )
+        }
     }
 }

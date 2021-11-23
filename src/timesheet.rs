@@ -1,10 +1,13 @@
 use crate::date_parser::TimesheetYears;
+use crate::timesheet_config::TimesheetConfig;
 use crate::utils::{check_for_valid_day, check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Datelike};
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::process;
 use std::process::{Command, Output};
+use std::rc::Rc;
 
 pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 
@@ -89,7 +92,7 @@ impl Timesheet {
     }
 
     /// Get values from buffer and set these to the Timesheet struct fields
-    pub fn set_values_from_buffer(&mut self, timesheet: &mut Timesheet) -> &mut Timesheet {
+    pub fn set_values_from_buffer(&mut self, timesheet: &Timesheet) -> &mut Timesheet {
         *self = timesheet.clone();
         self
     }
@@ -253,7 +256,10 @@ impl Timesheet {
         Ok(self)
     }
 
-    pub fn exec_generate_timesheets_from_git_history(&mut self) -> &mut Self {
+    pub fn exec_generate_timesheets_from_git_history(
+        &mut self,
+        timesheet_config: Rc<RefCell<TimesheetConfig>>,
+    ) -> &mut Self {
         let command = String::from("--author");
 
         // can safely unwrap here as name would have been set in the previous step
