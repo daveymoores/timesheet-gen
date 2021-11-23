@@ -1,14 +1,14 @@
 use std::process;
 
 mod cli;
+mod client_repositories;
 mod config;
 mod date_parser;
 mod db;
 mod file_reader;
 mod help_prompt;
 mod link_builder;
-mod timesheet;
-mod timesheet_config;
+mod repository;
 mod utils;
 
 fn main() {

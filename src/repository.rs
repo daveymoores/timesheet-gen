@@ -1,5 +1,5 @@
+use crate::client_repositories::ClientRepositories;
 use crate::date_parser::TimesheetYears;
-use crate::timesheet_config::TimesheetConfig;
 use crate::utils::{check_for_valid_day, check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Datelike};
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 // and perform various operations on it
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Timesheet {
+pub struct Repository {
     pub namespace: Option<String>,
     pub repo_path: Option<String>,
     pub git_path: Option<String>,
@@ -34,7 +34,7 @@ pub struct Timesheet {
     pub approver_signature: Option<String>,
 }
 
-impl Default for Timesheet {
+impl Default for Repository {
     fn default() -> Self {
         Self {
             namespace: None,
@@ -58,7 +58,7 @@ impl Default for Timesheet {
 }
 
 struct Iter<'a> {
-    inner: &'a Timesheet,
+    inner: &'a Repository,
     index: u8,
 }
 
@@ -77,9 +77,9 @@ impl<'a> Iterator for Iter<'a> {
     }
 }
 
-impl Timesheet {
+impl Repository {
     pub fn new() -> Self {
-        Timesheet {
+        Repository {
             ..Default::default()
         }
     }
@@ -91,9 +91,9 @@ impl Timesheet {
         }
     }
 
-    /// Get values from buffer and set these to the Timesheet struct fields
-    pub fn set_values_from_buffer(&mut self, timesheet: &Timesheet) -> &mut Timesheet {
-        *self = timesheet.clone();
+    /// Get values from buffer and set these to the Repository struct fields
+    pub fn set_values_from_buffer(&mut self, repository: &Repository) -> &mut Repository {
+        *self = repository.clone();
         self
     }
 
@@ -258,12 +258,13 @@ impl Timesheet {
 
     pub fn exec_generate_timesheets_from_git_history(
         &mut self,
-        timesheet_config: Rc<RefCell<TimesheetConfig>>,
+        _client_repositories: Rc<RefCell<ClientRepositories>>,
     ) -> &mut Self {
         let command = String::from("--author");
 
         // can safely unwrap here as name would have been set in the previous step
         let author = [command, self.name.as_ref().unwrap().to_string()].join("=");
+
         let output = Command::new("git")
             .arg("-C")
             .arg(self.git_path.as_ref().unwrap().to_string())
@@ -439,11 +440,11 @@ mod tests {
 
     #[test]
     fn it_sets_values_from_buffer() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
-        let mut ts = Timesheet {
+        let mut ts = Repository {
             namespace: Option::from("timesheet-gen".to_string()),
             git_path: Option::from(".".to_string()),
             repo_path: Option::from(
@@ -467,7 +468,7 @@ mod tests {
 
     #[test]
     fn it_mutates_timesheet_entry() {
-        let mut ts = Timesheet {
+        let mut ts = Repository {
             ..Default::default()
         };
 
@@ -492,7 +493,7 @@ mod tests {
 
     #[test]
     fn it_gets_timesheet_entry() {
-        let mut ts = Timesheet {
+        let mut ts = Repository {
             ..Default::default()
         };
 
@@ -509,7 +510,7 @@ mod tests {
 
     #[test]
     fn it_parses_git_log_dates_from_git_history() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -583,7 +584,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_finds_namespace_from_git_path() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -594,7 +595,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_finds_git_path_from_directory() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -618,7 +619,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_requires_approval() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -628,7 +629,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_approvers_email() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -641,7 +642,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_approvers_name() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -651,7 +652,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_project_number() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -664,7 +665,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_namespace() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -674,7 +675,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_repo_path() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -684,7 +685,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_name() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -694,7 +695,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_email() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -704,7 +705,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_client_name() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -714,7 +715,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_client_contact_person() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -727,7 +728,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_client_address() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -740,7 +741,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_timesheet() {
-        let mut ts = Timesheet {
+        let mut ts = Repository {
             ..Default::default()
         };
 
@@ -767,7 +768,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_git_path() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 

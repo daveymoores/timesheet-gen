@@ -1,4 +1,4 @@
-use crate::timesheet::{GitLogDates, Timesheet};
+use crate::repository::{GitLogDates, Repository};
 use crate::utils::get_days_from_month;
 use chrono::{TimeZone, Utc};
 use std::collections::HashMap;
@@ -36,7 +36,7 @@ fn set_day_map(weekend: i32, hours: i32, edited: i32, day_map: &mut HashMap<Stri
 fn parse_hours_from_date(
     date_tuple: (i32, u32, u32),
     worked_days: Vec<u32>,
-    timesheet: &mut Timesheet,
+    repository: &mut Repository,
 ) -> Vec<HashMap<String, i32>> {
     // iterate through the number of days in the month
     // for each day return the calendar day
@@ -51,7 +51,7 @@ fn parse_hours_from_date(
         // Each day denotes whether it is a Weekend, what the hours worked are
         // and whether it has been manually edited by the user to prevent these
         // changes being overwritten when the data is synced
-        match timesheet.timesheet {
+        match repository.timesheet {
             // if there is no timesheet at all, then just add the days in
             None => {
                 set_day_map(is_weekend, hours_worked, 0, &mut day_map);
@@ -60,7 +60,7 @@ fn parse_hours_from_date(
             // before setting the hour value
             Some(_) => {
                 let day_index: usize = usize::try_from(day).unwrap() - 1;
-                let is_user_edited = match timesheet.get_timesheet_entry(
+                let is_user_edited = match repository.get_timesheet_entry(
                     &date_tuple.0.to_string(),
                     &date_tuple.1,
                     day_index,
@@ -76,7 +76,7 @@ fn parse_hours_from_date(
                 if is_user_edited.unwrap() == &0 {
                     set_day_map(is_weekend, hours_worked, 0, &mut day_map);
                 } else {
-                    let hours_worked_for_user_edited_day = match timesheet.get_timesheet_entry(
+                    let hours_worked_for_user_edited_day = match repository.get_timesheet_entry(
                         &date_tuple.0.to_string(),
                         &date_tuple.1,
                         day_index,
@@ -110,12 +110,12 @@ pub type TimesheetYears = HashMap<String, HashMap<String, Vec<HashMap<String, i3
 
 pub fn get_timesheet_map_from_date_hashmap(
     date_map: GitLogDates,
-    timesheet: &mut Timesheet,
+    repository: &mut Repository,
 ) -> TimesheetYears {
     // TODO this would better if the timesheet was directly edited and added to
     // TODO rather than remaking TimesheetYears everytime this is run
 
-    let timesheet: TimesheetYears = date_map
+    let timesheet_years: TimesheetYears = date_map
         .into_iter()
         .map(|year_tuple| {
             let month_map: TimesheetMonths = year_tuple
@@ -129,7 +129,7 @@ pub fn get_timesheet_map_from_date_hashmap(
                     let worked_hours_for_month = parse_hours_from_date(
                         (year_tuple.0, month_tuple.0, days_in_month),
                         worked_days,
-                        timesheet,
+                        repository,
                     );
                     (month_tuple.0.to_string(), worked_hours_for_month)
                 })
@@ -138,7 +138,7 @@ pub fn get_timesheet_map_from_date_hashmap(
         })
         .collect();
 
-    timesheet
+    timesheet_years
 }
 
 #[cfg(test)]

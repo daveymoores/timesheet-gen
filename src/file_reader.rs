@@ -1,6 +1,6 @@
+use crate::client_repositories::{Client, ClientRepositories};
 use crate::help_prompt::Onboarding;
-use crate::timesheet::Timesheet;
-use crate::timesheet_config::{Client, TimesheetConfig};
+use crate::repository::Repository;
 use serde_json::json;
 use std::cell::{Ref, RefCell};
 use std::fs::File;
@@ -77,37 +77,37 @@ pub fn write_json_to_config_file(
 }
 
 pub fn serialize_config(
-    deserialized_config: Option<Vec<TimesheetConfig>>,
-    timesheet: Ref<Timesheet>,
+    deserialized_config: Option<Vec<ClientRepositories>>,
+    repository: Ref<Repository>,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let ts_client = Client {
-        client_name: timesheet.client_name.clone().unwrap_or("None".to_string()),
-        client_address: timesheet
+        client_name: repository.client_name.clone().unwrap_or("None".to_string()),
+        client_address: repository
             .client_address
             .clone()
             .unwrap_or("None".to_string()),
-        client_contact_person: timesheet
+        client_contact_person: repository
             .client_contact_person
             .clone()
             .unwrap_or("None".to_string()),
     };
 
-    let ts_namespace = timesheet.namespace.clone().unwrap_or("None".to_string());
+    let ts_namespace = repository.namespace.clone().unwrap_or("None".to_string());
 
-    // if the client and namespace exists, update it with current timesheet
+    // if the client and namespace exists, update it with current Repository
     let config_data = match deserialized_config {
         None => {
             json!([{
                 "client": &ts_client,
-                "repositories": [timesheet.deref()],
+                "repositories": [repository.deref()],
             }])
         }
         Some(config) => {
-            let config_data: Vec<TimesheetConfig> = config
+            let config_data: Vec<ClientRepositories> = config
                 .into_iter()
                 .map(|client| {
                     if &client.client.as_ref().unwrap().client_name == &ts_client.client_name {
-                        return TimesheetConfig {
+                        return ClientRepositories {
                             client: Option::from(ts_client.clone()),
                             repositories: Some(
                                 client
@@ -115,12 +115,12 @@ pub fn serialize_config(
                                     .repositories
                                     .unwrap()
                                     .into_iter()
-                                    .map(|repository| {
-                                        if repository.namespace.as_ref().unwrap() == &ts_namespace {
-                                            return timesheet.deref().to_owned();
+                                    .map(|repo| {
+                                        if repo.namespace.as_ref().unwrap() == &ts_namespace {
+                                            return repository.deref().to_owned();
                                         }
 
-                                        repository
+                                        repo
                                     })
                                     .collect(),
                             ),
@@ -212,11 +212,11 @@ mod tests {
 
     #[test]
     fn it_writes_a_config_file_when_file_exists() {
-        let mock_timesheet = RefCell::new(Timesheet {
+        let mock_repository = RefCell::new(Repository {
             ..Default::default()
         });
 
-        let timesheet = mock_timesheet.borrow();
+        let repository = mock_repository.borrow();
 
         // creates mock directory that is destroyed when it goes out of scope
         let dir = tempfile::tempdir().unwrap();
@@ -225,7 +225,7 @@ mod tests {
         let file = File::create(&mock_config_path).unwrap();
         let string_path_from_temp_dir = mock_config_path.to_str().unwrap().to_owned();
 
-        let json = serialize_config(None, timesheet).unwrap();
+        let json = serialize_config(None, repository).unwrap();
 
         assert!(write_json_to_config_file(json, string_path_from_temp_dir).is_ok());
 
@@ -235,42 +235,42 @@ mod tests {
 
     #[test]
     fn it_throws_an_error_when_writing_config_if_file_doesnt_exist() {
-        let mock_timesheet = RefCell::new(Timesheet {
+        let mock_repository = RefCell::new(Repository {
             ..Default::default()
         });
 
-        let timesheet = mock_timesheet.borrow();
+        let repository = mock_repository.borrow();
 
-        let json = serialize_config(None, timesheet).unwrap();
+        let json = serialize_config(None, repository).unwrap();
 
         assert!(write_json_to_config_file(json, "./a/fake/path".to_string()).is_err());
     }
 
     #[test]
     fn it_finds_and_updates_a_client() {
-        let deserialized_config = vec![TimesheetConfig {
+        let deserialized_config = vec![ClientRepositories {
             client: Option::from(Client {
                 client_name: "alphabet".to_string(),
                 client_address: "Spaghetti Way, USA".to_string(),
                 client_contact_person: "John Smith".to_string(),
             }),
-            repositories: Option::from(vec![Timesheet {
+            repositories: Option::from(vec![Repository {
                 namespace: Option::from("timesheet-gen".to_string()),
                 ..Default::default()
             }]),
         }];
 
-        let mock_timesheet = RefCell::new(Timesheet {
+        let mock_repository = RefCell::new(Repository {
             client_name: Option::from("alphabet".to_string()),
             namespace: Option::from("timesheet-gen".to_string()),
             client_contact_person: Option::from("John Jones".to_string()),
             ..Default::default()
         });
 
-        let timesheet = mock_timesheet.borrow();
+        let repository = mock_repository.borrow();
 
-        let json = serialize_config(Option::from(deserialized_config), timesheet).unwrap();
-        let value: Vec<TimesheetConfig> = serde_json::from_str(&*json).unwrap();
+        let json = serialize_config(Option::from(deserialized_config), repository).unwrap();
+        let value: Vec<ClientRepositories> = serde_json::from_str(&*json).unwrap();
 
         assert_eq!(
             value[0].repositories.as_ref().unwrap()[0]

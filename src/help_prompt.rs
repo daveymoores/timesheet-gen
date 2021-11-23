@@ -1,5 +1,5 @@
-use crate::timesheet::Timesheet;
-use crate::timesheet_config::TimesheetConfig;
+use crate::client_repositories::ClientRepositories;
+use crate::repository::Repository;
 /// Help prompt handles all of the interactions with the user.
 /// It writes to the std output, and returns input data or a boolean
 use dialoguer::{Confirm, Editor, Input, Select};
@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct HelpPrompt {
-    timesheet: Rc<RefCell<Timesheet>>,
+    repository: Rc<RefCell<Repository>>,
 }
 
 pub trait Onboarding {
@@ -42,8 +42,8 @@ impl ExistingClientOnboarding for HelpPrompt {
 }
 
 impl HelpPrompt {
-    pub fn new(timesheet: Rc<RefCell<Timesheet>>) -> Self {
-        Self { timesheet }
+    pub fn new(repository: Rc<RefCell<Repository>>) -> Self {
+        Self { repository }
     }
 
     pub fn repo_already_initialised() {
@@ -56,7 +56,7 @@ impl HelpPrompt {
 
     pub fn prompt_for_client(
         &self,
-        deserialized_config: Vec<TimesheetConfig>,
+        deserialized_config: Vec<ClientRepositories>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!(
             "Looks like this repository hasn't been initialised yet.\n\
@@ -85,7 +85,7 @@ impl HelpPrompt {
 
             let unwrapped_client = client.client.as_ref().unwrap();
 
-            self.timesheet
+            self.repository
                 .borrow_mut()
                 .set_client_name(unwrapped_client.client_name.clone())
                 .set_client_address(unwrapped_client.client_address.clone())
@@ -104,7 +104,9 @@ impl HelpPrompt {
         );
 
         if Confirm::new().default(true).interact()? {
-            self.timesheet.borrow_mut().set_repo_path(String::from("."));
+            self.repository
+                .borrow_mut()
+                .set_repo_path(String::from("."));
         } else {
             println!("Please give a path to the repository you would like to use");
 
@@ -115,7 +117,7 @@ impl HelpPrompt {
 
             let input: String = Input::new().with_initial_text(path).interact_text()?;
 
-            self.timesheet
+            self.repository
                 .borrow_mut()
                 .set_repo_path(String::from(input));
         }
@@ -124,7 +126,9 @@ impl HelpPrompt {
     }
 
     pub fn search_for_repository_details(&self) -> Result<&Self, Box<dyn std::error::Error>> {
-        self.timesheet.borrow_mut().find_repository_details_from()?;
+        self.repository
+            .borrow_mut()
+            .find_repository_details_from()?;
 
         println!("Repository details found!");
         Ok(self)
@@ -133,15 +137,17 @@ impl HelpPrompt {
     pub fn add_client_details(&self) -> Result<&Self, std::io::Error> {
         println!("Client company name");
         let input: String = Input::new().interact_text()?;
-        self.timesheet.borrow_mut().set_client_name(input);
+        self.repository.borrow_mut().set_client_name(input);
 
         println!("Client contact person");
         let input: String = Input::new().interact_text()?;
-        self.timesheet.borrow_mut().set_client_contact_person(input);
+        self.repository
+            .borrow_mut()
+            .set_client_contact_person(input);
 
         println!("Client address");
         if let Some(input) = Editor::new().edit("Enter an address").unwrap() {
-            self.timesheet.borrow_mut().set_client_address(input);
+            self.repository.borrow_mut().set_client_address(input);
         }
 
         Ok(self)
@@ -150,17 +156,17 @@ impl HelpPrompt {
     pub fn prompt_for_manager_approval(&self) -> Result<&Self, Box<dyn Error>> {
         println!("Does your timesheet need approval? (This will enable signing functionality, see https://timesheet-gen.io/docs/signing)");
         if Confirm::new().default(true).interact()? {
-            self.timesheet.borrow_mut().set_requires_approval(true);
+            self.repository.borrow_mut().set_requires_approval(true);
 
             println!("Approvers name");
             let input: String = Input::new().interact_text()?;
-            self.timesheet.borrow_mut().set_approvers_name(input);
+            self.repository.borrow_mut().set_approvers_name(input);
 
             println!("Approvers email");
             let input: String = Input::new().interact_text()?;
-            self.timesheet.borrow_mut().set_approvers_email(input);
+            self.repository.borrow_mut().set_approvers_email(input);
         } else {
-            self.timesheet.borrow_mut().set_requires_approval(false);
+            self.repository.borrow_mut().set_requires_approval(false);
         }
 
         Ok(self)
@@ -171,7 +177,7 @@ impl HelpPrompt {
         if Confirm::new().default(true).interact()? {
             println!("Project number");
             let input: String = Input::new().interact_text()?;
-            self.timesheet.borrow_mut().set_project_number(input);
+            self.repository.borrow_mut().set_project_number(input);
         }
 
         Ok(self)
@@ -180,29 +186,29 @@ impl HelpPrompt {
     pub fn show_details(&self) -> &Self {
         println!("These are the details associated with this repository:");
 
-        if let Some(namespace) = &self.timesheet.borrow().namespace.clone() {
+        if let Some(namespace) = &self.repository.borrow().namespace.clone() {
             println!("Project: {}", namespace);
         }
-        if let Some(email) = &self.timesheet.borrow().email.clone() {
+        if let Some(email) = &self.repository.borrow().email.clone() {
             println!("Email: {}", email);
         }
-        if let Some(name) = &self.timesheet.borrow().name.clone() {
+        if let Some(name) = &self.repository.borrow().name.clone() {
             println!("Name: {}", name);
         }
-        if let Some(client_name) = &self.timesheet.borrow().client_name.clone() {
+        if let Some(client_name) = &self.repository.borrow().client_name.clone() {
             println!("Client name: {}", client_name);
         }
-        if let Some(client_contact_person) = &self.timesheet.borrow().client_contact_person.clone()
+        if let Some(client_contact_person) = &self.repository.borrow().client_contact_person.clone()
         {
             println!("Client contact person: {}", client_contact_person);
         }
-        if let Some(client_address) = &self.timesheet.borrow().client_address.clone() {
+        if let Some(client_address) = &self.repository.borrow().client_address.clone() {
             println!("Client address: {}", client_address);
         }
-        if let Some(approvers_name) = &self.timesheet.borrow().approvers_name.clone() {
+        if let Some(approvers_name) = &self.repository.borrow().approvers_name.clone() {
             println!("Approvers name: {}", approvers_name);
         }
-        if let Some(approvers_email) = &self.timesheet.borrow().approvers_email.clone() {
+        if let Some(approvers_email) = &self.repository.borrow().approvers_email.clone() {
             println!("Approvers email: {}", approvers_email);
         }
 

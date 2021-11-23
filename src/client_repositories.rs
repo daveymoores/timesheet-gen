@@ -1,10 +1,10 @@
 use crate::config::New;
-use crate::timesheet::Timesheet;
+use crate::repository::Repository;
 use serde::{Deserialize, Serialize};
 
-/// Timesheets are modified at a Timesheet level and a client level.
-/// TimesheetConfig holds the client and the repositories when they are found in the buffer
-/// Storing the data here allows the timesheet being currently operated on to be cross referenced
+/// Repositories are modified at a Repository level and a client level.
+/// ClientRepositories  holds the client and the repositories when they are found in the buffer
+/// Storing the data here allows the repository  being currently operated on to be cross referenced
 /// against all the repos under the same client, and hence generate the correct working hours.
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -15,12 +15,12 @@ pub struct Client {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct TimesheetConfig {
+pub struct ClientRepositories {
     pub client: Option<Client>,
-    pub repositories: Option<Vec<Timesheet>>,
+    pub repositories: Option<Vec<Repository>>,
 }
 
-impl Default for TimesheetConfig {
+impl Default for ClientRepositories {
     fn default() -> Self {
         Self {
             client: None,
@@ -29,7 +29,7 @@ impl Default for TimesheetConfig {
     }
 }
 
-impl New for TimesheetConfig {
+impl New for ClientRepositories {
     fn new() -> Self {
         Self {
             ..Default::default()
@@ -37,12 +37,12 @@ impl New for TimesheetConfig {
     }
 }
 
-impl TimesheetConfig {
+impl ClientRepositories {
     pub fn set_values_from_buffer(
         &mut self,
-        timesheet_config: &TimesheetConfig,
-    ) -> &mut TimesheetConfig {
-        *self = timesheet_config.clone();
+        client_repositories: &ClientRepositories,
+    ) -> &mut ClientRepositories {
+        *self = client_repositories.clone();
         self
     }
 }

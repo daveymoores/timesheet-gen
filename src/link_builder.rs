@@ -1,8 +1,9 @@
 use crate::db;
-use crate::timesheet::Timesheet;
+use crate::repository::Repository;
 use crate::utils::{check_for_valid_month, check_for_valid_year};
 use bson::Document;
 use chrono::{DateTime, Month, Utc};
+use dotenv;
 use mongodb::bson::doc;
 use num_traits::cast::FromPrimitive;
 use serde_json::json;
@@ -30,7 +31,7 @@ fn get_string_month_year(
 }
 
 fn find_month_from_timesheet<'a>(
-    sheet: &'a Timesheet,
+    sheet: &'a Repository,
     options: &'a Vec<Option<String>>,
 ) -> Result<&'a TimesheetHoursForMonth, Box<dyn Error>> {
     // safe to unwrap options here as it would have been caught above
@@ -58,7 +59,7 @@ fn find_month_from_timesheet<'a>(
 
 fn build_document(
     date: DateTime<Utc>,
-    sheet: &Timesheet,
+    sheet: &Repository,
     random_path: &String,
     month_year_string: &String,
     total_hours: &i32,
@@ -92,12 +93,13 @@ fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> i32 {
 }
 
 pub async fn build_unique_uri(
-    timesheet: Rc<RefCell<Timesheet>>,
+    repository: Rc<RefCell<Repository>>,
     options: Vec<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
-    let mongo_db: String =
-        env::var("MONGODB_DB").expect("You must set the MONGODB_DB environment var!");
-    let mongodb_collection: String = env::var("MONGODB_COLLECTION")
+    dotenv::dotenv().ok();
+
+    let mongodb_db = env::var("MONGODB_DB").expect("You must set the MONGODB_DB environment var!");
+    let mongodb_collection = env::var("MONGODB_COLLECTION")
         .expect("You must set the MONGODB_COLLECTION environment var!");
 
     let month_year_string = get_string_month_year(&options[0], &options[1])?;
@@ -106,10 +108,10 @@ pub async fn build_unique_uri(
     let db = db::Db::new().await?;
     let collection = db
         .client
-        .database(&mongo_db)
+        .database(&mongodb_db)
         .collection(&mongodb_collection);
 
-    let sheet = timesheet.borrow_mut();
+    let sheet = repository.borrow_mut();
 
     let timesheet_month = find_month_from_timesheet(&sheet, &options)?;
     let total_hours = calculate_total_hours(&timesheet_month);
@@ -134,7 +136,7 @@ pub async fn build_unique_uri(
     if !index_names.contains(&String::from("expiration_date")) {
         // create TTL index to expire documents after 30 minutes
         db.client
-            .database(&mongo_db)
+            .database(&mongodb_db)
             .run_command(
                 doc! {
                     "createIndexes": &mongodb_collection,
@@ -176,7 +178,7 @@ mod test {
         build_document, calculate_total_hours, find_month_from_timesheet, get_string_month_year,
         TimesheetHoursForMonth,
     };
-    use crate::timesheet::{GitLogDates, Timesheet};
+    use crate::repository::{GitLogDates, Repository};
     use chrono::{TimeZone, Utc};
     use mongodb::bson::doc;
     use serde_json::json;
@@ -204,18 +206,18 @@ mod test {
         date_hashmap
     }
 
-    fn create_mock_timesheet() -> Timesheet {
+    fn create_mock_repository() -> Repository {
         // testing utility that returns
         // {2021: {10: {20, 23, 21}, 9: {8}}, 2020: {8: {1}}, 2019: {1: {3}}}
         let date_hashmap: GitLogDates = get_timesheet_hashmap();
         let timesheet = get_timesheet_map_from_date_hashmap(date_hashmap, &mut Default::default());
 
-        let timesheet = Timesheet {
+        let repository = Repository {
             timesheet: Option::from(timesheet),
             ..Default::default()
         };
 
-        timesheet
+        repository
     }
 
     fn create_mock_timesheet_hours_for_month() -> TimesheetHoursForMonth {
@@ -230,7 +232,7 @@ mod test {
 
     #[test]
     fn it_builds_document() {
-        let timesheet = Timesheet {
+        let timesheet = Repository {
             namespace: Option::from("Some project".to_string()),
             name: Option::from("Barry Balls".to_string()),
             email: Option::from("barry.balls@123.reg".to_string()),
@@ -329,7 +331,7 @@ mod test {
             Option::from("2021".to_owned()),
         ];
 
-        let timesheet = create_mock_timesheet();
+        let timesheet = create_mock_repository();
         assert!(find_month_from_timesheet(&timesheet, &options).is_err());
     }
 
@@ -340,7 +342,7 @@ mod test {
             Option::from("2021".to_owned()),
         ];
 
-        let timesheet = create_mock_timesheet();
+        let timesheet = create_mock_repository();
         assert!(find_month_from_timesheet(&timesheet, &options).is_ok());
     }
 }
