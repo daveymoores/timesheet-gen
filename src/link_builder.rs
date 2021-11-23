@@ -95,14 +95,19 @@ pub async fn build_unique_uri(
     timesheet: Rc<RefCell<Timesheet>>,
     options: Vec<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
+    const MONGODB_DB: String =
+        env::var("MONGODB_DB").expect("You must set the MONGODB_DB environment var!");
+    const MONGODB_COLLECTION: String = env::var("MONGODB_COLLECTION")
+        .expect("You must set the MONGODB_COLLECTION environment var!");
+
     let month_year_string = get_string_month_year(&options[0], &options[1])?;
     println!("Generating timesheet for {}...", month_year_string);
 
     let db = db::Db::new().await?;
     let collection = db
         .client
-        .database("timesheet-gen")
-        .collection("timesheet-temp-paths");
+        .database(&MONGODB_DB)
+        .collection(&MONGODB_COLLECTION);
 
     let sheet = timesheet.borrow_mut();
 
@@ -121,7 +126,7 @@ pub async fn build_unique_uri(
     // Check for existing index for TTL on the collection
     let index_names = collection.list_index_names().await?;
 
-    let expire_time_seconds: i32 = env::var("EXPIRE_TIME_SECONDS")
+    const EXPIRE_TIME_SECONDS: i32 = env::var("EXPIRE_TIME_SECONDS")
         .expect("You must set the EXPIRE_TIME_SECONDS environment var!")
         .parse()
         .expect("Expire time can't be parsed to i32");
@@ -129,15 +134,15 @@ pub async fn build_unique_uri(
     if !index_names.contains(&String::from("expiration_date")) {
         // create TTL index to expire documents after 30 minutes
         db.client
-            .database("timesheet-gen")
+            .database(&MONGODB_DB)
             .run_command(
                 doc! {
-                    "createIndexes": "timesheet-temp-paths",
+                    "createIndexes": &MONGODB_COLLECTION,
                     "indexes": [
                         {
                             "key": { "creation_date": 1 },
                             "name": "expiration_date",
-                            "expireAfterSeconds": expire_time_seconds,
+                            "expireAfterSeconds": EXPIRE_TIME_SECONDS,
                             "unique": true
                         },
                     ]
@@ -149,7 +154,7 @@ pub async fn build_unique_uri(
 
     collection.insert_one(document.clone(), None).await?;
 
-    let timesheet_gen_uri: String = format!(
+    const TIMESHEET_GEN_URI: String = format!(
         "{}/{}",
         env::var("TIMESHEET_GEN_URI").expect("You must set the TIMESHEET_GEN_URI environment var!"),
         &random_path
@@ -157,8 +162,8 @@ pub async fn build_unique_uri(
 
     println!(
         "Timesheet now available for {} minutes @ {}",
-        expire_time_seconds / 60,
-        timesheet_gen_uri
+        EXPIRE_TIME_SECONDS / 60,
+        TIMESHEET_GEN_URI
     );
 
     process::exit(exitcode::OK);
