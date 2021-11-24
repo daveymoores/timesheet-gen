@@ -109,13 +109,11 @@ pub type TimesheetMonths = HashMap<String, Vec<HashMap<String, i32>>>;
 pub type TimesheetYears = HashMap<String, HashMap<String, Vec<HashMap<String, i32>>>>;
 
 pub fn get_timesheet_map_from_date_hashmap(
-    date_map: GitLogDates,
+    git_log_dates: GitLogDates,
     repository: &mut Repository,
+    adjacent_git_log_dates: Vec<GitLogDates>,
 ) -> TimesheetYears {
-    // TODO this would better if the timesheet was directly edited and added to
-    // TODO rather than remaking TimesheetYears everytime this is run
-
-    let timesheet_years: TimesheetYears = date_map
+    let timesheet_years: TimesheetYears = git_log_dates
         .into_iter()
         .map(|year_tuple| {
             let month_map: TimesheetMonths = year_tuple

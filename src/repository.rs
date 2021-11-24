@@ -297,18 +297,6 @@ impl Repository {
         }
 
         self.set_git_log_dates(year_month_map);
-
-        let timesheet = match &self.git_log_dates {
-            Some(date_map) => {
-                crate::date_parser::get_timesheet_map_from_date_hashmap(date_map.clone(), self)
-            }
-            None => {
-                eprintln!("No dates parsed from git log");
-                process::exit(exitcode::DATAERR);
-            }
-        };
-
-        self.set_timesheet(timesheet);
     }
 
     pub fn mutate_timesheet_entry(
@@ -534,7 +522,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
         let x = timesheet.git_log_dates.unwrap();
 
         // to check the hashmap shape is correct, lets create an array
-        // of the numeric values and order them. Not great but snapshot testing with hashmaps isn't a thing in rust...
+        // of the numeric values and order them. Not great but snapshot testing with hashmaps isn't a thing in Rust...
         let mut k = vec![];
         for (key, value) in x.into_iter() {
             k.push(key.clone());

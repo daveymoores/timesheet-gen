@@ -210,7 +210,8 @@ mod test {
         // testing utility that returns
         // {2021: {10: {20, 23, 21}, 9: {8}}, 2020: {8: {1}}, 2019: {1: {3}}}
         let date_hashmap: GitLogDates = get_timesheet_hashmap();
-        let timesheet = get_timesheet_map_from_date_hashmap(date_hashmap, &mut Default::default());
+        let timesheet =
+            get_timesheet_map_from_date_hashmap(date_hashmap, &mut Default::default(), vec![]);
 
         let repository = Repository {
             timesheet: Option::from(timesheet),
