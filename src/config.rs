@@ -126,11 +126,13 @@ impl Config {
             // and update the git log data based on all repositories
             let ts_clone = ts_tuple.clone();
 
+            // ...and fetch a new batch of interaction data
             client_repositories
                 .borrow_mut()
                 .set_values_from_buffer(ts_clone.1)
-                .exec_generate_timesheets_from_git_history();
-            // ...and fetch a new batch of interaction data
+                .exec_generate_timesheets_from_git_history()
+                .compare_logs_and_set_timesheets();
+
             repository.borrow_mut().set_values_from_buffer(ts_clone.0);
         } else {
             // if it doesn't, onboard them and check whether current repo

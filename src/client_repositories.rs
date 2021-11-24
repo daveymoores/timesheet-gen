@@ -116,6 +116,7 @@ mod tests {
     use crate::client_repositories::{Client, ClientRepositories};
     use crate::date_parser::TimesheetYears;
     use crate::repository::{GitLogDates, Repository};
+    use serde_json::{Number, Value};
     use std::collections::{HashMap, HashSet};
 
     // Generate git log dates that overlap by one day each month to test hours being split equally
@@ -179,69 +180,12 @@ mod tests {
             .unwrap()
             .get("2")
             .unwrap()[0..3];
-        let timesheet_length = timesheet.len().clone();
 
-        for i in 0..timesheet_length {
-            assert_eq!(
-                timesheet[i].get("hours").unwrap(),
-                HashMap::from([
-                    ("hours".to_string(), 8),
-                    ("user_edited".to_string(), 0),
-                    ("Weekend".to_string(), 0),
-                ])
-                .get("hours")
-                .unwrap()
-            );
-        }
+        let ts = timesheet
+            .into_iter()
+            .map(|day| day.get("hours").unwrap().clone().as_f64().unwrap())
+            .collect::<Vec<f64>>();
 
-        // Check project 2 has hours split on overlapping days
-        let repository = repositories[1].clone();
-        let timesheet = &repository
-            .timesheet
-            .as_ref()
-            .unwrap()
-            .get("2021")
-            .unwrap()
-            .get("2")
-            .unwrap()[1..4];
-        let timesheet_length = timesheet.len().clone();
-
-        for i in 0..timesheet_length {
-            assert_eq!(
-                timesheet[i].get("hours").unwrap(),
-                HashMap::from([
-                    ("hours".to_string(), 8),
-                    ("user_edited".to_string(), 0),
-                    ("Weekend".to_string(), 0),
-                ])
-                .get("hours")
-                .unwrap()
-            );
-        }
-
-        // Check project 3 has hours split on overlapping days
-        let repository = repositories[2].clone();
-        let timesheet = &repository
-            .timesheet
-            .as_ref()
-            .unwrap()
-            .get("2021")
-            .unwrap()
-            .get("2")
-            .unwrap()[2..5];
-        let timesheet_length = timesheet.len().clone();
-
-        for i in 0..timesheet_length {
-            assert_eq!(
-                timesheet[i].get("hours").unwrap(),
-                HashMap::from([
-                    ("hours".to_string(), 8),
-                    ("user_edited".to_string(), 0),
-                    ("Weekend".to_string(), 0),
-                ])
-                .get("hours")
-                .unwrap()
-            );
-        }
+        assert_eq!(ts, vec![8.0, 4.0, 2.6666666666666665]);
     }
 }

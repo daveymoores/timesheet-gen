@@ -6,7 +6,7 @@ use chrono::{DateTime, Month, Utc};
 use dotenv;
 use mongodb::bson::doc;
 use num_traits::cast::FromPrimitive;
-use serde_json::json;
+use serde_json::{json, Map, Value};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::error::Error;
@@ -14,7 +14,7 @@ use std::io::ErrorKind;
 use std::rc::Rc;
 use std::{env, io, process};
 
-type TimesheetHoursForMonth = Vec<HashMap<String, i32>>;
+type TimesheetHoursForMonth = Vec<Map<String, Value>>;
 
 fn get_string_month_year(
     month: &Option<String>,
@@ -62,7 +62,7 @@ fn build_document(
     sheet: &Repository,
     random_path: &String,
     month_year_string: &String,
-    total_hours: &i32,
+    total_hours: &f64,
     timesheet_month: &TimesheetHoursForMonth,
 ) -> Document {
     let document = doc! {
@@ -82,13 +82,13 @@ fn build_document(
     document
 }
 
-fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> i32 {
-    let hours: Vec<&i32> = timesheet_month
+fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> f64 {
+    let hours: Vec<f64> = timesheet_month
         .into_iter()
-        .map(|x| x.get("hours").unwrap())
+        .map(|x| x.get("hours").unwrap().as_f64().unwrap())
         .collect();
 
-    let total_hours: i32 = hours.iter().map(|&i| i).sum();
+    let total_hours: f64 = hours.iter().map(|&i| i).sum();
     total_hours
 }
 
@@ -181,7 +181,7 @@ mod test {
     use crate::repository::{GitLogDates, Repository};
     use chrono::{TimeZone, Utc};
     use mongodb::bson::doc;
-    use serde_json::json;
+    use serde_json::{json, Map, Number, Value};
     use std::collections::{HashMap, HashSet};
 
     pub fn get_timesheet_hashmap() -> GitLogDates {
@@ -222,12 +222,12 @@ mod test {
     }
 
     fn create_mock_timesheet_hours_for_month() -> TimesheetHoursForMonth {
-        let month: TimesheetHoursForMonth = vec![
-            vec![("hours".to_string(), 8 as i32)].into_iter().collect(),
-            vec![("hours".to_string(), 8 as i32)].into_iter().collect(),
-            vec![("hours".to_string(), 8 as i32)].into_iter().collect(),
-        ];
+        let f64_value = Value::Number(Number::from_f64(8.0).unwrap());
 
+        let mut map = Map::new();
+        map.extend(vec![("hours".to_string(), f64_value)]);
+
+        let month: TimesheetHoursForMonth = vec![map.clone(), map.clone(), map.clone()];
         month
     }
 
@@ -254,7 +254,7 @@ mod test {
         "client_contact_person" : "Jenny boomers",
         "address" : "Tron, Tron, Tron",
         "timesheet" : json!(month).to_string(),
-        "total_hours" : 36,
+        "total_hours" : 36.0,
         "month_year": "November, 2021",
         };
 
@@ -264,7 +264,7 @@ mod test {
                 &timesheet,
                 &"fbfxhs".to_string(),
                 &"November, 2021".to_string(),
-                &36,
+                &36.0,
                 &month
             ),
             doc
@@ -274,7 +274,7 @@ mod test {
     #[test]
     fn it_calculates_total_hours() {
         let month = create_mock_timesheet_hours_for_month();
-        assert_eq!(calculate_total_hours(&month), 24);
+        assert_eq!(calculate_total_hours(&month), 24.0);
     }
 
     #[test]

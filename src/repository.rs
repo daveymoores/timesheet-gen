@@ -1,8 +1,9 @@
 use crate::client_repositories::ClientRepositories;
-use crate::date_parser::TimesheetYears;
+use crate::date_parser::{create_single_day_object, DayMap, TimesheetYears};
 use crate::utils::{check_for_valid_day, check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Datelike};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::process;
@@ -304,7 +305,7 @@ impl Repository {
         year_string: &String,
         month_u32: &u32,
         day: usize,
-        entry: Vec<(String, i32)>,
+        entry: DayMap,
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
         self.timesheet
             .as_mut()
@@ -324,7 +325,7 @@ impl Repository {
         month_u32: &u32,
         day: usize,
         entry: String,
-    ) -> Result<Option<&i32>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<&Value>, Box<dyn std::error::Error>> {
         let value = self
             .timesheet
             .as_ref()
@@ -346,7 +347,7 @@ impl Repository {
         let month_u32 = check_for_valid_month(&options[2])?;
         let day_string = check_for_valid_day(&options[1], month_u32, year_string.parse().unwrap())?;
 
-        let hour: i32 = options[0].as_ref().unwrap().parse()?;
+        let hour: f64 = options[0].as_ref().unwrap().parse()?;
         let day: usize = day_string.parse()?;
 
         let is_weekend =
@@ -363,11 +364,7 @@ impl Repository {
             &year_string,
             &month_u32,
             day,
-            vec![
-                ("hours".to_string(), hour),
-                ("user_edited".to_string(), 1),
-                ("weekend".to_string(), is_weekend),
-            ],
+            create_single_day_object(is_weekend.as_bool().unwrap(), hour, true),
         )?;
 
         Ok(self)
@@ -377,23 +374,21 @@ impl Repository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
+    use serde_json::{json, Map, Number};
     use std::os::unix::process::ExitStatusExt;
     use std::process::ExitStatus;
 
     fn get_mock_year_map() -> TimesheetYears {
         let mut year_map: TimesheetYears = HashMap::new();
 
+        let mut map = Map::new();
+        map.extend(vec![("user_edited".to_string(), Value::Bool(true))]);
+
         year_map.insert(
             "2021".to_string(),
-            vec![(
-                "11".to_string(),
-                vec![vec![("user_edited".to_string(), 1)]
-                    .into_iter()
-                    .collect::<HashMap<String, i32>>()],
-            )]
-            .into_iter()
-            .collect::<HashMap<String, Vec<HashMap<String, i32>>>>(),
+            vec![("11".to_string(), vec![map])]
+                .into_iter()
+                .collect::<HashMap<String, Vec<Map<String, Value>>>>(),
         );
 
         year_map
@@ -440,7 +435,7 @@ mod tests {
             &"2021".to_string(),
             &11,
             0,
-            vec![("user_edited".to_string(), 0)],
+            create_single_day_object(false, 8.0, false),
         )
         .unwrap();
 
@@ -448,7 +443,7 @@ mod tests {
             ts.get_timesheet_entry(&"2021".to_string(), &11, 0, "user_edited".to_string())
                 .unwrap()
                 .unwrap(),
-            &0 as &i32
+            false
         );
     }
 
@@ -465,7 +460,7 @@ mod tests {
             ts.get_timesheet_entry(&"2021".to_string(), &11, 0, "user_edited".to_string())
                 .unwrap()
                 .unwrap(),
-            &1 as &i32
+            true
         );
     }
 
@@ -707,23 +702,24 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
         };
 
         let mut year_map: TimesheetYears = HashMap::new();
+        let mut map = Map::new();
+        map.extend(vec![(
+            "baz".to_string(),
+            Value::Number(Number::from_f64(8.0).unwrap()),
+        )]);
+
         year_map.insert(
             "foo".to_string(),
-            vec![(
-                "bar".to_string(),
-                vec![vec![("baz".to_string(), 8)]
-                    .into_iter()
-                    .collect::<HashMap<String, i32>>()],
-            )]
-            .into_iter()
-            .collect::<HashMap<String, Vec<HashMap<String, i32>>>>(),
+            vec![("bar".to_string(), vec![map])]
+                .into_iter()
+                .collect::<HashMap<String, Vec<Map<String, Value>>>>(),
         );
 
         ts.set_timesheet(year_map);
         assert!(ts.timesheet.clone().unwrap().contains_key("foo"));
         assert_eq!(
             json!(ts.timesheet.clone()).to_string(),
-            "{\"foo\":{\"bar\":[{\"baz\":8}]}}"
+            "{\"foo\":{\"bar\":[{\"baz\":8.0}]}}"
         );
     }
 
