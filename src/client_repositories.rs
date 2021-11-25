@@ -21,8 +21,15 @@ pub struct Client {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct User {
+    pub name: String,
+    pub email: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ClientRepositories {
     pub client: Option<Client>,
+    pub user: Option<User>,
     pub repositories: Option<Vec<Repository>>,
 }
 
@@ -30,6 +37,7 @@ impl Default for ClientRepositories {
     fn default() -> Self {
         Self {
             client: None,
+            user: None,
             repositories: None,
         }
     }
@@ -113,7 +121,7 @@ impl ClientRepositories {
 
 #[cfg(test)]
 mod tests {
-    use crate::client_repositories::{Client, ClientRepositories};
+    use crate::client_repositories::{Client, ClientRepositories, User};
     use crate::date_parser::TimesheetYears;
     use crate::repository::{GitLogDates, Repository};
     use serde_json::{Number, Value};
@@ -144,6 +152,10 @@ mod tests {
                 client_name: "Alphabet".to_string(),
                 client_address: "Alphabet way".to_string(),
                 client_contact_person: "John Jones".to_string(),
+            }),
+            user: Option::Some(User {
+                name: "Jim Jones".to_string(),
+                email: "jim@jones.com".to_string(),
             }),
             repositories: Option::Some(vec![
                 Repository {

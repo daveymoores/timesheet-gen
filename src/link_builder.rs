@@ -1,3 +1,4 @@
+use crate::client_repositories::{Client, ClientRepositories, User};
 use crate::db;
 use crate::repository::Repository;
 use crate::utils::{check_for_valid_month, check_for_valid_year};
@@ -6,13 +7,32 @@ use chrono::{DateTime, Month, Utc};
 use dotenv;
 use mongodb::bson::doc;
 use num_traits::cast::FromPrimitive;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::ErrorKind;
+use std::ops::Deref;
 use std::rc::Rc;
 use std::{env, io, process};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct Timesheet {
+    namespace: String,
+    timesheet: TimesheetHoursForMonth,
+    total_hours: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct TimesheetDocument {
+    creation_date: DateTime<Utc>,
+    random_path: String,
+    month_year: String,
+    client: Option<Client>,
+    user: Option<User>,
+    timesheets: Vec<Timesheet>,
+}
 
 type TimesheetHoursForMonth = Vec<Map<String, Value>>;
 
@@ -57,29 +77,22 @@ fn find_month_from_timesheet<'a>(
     Ok(timesheet_month)
 }
 
-fn build_document(
-    date: DateTime<Utc>,
-    sheet: &Repository,
-    random_path: &String,
-    month_year_string: &String,
-    total_hours: &f64,
-    timesheet_month: &TimesheetHoursForMonth,
-) -> Document {
-    let document = doc! {
-        "creation_date": date,
-        "random_path": &random_path,
-        "name" : sheet.name.as_ref(),
-        "email" : sheet.email.as_ref(),
-        "namespace" : sheet.namespace.as_ref(),
-        "client_name" : sheet.client_name.as_ref(),
-        "client_contact_person" : sheet.client_contact_person.as_ref(),
-        "address" : sheet.client_address.as_ref(),
-        "timesheet" : json!(timesheet_month).to_string(),
-        "total_hours" : total_hours,
-        "month_year": month_year_string,
-    };
-
-    document
+fn build_document<'a>(
+    creation_date: DateTime<Utc>,
+    random_path: &'a String,
+    month_year_string: &'a String,
+    timesheets: &'a Vec<Timesheet>,
+    client_repositories: &'a RefMut<ClientRepositories>,
+) -> TimesheetDocument {
+    let repos = client_repositories;
+    TimesheetDocument {
+        creation_date,
+        random_path: random_path.clone(),
+        month_year: month_year_string.clone(),
+        user: repos.user.clone(),
+        client: repos.client.clone(),
+        timesheets: timesheets.clone(),
+    }
 }
 
 fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> f64 {
@@ -93,7 +106,7 @@ fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> f64 {
 }
 
 pub async fn build_unique_uri(
-    repository: Rc<RefCell<Repository>>,
+    client_repositories: Rc<RefCell<ClientRepositories>>,
     options: Vec<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
     dotenv::dotenv().ok();
@@ -111,18 +124,35 @@ pub async fn build_unique_uri(
         .database(&mongodb_db)
         .collection(&mongodb_collection);
 
-    let sheet = repository.borrow_mut();
+    let mut timesheets: Vec<Timesheet> = vec![];
 
-    let timesheet_month = find_month_from_timesheet(&sheet, &options)?;
-    let total_hours = calculate_total_hours(&timesheet_month);
+    let client_repos = client_repositories.borrow_mut();
+    let repos_option = &client_repos.repositories;
+    let repos = repos_option.as_ref().unwrap();
+
+    for i in 0..repos.len() {
+        let namespace = &repos[i].namespace;
+        let namespace_deref = namespace.as_ref().unwrap().deref();
+
+        let timesheet = find_month_from_timesheet(&repos[i], &options).unwrap_or_else(|err| {
+            eprintln!("Error finding month in timesheet: {}", err);
+            std::process::exit(exitcode::DATAERR);
+        });
+
+        timesheets.push(Timesheet {
+            namespace: namespace_deref.to_owned(),
+            timesheet: timesheet.to_owned(),
+            total_hours: calculate_total_hours(&timesheet),
+        });
+    }
+
     let random_path: String = db.generate_random_path(&collection).await?;
     let document = build_document(
         Utc::now(),
-        &sheet,
         &random_path,
         &month_year_string,
-        &total_hours,
-        &timesheet_month,
+        &timesheets,
+        &client_repos,
     );
 
     // Check for existing index for TTL on the collection
@@ -173,16 +203,19 @@ pub async fn build_unique_uri(
 
 #[cfg(test)]
 mod test {
+    use crate::client_repositories::{Client, ClientRepositories, User};
     use crate::date_parser::get_timesheet_map_from_date_hashmap;
     use crate::link_builder::{
         build_document, calculate_total_hours, find_month_from_timesheet, get_string_month_year,
-        TimesheetHoursForMonth,
+        Timesheet, TimesheetDocument, TimesheetHoursForMonth,
     };
     use crate::repository::{GitLogDates, Repository};
     use chrono::{TimeZone, Utc};
     use mongodb::bson::doc;
     use serde_json::{json, Map, Number, Value};
+    use std::cell::RefCell;
     use std::collections::{HashMap, HashSet};
+    use std::rc::Rc;
 
     pub fn get_timesheet_hashmap() -> GitLogDates {
         let date_hashmap: GitLogDates = vec![
@@ -233,42 +266,50 @@ mod test {
 
     #[test]
     fn it_builds_document() {
-        let timesheet = Repository {
-            namespace: Option::from("Some project".to_string()),
-            name: Option::from("Barry Balls".to_string()),
-            email: Option::from("barry.balls@123.reg".to_string()),
-            client_name: Option::from("Alphabet".to_string()),
-            client_contact_person: Option::from("Jenny boomers".to_string()),
-            client_address: Option::from("Tron, Tron, Tron".to_string()),
-            ..Default::default()
-        };
-        let month = create_mock_timesheet_hours_for_month();
+        let timesheet_for_month = create_mock_timesheet_hours_for_month();
 
-        let doc = doc! {
-        "creation_date": Utc.ymd(2014, 11, 28).and_hms(12, 0, 9),
-        "random_path": "fbfxhs",
-        "name" : "Barry Balls",
-        "email" : "barry.balls@123.reg",
-        "namespace" : "Some project",
-        "client_name" :"Alphabet",
-        "client_contact_person" : "Jenny boomers",
-        "address" : "Tron, Tron, Tron",
-        "timesheet" : json!(month).to_string(),
-        "total_hours" : 36.0,
-        "month_year": "November, 2021",
+        let client = Option::from(Client {
+            client_name: "alphabet".to_string(),
+            client_address: "Spaghetti Way, USA".to_string(),
+            client_contact_person: "John Smith".to_string(),
+        });
+
+        let user = Option::from(User {
+            name: "Jim Jones".to_string(),
+            email: "jim@jones.com".to_string(),
+        });
+
+        let timesheets = vec![Timesheet {
+            namespace: "Some project".to_string(),
+            timesheet: timesheet_for_month,
+            total_hours: 50.0,
+        }];
+
+        let document = TimesheetDocument {
+            creation_date: Utc.ymd(2014, 11, 28).and_hms(12, 0, 9),
+            random_path: "fbfxhs".to_string(),
+            month_year: "November, 2021".to_string(),
+            client: client.clone(),
+            user: user.clone(),
+            timesheets: timesheets.clone(),
         };
 
-        assert_eq!(
-            build_document(
-                Utc.ymd(2014, 11, 28).and_hms(12, 0, 9),
-                &timesheet,
-                &"fbfxhs".to_string(),
-                &"November, 2021".to_string(),
-                &36.0,
-                &month
-            ),
-            doc
+        let generated_document = build_document(
+            Utc.ymd(2014, 11, 28).and_hms(12, 0, 9),
+            &"fbfxhs".to_string(),
+            &"November, 2021".to_string(),
+            &timesheets,
+            &Rc::new(RefCell::new(ClientRepositories {
+                client,
+                user,
+                repositories: Option::from(vec![Repository {
+                    ..Default::default()
+                }]),
+            }))
+            .borrow_mut(),
         );
+
+        assert_eq!(json!(generated_document), json!(document));
     }
 
     #[test]

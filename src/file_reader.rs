@@ -1,4 +1,4 @@
-use crate::client_repositories::{Client, ClientRepositories};
+use crate::client_repositories::{Client, ClientRepositories, User};
 use crate::help_prompt::Onboarding;
 use crate::repository::Repository;
 use serde_json::json;
@@ -92,6 +92,11 @@ pub fn serialize_config(
             .unwrap_or("None".to_string()),
     };
 
+    let ts_user = User {
+        name: repository.name.clone().unwrap_or("None".to_string()),
+        email: repository.email.clone().unwrap_or("None".to_string()),
+    };
+
     let ts_namespace = repository.namespace.clone().unwrap_or("None".to_string());
 
     // if the client and namespace exists, update it with current Repository
@@ -99,6 +104,7 @@ pub fn serialize_config(
         None => {
             json!([{
                 "client": &ts_client,
+                "user": &ts_user,
                 "repositories": [repository.deref()],
             }])
         }
@@ -109,6 +115,7 @@ pub fn serialize_config(
                     if &client.client.as_ref().unwrap().client_name == &ts_client.client_name {
                         return ClientRepositories {
                             client: Option::from(ts_client.clone()),
+                            user: Option::from(ts_user.clone()),
                             repositories: Some(
                                 client
                                     .clone()
@@ -253,6 +260,10 @@ mod tests {
                 client_name: "alphabet".to_string(),
                 client_address: "Spaghetti Way, USA".to_string(),
                 client_contact_person: "John Smith".to_string(),
+            }),
+            user: Option::Some(User {
+                name: "Jim Jones".to_string(),
+                email: "jim@jones.com".to_string(),
             }),
             repositories: Option::from(vec![Repository {
                 namespace: Option::from("timesheet-gen".to_string()),

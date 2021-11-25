@@ -133,6 +133,7 @@ impl Config {
                 .exec_generate_timesheets_from_git_history()
                 .compare_logs_and_set_timesheets();
 
+            // set th e working repo to the timesheet struct as it may be operated on
             repository.borrow_mut().set_values_from_buffer(ts_clone.0);
         } else {
             // if it doesn't, onboard them and check whether current repo
@@ -205,7 +206,7 @@ impl Make for Config {
         self.check_for_config_file(
             &mut buffer,
             Rc::clone(&repository),
-            client_repositories,
+            Rc::clone(&client_repositories),
             prompt.clone(),
         );
 
@@ -220,7 +221,7 @@ impl Make for Config {
                     std::process::exit(exitcode::CANTCREAT);
                 });
             // generate timesheet-gen.io link using existing config
-            link_builder::build_unique_uri(Rc::clone(&repository), options)
+            link_builder::build_unique_uri(Rc::clone(&client_repositories), options)
                 .await
                 .unwrap_or_else(|err| {
                     eprintln!("Error building unique link: {}", err);
@@ -311,7 +312,7 @@ impl RunMode for Config {
 
 #[cfg(test)]
 mod tests {
-    use crate::client_repositories::{Client, ClientRepositories};
+    use crate::client_repositories::{Client, ClientRepositories, User};
     use crate::config::{Config, New};
     use crate::repository::Repository;
 
@@ -322,6 +323,10 @@ mod tests {
                 client_name: "alphabet".to_string(),
                 client_address: "Spaghetti Way, USA".to_string(),
                 client_contact_person: "John Smith".to_string(),
+            }),
+            user: Option::Some(User {
+                name: "Jim Jones".to_string(),
+                email: "jim@jones.com".to_string(),
             }),
             repositories: Option::from(vec![Repository {
                 namespace: Option::from("timesheet-gen".to_string()),
