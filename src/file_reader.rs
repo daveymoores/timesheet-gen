@@ -1,8 +1,8 @@
-use crate::client_repositories::{Client, ClientRepositories, User};
+use crate::client_repositories::ClientRepositories;
 use crate::help_prompt::Onboarding;
 use crate::repository::Repository;
 use serde_json::json;
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Deref;
@@ -78,53 +78,40 @@ pub fn write_json_to_config_file(
 
 pub fn serialize_config(
     deserialized_config: Option<Vec<ClientRepositories>>,
-    repository: Ref<Repository>,
+    client_repository: Rc<RefCell<ClientRepositories>>,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let ts_client = Client {
-        client_name: repository.client_name.clone().unwrap_or("None".to_string()),
-        client_address: repository
-            .client_address
-            .clone()
-            .unwrap_or("None".to_string()),
-        client_contact_person: repository
-            .client_contact_person
-            .clone()
-            .unwrap_or("None".to_string()),
-    };
+    // get the values from the current repo so that it can be merged back into the config
+    let client = client_repository.borrow_mut().client.clone();
+    let user = client_repository.borrow_mut().user.clone();
+    let repository = client_repository
+        .borrow_mut()
+        .repositories
+        .as_ref()
+        .unwrap()[0]
+        .clone();
+    let namespace = repository.namespace.as_ref().unwrap();
+    let client_name = &client.as_ref().unwrap().client_name;
 
-    let ts_user = User {
-        name: repository.name.clone().unwrap_or("None".to_string()),
-        email: repository.email.clone().unwrap_or("None".to_string()),
-    };
-
-    let ts_namespace = repository.namespace.clone().unwrap_or("None".to_string());
-
-    // if the client and namespace exists, update it with current Repository
     let config_data = match deserialized_config {
         None => {
-            json!([{
-                "client": &ts_client,
-                "user": &ts_user,
-                "repositories": [repository.deref()],
-            }])
+            json!(client_repository.deref())
         }
         Some(config) => {
             let config_data: Vec<ClientRepositories> = config
                 .into_iter()
-                .map(|client| {
-                    if &client.client.as_ref().unwrap().client_name == &ts_client.client_name {
+                .map(|c| {
+                    if &c.client.as_ref().unwrap().client_name == &client_name.clone() {
                         return ClientRepositories {
-                            client: Option::from(ts_client.clone()),
-                            user: Option::from(ts_user.clone()),
+                            client: client.clone(),
+                            user: user.clone(),
                             repositories: Some(
-                                client
-                                    .clone()
+                                c.clone()
                                     .repositories
                                     .unwrap()
                                     .into_iter()
                                     .map(|repo| {
-                                        if repo.namespace.as_ref().unwrap() == &ts_namespace {
-                                            return repository.deref().to_owned();
+                                        if repo.namespace.as_ref().unwrap() == namespace {
+                                            return repository.to_owned();
                                         }
 
                                         repo
@@ -133,7 +120,7 @@ pub fn serialize_config(
                             ),
                         };
                     }
-                    client
+                    c
                 })
                 .collect();
 
@@ -152,6 +139,20 @@ mod tests {
     use std::cell::RefCell;
     use std::error::Error;
     use std::path::Path;
+
+    fn create_mock_client_repository(client_repository: Rc<RefCell<ClientRepositories>>) {
+        let repo = RefCell::new(Repository {
+            client_name: Option::from("alphabet".to_string()),
+            client_address: Option::from("Spaghetti Way, USA".to_string()),
+            client_contact_person: Option::from("John Smith".to_string()),
+            name: Option::from("Jim Jones".to_string()),
+            email: Option::from("jim@jones.com".to_string()),
+            namespace: Option::from("timesheet-gen".to_string()),
+            ..Default::default()
+        });
+
+        client_repository.borrow_mut().set_values(repo.borrow());
+    }
 
     #[test]
     fn get_filepath_returns_path_with_file_name() {
@@ -219,11 +220,11 @@ mod tests {
 
     #[test]
     fn it_writes_a_config_file_when_file_exists() {
-        let mock_repository = RefCell::new(Repository {
+        let client_repositories = Rc::new(RefCell::new(ClientRepositories {
             ..Default::default()
-        });
+        }));
 
-        let repository = mock_repository.borrow();
+        create_mock_client_repository(client_repositories.clone());
 
         // creates mock directory that is destroyed when it goes out of scope
         let dir = tempfile::tempdir().unwrap();
@@ -232,7 +233,7 @@ mod tests {
         let file = File::create(&mock_config_path).unwrap();
         let string_path_from_temp_dir = mock_config_path.to_str().unwrap().to_owned();
 
-        let json = serialize_config(None, repository).unwrap();
+        let json = serialize_config(None, client_repositories).unwrap();
 
         assert!(write_json_to_config_file(json, string_path_from_temp_dir).is_ok());
 
@@ -242,45 +243,29 @@ mod tests {
 
     #[test]
     fn it_throws_an_error_when_writing_config_if_file_doesnt_exist() {
-        let mock_repository = RefCell::new(Repository {
+        let client_repositories = Rc::new(RefCell::new(ClientRepositories {
             ..Default::default()
-        });
+        }));
 
-        let repository = mock_repository.borrow();
+        create_mock_client_repository(client_repositories.clone());
 
-        let json = serialize_config(None, repository).unwrap();
+        let json = serialize_config(None, client_repositories).unwrap();
 
         assert!(write_json_to_config_file(json, "./a/fake/path".to_string()).is_err());
     }
 
     #[test]
     fn it_finds_and_updates_a_client() {
-        let deserialized_config = vec![ClientRepositories {
-            client: Option::from(Client {
-                client_name: "alphabet".to_string(),
-                client_address: "Spaghetti Way, USA".to_string(),
-                client_contact_person: "John Smith".to_string(),
-            }),
-            user: Option::Some(User {
-                name: "Jim Jones".to_string(),
-                email: "jim@jones.com".to_string(),
-            }),
-            repositories: Option::from(vec![Repository {
-                namespace: Option::from("timesheet-gen".to_string()),
-                ..Default::default()
-            }]),
-        }];
-
-        let mock_repository = RefCell::new(Repository {
-            client_name: Option::from("alphabet".to_string()),
-            namespace: Option::from("timesheet-gen".to_string()),
-            client_contact_person: Option::from("John Jones".to_string()),
+        let client_repositories = Rc::new(RefCell::new(ClientRepositories {
             ..Default::default()
-        });
+        }));
 
-        let repository = mock_repository.borrow();
+        create_mock_client_repository(client_repositories.clone());
 
-        let json = serialize_config(Option::from(deserialized_config), repository).unwrap();
+        let deserialized_config = vec![client_repositories.borrow().clone()];
+
+        let json =
+            serialize_config(Option::from(deserialized_config), client_repositories).unwrap();
         let value: Vec<ClientRepositories> = serde_json::from_str(&*json).unwrap();
 
         assert_eq!(
@@ -288,7 +273,7 @@ mod tests {
                 .client_contact_person
                 .as_ref()
                 .unwrap(),
-            &"John Jones".to_string()
+            &"John Smith".to_string()
         );
     }
 }

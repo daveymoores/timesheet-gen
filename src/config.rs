@@ -26,15 +26,18 @@ impl New for Config {
 impl Config {
     /// Find and update client if sheet exists, otherwise write a new one
     fn write_to_config_file(
-        repository: Rc<RefCell<Repository>>,
+        client_repositories: Rc<RefCell<ClientRepositories>>,
         deserialized_config: Option<Vec<ClientRepositories>>,
     ) {
         let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
-        let json = crate::file_reader::serialize_config(deserialized_config, repository.borrow())
-            .unwrap_or_else(|err| {
-                eprintln!("Error serializing json: {}", err);
-                std::process::exit(exitcode::CANTCREAT);
-            });
+        let json = crate::file_reader::serialize_config(
+            deserialized_config,
+            Rc::clone(&client_repositories),
+        )
+        .unwrap_or_else(|err| {
+            eprintln!("Error serializing json: {}", err);
+            std::process::exit(exitcode::CANTCREAT);
+        });
 
         crate::file_reader::write_json_to_config_file(json, config_path).unwrap_or_else(|err| {
             eprintln!("Error writing data to file: {}", err);
@@ -106,7 +109,13 @@ impl Config {
         // if the buffer is empty, there is no existing file, user has been onboarded
         // and Repository state holds the data. Write this data to file.
         if buffer.is_empty() {
-            Config::write_to_config_file(repository, None);
+            client_repositories
+                .borrow_mut()
+                .set_values(repository.borrow())
+                .exec_generate_timesheets_from_git_history()
+                .compare_logs_and_set_timesheets();
+
+            Config::write_to_config_file(client_repositories, None);
             return;
         }
 
@@ -255,7 +264,7 @@ impl Edit for Config {
         self.check_for_config_file(
             &mut buffer,
             Rc::clone(&repository),
-            client_repositories,
+            Rc::clone(&client_repositories),
             prompt,
         );
 
@@ -271,8 +280,14 @@ impl Edit for Config {
                     process::exit(exitcode::DATAERR);
                 });
 
+            client_repositories
+                .borrow_mut()
+                .set_values(repository.borrow())
+                .exec_generate_timesheets_from_git_history()
+                .compare_logs_and_set_timesheets();
+
             // TODO give success message here
-            Config::write_to_config_file(repository, None);
+            Config::write_to_config_file(client_repositories, None);
         }
     }
 }

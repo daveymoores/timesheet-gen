@@ -1,12 +1,10 @@
 use crate::config::New;
 use crate::repository::{GitLogDates, Repository};
-use chrono::{DateTime, Datelike};
 use serde::{Deserialize, Serialize};
-use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::cell::Ref;
+use std::ops::Deref;
 use std::process;
 use std::process::Command;
-use std::rc::Rc;
 
 /// Repositories are modified at a Repository level and a client level.
 /// ClientRepositories  holds the client and the repositories when they are found in the buffer
@@ -33,6 +31,14 @@ pub struct ClientRepositories {
     pub repositories: Option<Vec<Repository>>,
 }
 
+impl New for ClientRepositories {
+    fn new() -> Self {
+        Self {
+            ..Default::default()
+        }
+    }
+}
+
 impl Default for ClientRepositories {
     fn default() -> Self {
         Self {
@@ -43,15 +49,27 @@ impl Default for ClientRepositories {
     }
 }
 
-impl New for ClientRepositories {
-    fn new() -> Self {
-        Self {
-            ..Default::default()
-        }
-    }
-}
-
 impl ClientRepositories {
+    pub fn set_values(&mut self, repository: Ref<Repository>) -> &mut Self {
+        self.client = Option::from(Client {
+            client_name: repository.client_name.clone().unwrap_or("None".to_string()),
+            client_address: repository
+                .client_address
+                .clone()
+                .unwrap_or("None".to_string()),
+            client_contact_person: repository
+                .client_contact_person
+                .clone()
+                .unwrap_or("None".to_string()),
+        });
+        self.user = Option::from(User {
+            name: repository.name.clone().unwrap_or("None".to_string()),
+            email: repository.email.clone().unwrap_or("None".to_string()),
+        });
+        self.repositories = Option::from(vec![repository.deref().clone()]);
+        self
+    }
+
     pub fn set_values_from_buffer(
         &mut self,
         client_repositories: &ClientRepositories,
@@ -122,9 +140,9 @@ impl ClientRepositories {
 #[cfg(test)]
 mod tests {
     use crate::client_repositories::{Client, ClientRepositories, User};
-    use crate::date_parser::TimesheetYears;
     use crate::repository::{GitLogDates, Repository};
-    use serde_json::{Number, Value};
+    use serde_json::json;
+    use std::cell::RefCell;
     use std::collections::{HashMap, HashSet};
 
     // Generate git log dates that overlap by one day each month to test hours being split equally
@@ -143,6 +161,33 @@ mod tests {
                 HashMap::from([(9, HashSet::from(days)), (2, HashSet::from(days))]),
             ),
         ])
+    }
+
+    #[test]
+    fn it_sets_values() {
+        let mut client_repositories = ClientRepositories {
+            ..Default::default()
+        };
+
+        let repository = RefCell::new(Repository {
+            client_name: Option::from("Alphabet".to_string()),
+            client_address: Option::from("Alphabet way".to_string()),
+            client_contact_person: Option::from("John Jones".to_string()),
+            name: Option::from("Jim Jones".to_string()),
+            email: Option::from("jim@jones.com".to_string()),
+            ..Default::default()
+        });
+
+        client_repositories.set_values(repository.borrow());
+
+        assert_eq!(
+            json!(client_repositories.client),
+            json!(Client {
+                client_name: "Alphabet".to_string(),
+                client_address: "Alphabet way".to_string(),
+                client_contact_person: "John Jones".to_string(),
+            })
+        );
     }
 
     #[test]

@@ -1,14 +1,11 @@
-use crate::client_repositories::ClientRepositories;
 use crate::date_parser::{create_single_day_object, DayMap, TimesheetYears};
 use crate::utils::{check_for_valid_day, check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Datelike};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::process;
 use std::process::{Command, Output};
-use std::rc::Rc;
 
 pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 
@@ -411,7 +408,6 @@ mod tests {
 
         timesheet.set_values_from_buffer(&mut ts);
         let x: Vec<&String> = ts.iter().map(|y| y.as_ref().unwrap()).collect();
-        println!("{:?}", x);
         assert_eq!(
             x,
             [
