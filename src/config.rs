@@ -47,12 +47,13 @@ impl Config {
         process::exit(exitcode::OK)
     }
 
-    fn check_for_repo_in_buffer(
+    fn check_for_repo_in_buffer<'a>(
         self,
-        deserialized_config: &mut Vec<ClientRepositories>,
-    ) -> Result<Option<(&Repository, &ClientRepositories)>, Box<dyn std::error::Error>> {
+        deserialized_config: &'a mut Vec<ClientRepositories>,
+        options: &'a Vec<Option<String>>,
+    ) -> Result<Option<(&'a Repository, &'a ClientRepositories)>, Box<dyn std::error::Error>> {
         let mut temp_repository = Repository {
-            repo_path: Option::from(".".to_string()),
+            repo_path: Option::from(options[0].as_ref().unwrap().to_string()),
             ..Default::default()
         };
 
@@ -93,6 +94,7 @@ impl Config {
 
     fn check_for_config_file(
         self,
+        options: &Vec<Option<String>>,
         buffer: &mut String,
         repository: Rc<RefCell<Repository>>,
         client_repositories: Rc<RefCell<ClientRepositories>>,
@@ -119,13 +121,13 @@ impl Config {
             return;
         }
 
-        // ..if the there is an existing config file, check whether the current repository exists under any clients
+        // ..if the there is an existing config file, check whether the (passed path) repository exists under any clients
         // if it does pass Repository values to Repository
         let mut deserialized_config: Vec<ClientRepositories> = serde_json::from_str(&buffer)
             .expect("Initialisation of ClientRepository struct from buffer failed");
 
         if let Some(ts_tuple) = self
-            .check_for_repo_in_buffer(&mut deserialized_config)
+            .check_for_repo_in_buffer(&mut deserialized_config, &options)
             .unwrap_or_else(|err| {
                 eprintln!("Error trying to read from config file: {}", err);
                 std::process::exit(exitcode::DATAERR);
@@ -172,7 +174,7 @@ pub trait Init {
 impl Init for Config {
     fn init(
         &self,
-        _options: Vec<Option<String>>,
+        options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
         client_repositories: Rc<RefCell<ClientRepositories>>,
         prompt: RcHelpPrompt,
@@ -180,6 +182,7 @@ impl Init for Config {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         self.check_for_config_file(
+            &options,
             &mut buffer,
             Rc::clone(&repository),
             client_repositories,
@@ -213,6 +216,7 @@ impl Make for Config {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         self.check_for_config_file(
+            &options,
             &mut buffer,
             Rc::clone(&repository),
             Rc::clone(&client_repositories),
@@ -262,6 +266,7 @@ impl Edit for Config {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         self.check_for_config_file(
+            &options,
             &mut buffer,
             Rc::clone(&repository),
             Rc::clone(&client_repositories),
@@ -306,7 +311,7 @@ pub trait RunMode {
 impl RunMode for Config {
     fn run_mode(
         &self,
-        _options: Vec<Option<String>>,
+        options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
         client_repositories: Rc<RefCell<ClientRepositories>>,
         prompt: RcHelpPrompt,
@@ -314,6 +319,7 @@ impl RunMode for Config {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         self.check_for_config_file(
+            &options,
             &mut buffer,
             Rc::clone(&repository),
             client_repositories,
@@ -349,9 +355,10 @@ mod tests {
             }]),
         }];
 
+        let options = vec![Option::from(".".to_string())];
         let config: Config = Config::new();
         let option = config
-            .check_for_repo_in_buffer(&mut deserialized_config)
+            .check_for_repo_in_buffer(&mut deserialized_config, &options)
             .unwrap();
 
         if let Some((repository, _client_repositories)) = option {
