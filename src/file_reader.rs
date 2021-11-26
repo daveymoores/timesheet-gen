@@ -94,7 +94,7 @@ pub fn serialize_config(
 
     let config_data = match deserialized_config {
         None => {
-            json!(client_repository.deref())
+            json!(vec![client_repository.deref()])
         }
         Some(config) => {
             let config_data: Vec<ClientRepositories> = config

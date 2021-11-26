@@ -122,7 +122,7 @@ impl Config {
         // ..if the there is an existing config file, check whether the current repository exists under any clients
         // if it does pass Repository values to Repository
         let mut deserialized_config: Vec<ClientRepositories> = serde_json::from_str(&buffer)
-            .expect("Initialisation of Repository struct from buffer failed");
+            .expect("Initialisation of ClientRepository struct from buffer failed");
 
         if let Some(ts_tuple) = self
             .check_for_repo_in_buffer(&mut deserialized_config)
