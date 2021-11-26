@@ -1,7 +1,10 @@
 use crate::client_repositories::ClientRepositories;
 use crate::help_prompt::Onboarding;
+use crate::repository::Repository;
+use dotenv::dotenv;
 use serde_json::json;
 use std::cell::RefCell;
+use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Deref;
@@ -20,8 +23,15 @@ pub fn get_home_path() -> PathBuf {
 
 /// Create filepath to config file
 pub fn get_filepath(path: PathBuf) -> String {
-    let home_path = path.to_str();
-    home_path.unwrap().to_owned() + "/" + CONFIG_FILE_NAME
+    dotenv().ok();
+
+    let test_mode = env::var("TEST_MODE").expect("TEST MODE not set");
+    return if test_mode.parse().unwrap() {
+        "./testing-utils".to_owned() + "/" + CONFIG_FILE_NAME
+    } else {
+        let home_path = path.to_str();
+        home_path.unwrap().to_owned() + "/" + CONFIG_FILE_NAME
+    };
 }
 
 /// Read config file or throw error and call error function
