@@ -1,12 +1,16 @@
 extern crate clap;
+use crate::client_repositories::ClientRepositories;
 use crate::config;
 use crate::config::{Edit, Init, Make, New, RunMode};
-use crate::timesheet;
+use crate::help_prompt::HelpPrompt;
+use crate::repository;
 use chrono::prelude::*;
 use clap::{App, Arg, ArgMatches, Error};
 use std::cell::RefCell;
 use std::ffi::OsString;
 use std::rc::Rc;
+
+pub type RcHelpPrompt = Rc<RefCell<HelpPrompt>>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Commands {
@@ -201,25 +205,33 @@ impl Cli<'_> {
         })
     }
 
-    // Create an instance of timesheet wrapped in a smart pointer
+    // Create an instance of repository wrapped in a smart pointer
     // Then pass this into each of the config functions as clones
     // The clones being references to the original reference means
     // that it can be passed into multiple functions
     pub fn run(&self) -> Result<(), clap::Error> {
-        let timesheet = Rc::new(RefCell::new(timesheet::Timesheet::new()));
+        let repository = Rc::new(RefCell::new(repository::Repository::new()));
+        let client_repositories = Rc::new(RefCell::new(ClientRepositories::new()));
 
         let matches = &self.matches;
         let cli: Cli = self.parse_commands(&matches)?;
 
         let config: config::Config = config::Config::new();
+        let prompt = crate::help_prompt::HelpPrompt::new(Rc::clone(&repository));
+        let rc_prompt: RcHelpPrompt = Rc::new(RefCell::new(prompt));
 
-        Self::run_command(cli, config, &timesheet);
+        Self::run_command(cli, config, &repository, &client_repositories, &rc_prompt);
 
         Ok(())
     }
 
-    pub fn run_command<T>(cli: Cli, config: T, timesheet: &Rc<RefCell<timesheet::Timesheet>>)
-    where
+    pub fn run_command<T>(
+        cli: Cli,
+        config: T,
+        repository: &Rc<RefCell<repository::Repository>>,
+        client_repositories: &Rc<RefCell<ClientRepositories>>,
+        prompt: &RcHelpPrompt,
+    ) where
         T: Init + Make + Edit + RunMode,
     {
         match cli.command {
@@ -227,11 +239,36 @@ impl Cli<'_> {
                 panic!("The programme shouldn't be able to get here");
             }
             Some(commands) => match commands {
-                Commands::Init => config.init(cli.options, Rc::clone(&timesheet)),
-                Commands::Make => config.make(cli.options, Rc::clone(&timesheet)),
-                Commands::Edit => config.edit(cli.options, Rc::clone(&timesheet)),
-                Commands::Remove => config.edit(cli.options, Rc::clone(&timesheet)),
-                Commands::RunMode => config.run_mode(cli.options, Rc::clone(&timesheet)),
+                Commands::Init => config.init(
+                    cli.options,
+                    Rc::clone(&repository),
+                    Rc::clone(client_repositories),
+                    Rc::clone(prompt),
+                ),
+                Commands::Make => config.make(
+                    cli.options,
+                    Rc::clone(&repository),
+                    Rc::clone(client_repositories),
+                    Rc::clone(prompt),
+                ),
+                Commands::Edit => config.edit(
+                    cli.options,
+                    Rc::clone(&repository),
+                    Rc::clone(client_repositories),
+                    Rc::clone(prompt),
+                ),
+                Commands::Remove => config.edit(
+                    cli.options,
+                    Rc::clone(&repository),
+                    Rc::clone(client_repositories),
+                    Rc::clone(prompt),
+                ),
+                Commands::RunMode => config.run_mode(
+                    cli.options,
+                    Rc::clone(&repository),
+                    Rc::clone(client_repositories),
+                    Rc::clone(prompt),
+                ),
             },
         }
     }
@@ -241,6 +278,7 @@ impl Cli<'_> {
 mod tests {
     use super::*;
     use crate::config::New;
+    use crate::repository::Repository;
     use std::fmt::Debug;
     use std::str::FromStr;
 
@@ -262,13 +300,22 @@ mod tests {
         let cli = Cli::new_from(commands).unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
         let response = new_cli.unwrap();
+        let prompt =
+            crate::help_prompt::HelpPrompt::new(Rc::new(RefCell::new(repository::Repository {
+                ..Default::default()
+            })));
+
+        let repository = Rc::new(RefCell::new(Repository::new()));
+        let client_repositories = Rc::new(RefCell::new(ClientRepositories::new()));
+
+        let rc_prompt = Rc::new(RefCell::new(prompt));
 
         Cli::run_command(
             response,
             mock_config,
-            &Rc::new(RefCell::new(timesheet::Timesheet {
-                ..Default::default()
-            })),
+            &repository,
+            &client_repositories,
+            &rc_prompt,
         );
     }
 
@@ -282,7 +329,9 @@ mod tests {
         fn init(
             &self,
             _options: Vec<Option<String>>,
-            _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+            _repository: Rc<RefCell<repository::Repository>>,
+            _client_repositories: Rc<RefCell<ClientRepositories>>,
+            _prompt: RcHelpPrompt,
         ) {
             assert!(true);
         }
@@ -292,7 +341,9 @@ mod tests {
         fn edit(
             &self,
             _options: Vec<Option<String>>,
-            _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+            _repository: Rc<RefCell<repository::Repository>>,
+            _client_repositories: Rc<RefCell<ClientRepositories>>,
+            _prompt: RcHelpPrompt,
         ) {
             assert!(true);
         }
@@ -302,7 +353,9 @@ mod tests {
         fn make(
             &self,
             _options: Vec<Option<String>>,
-            _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+            _repository: Rc<RefCell<repository::Repository>>,
+            _client_repositories: Rc<RefCell<ClientRepositories>>,
+            _prompt: RcHelpPrompt,
         ) {
             assert!(true);
         }
@@ -312,7 +365,9 @@ mod tests {
         fn run_mode(
             &self,
             _options: Vec<Option<String>>,
-            _timesheet: Rc<RefCell<timesheet::Timesheet>>,
+            _repository: Rc<RefCell<repository::Repository>>,
+            _client_repositories: Rc<RefCell<ClientRepositories>>,
+            _prompt: RcHelpPrompt,
         ) {
             assert!(true);
         }

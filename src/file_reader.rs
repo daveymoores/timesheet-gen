@@ -1,12 +1,13 @@
+use crate::client_repositories::ClientRepositories;
 use crate::help_prompt::Onboarding;
-use crate::timesheet::Timesheet;
+use crate::repository::Repository;
 use serde_json::json;
-use std::cell::Ref;
-use std::collections::HashMap;
+use std::cell::RefCell;
 use std::fs::File;
 use std::io::{Read, Write};
+use std::ops::Deref;
 use std::path::PathBuf;
-use std::process;
+use std::rc::Rc;
 
 const CONFIG_FILE_NAME: &str = ".timesheet-gen.txt";
 
@@ -28,7 +29,7 @@ pub fn get_filepath(path: PathBuf) -> String {
 fn read_file<T>(
     buffer: &mut String,
     path: String,
-    prompt: T,
+    prompt: Rc<RefCell<T>>,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     T: Onboarding,
@@ -38,7 +39,7 @@ where
             file.read_to_string(buffer)?;
         }
         Err(_) => {
-            prompt.onboarding()?;
+            prompt.borrow_mut().onboarding()?;
         }
     };
 
@@ -47,7 +48,7 @@ where
 
 pub fn read_data_from_config_file<T>(
     buffer: &mut String,
-    prompt: T,
+    prompt: Rc<RefCell<T>>,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     T: Onboarding,
@@ -58,25 +59,11 @@ where
     Ok(())
 }
 
-pub fn write_config_file(
-    timesheet: &Ref<Timesheet>,
+pub fn write_json_to_config_file(
+    json: String,
     config_path: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let unwrapped_timesheet = json!({
-        "namespace": timesheet.namespace.as_ref().unwrap_or(&"None".to_string()),
-        "repo_path": timesheet.repo_path.as_ref().unwrap_or(&"None".to_string()),
-        "git_path": timesheet.git_path.as_ref().unwrap_or(&"None".to_string()),
-        "name": timesheet.name.as_ref().unwrap_or(&"None".to_string()),
-        "email": timesheet.email.as_ref().unwrap_or(&"None".to_string()),
-        "client_name": timesheet.client_name.as_ref().unwrap_or(&"None".to_string()),
-        "client_contact_person": timesheet.client_contact_person.as_ref().unwrap_or(&"None".to_string()),
-        "client_address": timesheet.client_address.as_ref().unwrap_or(&"None".to_string()),
-        "po_number": timesheet.po_number.as_ref().unwrap_or(&"None".to_string()),
-        "timesheet": timesheet.timesheet.as_ref().unwrap_or(&HashMap::new()),
-    });
-
-    let json = serde_json::to_string(&unwrapped_timesheet).unwrap();
-    let mut file = File::create(&config_path)?;
+    let mut file = File::create(config_path)?;
 
     file.write_all(json.as_bytes())?;
 
@@ -86,7 +73,64 @@ pub fn write_config_file(
     or 'timesheet-gen help' for more options."
     );
 
-    process::exit(exitcode::OK);
+    Ok(())
+}
+
+pub fn serialize_config(
+    deserialized_config: Option<Vec<ClientRepositories>>,
+    client_repository: Rc<RefCell<ClientRepositories>>,
+) -> Result<String, Box<dyn std::error::Error>> {
+    // get the values from the current repo so that it can be merged back into the config
+    let client = client_repository.borrow_mut().client.clone();
+    let user = client_repository.borrow_mut().user.clone();
+    let repository = client_repository
+        .borrow_mut()
+        .repositories
+        .as_ref()
+        .unwrap()[0]
+        .clone();
+    let namespace = repository.namespace.as_ref().unwrap();
+    let client_name = &client.as_ref().unwrap().client_name;
+
+    let config_data = match deserialized_config {
+        None => {
+            json!(vec![client_repository.deref()])
+        }
+        Some(config) => {
+            let config_data: Vec<ClientRepositories> = config
+                .into_iter()
+                .map(|c| {
+                    if &c.client.as_ref().unwrap().client_name == &client_name.clone() {
+                        return ClientRepositories {
+                            client: client.clone(),
+                            user: user.clone(),
+                            repositories: Some(
+                                c.clone()
+                                    .repositories
+                                    .unwrap()
+                                    .into_iter()
+                                    .map(|repo| {
+                                        if repo.namespace.as_ref().unwrap() == namespace {
+                                            return repository.to_owned();
+                                        }
+
+                                        repo
+                                    })
+                                    .collect(),
+                            ),
+                        };
+                    }
+                    c
+                })
+                .collect();
+
+            json!(config_data)
+        }
+    };
+
+    let json = serde_json::to_string(&config_data)?;
+
+    Ok(json)
 }
 
 #[cfg(test)]
@@ -95,6 +139,20 @@ mod tests {
     use std::cell::RefCell;
     use std::error::Error;
     use std::path::Path;
+
+    fn create_mock_client_repository(client_repository: Rc<RefCell<ClientRepositories>>) {
+        let repo = RefCell::new(Repository {
+            client_name: Option::from("alphabet".to_string()),
+            client_address: Option::from("Spaghetti Way, USA".to_string()),
+            client_contact_person: Option::from("John Smith".to_string()),
+            name: Option::from("Jim Jones".to_string()),
+            email: Option::from("jim@jones.com".to_string()),
+            namespace: Option::from("timesheet-gen".to_string()),
+            ..Default::default()
+        });
+
+        client_repository.borrow_mut().set_values(repo.borrow());
+    }
 
     #[test]
     fn get_filepath_returns_path_with_file_name() {
@@ -112,22 +170,23 @@ mod tests {
 
     #[test]
     fn read_file_returns_a_buffer() {
+        #[derive(Clone)]
         struct MockPrompt {}
 
         impl Onboarding for MockPrompt {
-            fn onboarding(self) -> Result<(), Box<dyn Error>> {
+            fn onboarding(&self) -> Result<(), Box<dyn Error>> {
                 assert!(false);
                 Ok(())
             }
         }
 
-        let mock_prompt = MockPrompt {};
+        let mock_prompt = Rc::new(RefCell::new(MockPrompt {}));
 
         let mut buffer = String::new();
 
         read_file(
             &mut buffer,
-            String::from("./testing-utils/.timesheet-gen.txt"),
+            String::from("./testing-utils/.hello.txt"),
             mock_prompt,
         )
         .unwrap();
@@ -137,67 +196,84 @@ mod tests {
 
     #[test]
     fn read_file_calls_the_error_function() {
+        #[derive(Clone)]
         struct MockPrompt {}
 
         impl Onboarding for MockPrompt {
-            fn onboarding(self) -> Result<(), Box<dyn Error>> {
+            fn onboarding(&self) -> Result<(), Box<dyn Error>> {
                 assert!(true);
                 Ok(())
             }
         }
 
-        let mock_prompt = MockPrompt {};
+        let mock_prompt = Rc::new(RefCell::new(MockPrompt {}));
 
         let mut buffer = String::new();
 
         read_file(
             &mut buffer,
-            String::from("./testing-utils/.timesheet-gen.txt"),
+            String::from("./testing-utils/.timesheet.txt"),
             mock_prompt,
         )
         .unwrap();
     }
 
-    // These tests write temp files and seem to screw up the test runner
-    // Ignore for now...
     #[test]
-    #[ignore]
     fn it_writes_a_config_file_when_file_exists() {
-        let mock_timesheet = RefCell::new(Timesheet {
+        let client_repositories = Rc::new(RefCell::new(ClientRepositories {
             ..Default::default()
-        });
+        }));
 
-        let timesheet = mock_timesheet.borrow();
+        create_mock_client_repository(client_repositories.clone());
 
         // creates mock directory that is destroyed when it goes out of scope
         let dir = tempfile::tempdir().unwrap();
         let mock_config_path = dir.path().join("my-temporary-note.txt");
 
         let file = File::create(&mock_config_path).unwrap();
-        let string_path_from_tempdir = mock_config_path.to_str().unwrap().to_owned();
-        assert_eq!(
-            write_config_file(&timesheet, string_path_from_tempdir).unwrap(),
-            ()
-        );
+        let string_path_from_temp_dir = mock_config_path.to_str().unwrap().to_owned();
+
+        let json = serialize_config(None, client_repositories).unwrap();
+
+        assert!(write_json_to_config_file(json, string_path_from_temp_dir).is_ok());
 
         drop(file);
         dir.close().unwrap();
     }
 
     #[test]
-    #[ignore]
     fn it_throws_an_error_when_writing_config_if_file_doesnt_exist() {
-        let mock_timesheet = RefCell::new(Timesheet {
+        let client_repositories = Rc::new(RefCell::new(ClientRepositories {
             ..Default::default()
-        });
+        }));
 
-        let timesheet = mock_timesheet.borrow();
+        create_mock_client_repository(client_repositories.clone());
 
-        // creates mock directory that is destroyed when it goes out of scope
-        let dir = tempfile::tempdir().unwrap();
-        let mock_config_path = dir.path().join("my-temporary-note.txt");
+        let json = serialize_config(None, client_repositories).unwrap();
 
-        let string_path_from_tempdir = mock_config_path.to_str().unwrap().to_owned();
-        assert!(write_config_file(&timesheet, string_path_from_tempdir).is_err());
+        assert!(write_json_to_config_file(json, "./a/fake/path".to_string()).is_err());
+    }
+
+    #[test]
+    fn it_finds_and_updates_a_client() {
+        let client_repositories = Rc::new(RefCell::new(ClientRepositories {
+            ..Default::default()
+        }));
+
+        create_mock_client_repository(client_repositories.clone());
+
+        let deserialized_config = vec![client_repositories.borrow().clone()];
+
+        let json =
+            serialize_config(Option::from(deserialized_config), client_repositories).unwrap();
+        let value: Vec<ClientRepositories> = serde_json::from_str(&*json).unwrap();
+
+        assert_eq!(
+            value[0].repositories.as_ref().unwrap()[0]
+                .client_contact_person
+                .as_ref()
+                .unwrap(),
+            &"John Smith".to_string()
+        );
     }
 }

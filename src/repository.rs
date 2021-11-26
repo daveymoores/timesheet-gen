@@ -1,7 +1,8 @@
-use crate::date_parser::TimesheetYears;
+use crate::date_parser::{create_single_day_object, DayMap, TimesheetYears};
 use crate::utils::{check_for_valid_day, check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Datelike};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::process;
 use std::process::{Command, Output};
@@ -11,8 +12,8 @@ pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 /// Holds the data from the config file. Config can access these values
 // and perform various operations on it
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Timesheet {
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Repository {
     pub namespace: Option<String>,
     pub repo_path: Option<String>,
     pub git_path: Option<String>,
@@ -22,13 +23,16 @@ pub struct Timesheet {
     pub client_name: Option<String>,
     pub client_contact_person: Option<String>,
     pub client_address: Option<String>,
-    pub po_number: Option<String>,
+    pub project_number: Option<String>,
     pub timesheet: Option<TimesheetYears>,
+    pub requires_approval: Option<bool>,
+    pub approvers_name: Option<String>,
+    pub approvers_email: Option<String>,
     pub user_signature: Option<String>,
     pub approver_signature: Option<String>,
 }
 
-impl Default for Timesheet {
+impl Default for Repository {
     fn default() -> Self {
         Self {
             namespace: None,
@@ -40,91 +44,125 @@ impl Default for Timesheet {
             client_name: None,
             client_contact_person: None,
             client_address: None,
-            po_number: None,
+            project_number: None,
             timesheet: None,
+            requires_approval: None,
+            approvers_name: None,
+            approvers_email: None,
             user_signature: None,
             approver_signature: None,
         }
     }
 }
 
-impl Timesheet {
+struct Iter<'a> {
+    inner: &'a Repository,
+    index: u8,
+}
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = &'a Option<String>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let ret = match self.index {
+            0 => &self.inner.namespace,
+            1 => &self.inner.repo_path,
+            2 => &self.inner.git_path,
+            _ => return None,
+        };
+        self.index += 1;
+        Some(ret)
+    }
+}
+
+impl Repository {
     pub fn new() -> Self {
-        Timesheet {
+        Repository {
             ..Default::default()
         }
     }
 
-    pub fn set_values_from_buffer(&mut self, buffer: &String) -> &mut Timesheet {
-        let deserialized_sheet: Timesheet = serde_json::from_str(&buffer)
-            .expect("Initialisation of timesheet struct from buffer failed");
+    fn iter(&self) -> Iter<'_> {
+        Iter {
+            inner: self,
+            index: 0,
+        }
+    }
 
-        self.namespace = deserialized_sheet.namespace;
-        self.repo_path = deserialized_sheet.repo_path;
-        self.git_path = deserialized_sheet.git_path;
-        self.git_log_dates = deserialized_sheet.git_log_dates;
-        self.name = deserialized_sheet.name;
-        self.email = deserialized_sheet.email;
-        self.client_name = deserialized_sheet.client_name;
-        self.client_contact_person = deserialized_sheet.client_contact_person;
-        self.client_address = deserialized_sheet.client_address;
-        self.po_number = deserialized_sheet.po_number;
-        self.timesheet = deserialized_sheet.timesheet;
-        self.user_signature = deserialized_sheet.user_signature;
-        self.approver_signature = deserialized_sheet.approver_signature;
+    /// Get values from buffer and set these to the Repository struct fields
+    pub fn set_values_from_buffer(&mut self, repository: &Repository) -> &mut Repository {
+        *self = repository.clone();
         self
     }
 
-    // pub fn set_user_signature(&mut self, value: String) {
-    //     self.user_signature = Option::from(value);
-    // }
-    //
-    // pub fn set_approver_signature(&mut self, value: String) {
-    //     self.approver_signature = Option::from(value);
-    // }
-    //
-    // pub fn set_po_number(&mut self, value: String) {
-    //     self.po_number = Option::from(value);
-    // }
+    pub fn set_approvers_name(&mut self, value: String) -> &mut Self {
+        self.approvers_name = Option::from(value);
+        self
+    }
 
-    pub fn set_namespace(&mut self, value: String) {
+    pub fn set_approvers_email(&mut self, value: String) -> &mut Self {
+        self.approvers_email = Option::from(value);
+        self
+    }
+
+    pub fn set_requires_approval(&mut self, value: bool) -> &mut Self {
+        self.requires_approval = Option::from(value);
+        self
+    }
+
+    pub fn set_project_number(&mut self, value: String) -> &mut Self {
+        self.project_number = Option::from(value);
+        self
+    }
+
+    pub fn set_namespace(&mut self, value: String) -> &mut Self {
         self.namespace = Option::from(value);
+        self
     }
 
-    pub fn set_repo_path(&mut self, value: String) {
+    pub fn set_repo_path(&mut self, value: String) -> &mut Self {
         self.repo_path = Option::from(value);
+        self
     }
 
-    pub fn set_name(&mut self, value: String) {
+    pub fn set_name(&mut self, value: String) -> &mut Self {
         self.name = Option::from(value);
+        self
     }
 
-    pub fn set_email(&mut self, value: String) {
+    pub fn set_email(&mut self, value: String) -> &mut Self {
         self.email = Option::from(value);
+        self
     }
 
-    pub fn set_client_name(&mut self, value: String) {
+    pub fn set_client_name(&mut self, value: String) -> &mut Self {
         self.client_name = Option::from(value);
+        self
     }
 
-    pub fn set_client_contact_person(&mut self, value: String) {
+    pub fn set_client_contact_person(&mut self, value: String) -> &mut Self {
         self.client_contact_person = Option::from(value);
+        self
     }
 
-    pub fn set_client_address(&mut self, value: String) {
+    pub fn set_client_address(&mut self, value: String) -> &mut Self {
         self.client_address = Option::from(value);
+        self
     }
 
-    pub fn set_timesheet(&mut self, value: TimesheetYears) {
+    pub fn set_timesheet(&mut self, value: TimesheetYears) -> &mut Self {
         self.timesheet = Option::from(value);
+        self
     }
 
-    pub fn set_git_path(&mut self, value: String) {
+    pub fn set_git_path(&mut self, value: String) -> &mut Self {
         self.git_path = Option::from(value);
+        self
     }
 
-    pub fn set_git_log_dates(&mut self, value: GitLogDates) {
+    pub fn set_git_log_dates(&mut self, value: GitLogDates) -> &mut Self {
         self.git_log_dates = Option::from(value);
+        self
     }
 
     pub fn find_namespace_from_git_path(
@@ -216,36 +254,13 @@ impl Timesheet {
         Ok(self)
     }
 
-    pub fn exec_generate_timesheets_from_git_history(&mut self) -> &mut Self {
-        let command = String::from("--author");
-
-        // can safely unwrap here as name would have been set in the previous step
-        let author = [command, self.name.as_ref().unwrap().to_string()].join("=");
-        let output = Command::new("git")
-            .arg("-C")
-            .arg(self.git_path.as_ref().unwrap().to_string())
-            .arg("log")
-            .arg("--date=rfc")
-            .arg(author)
-            .arg("--all")
-            .output()
-            .expect("Failed to execute command");
-
-        let output_string = crate::utils::trim_output_from_utf8(output)
-            .unwrap_or_else(|_| "Parsing output failed".to_string());
-
-        self.parse_git_log_dates_from_git_history(output_string);
-
-        self
-    }
-
     pub fn parse_git_log_dates_from_git_history(&mut self, git_history: String) {
         let mut year_month_map: GitLogDates = HashMap::new();
 
         let regex = regex::Regex::new(
             r"([a-zA-Z]{3}),\s(?P<day>\d{1,2})\s(?P<month>[a-zA-Z]{3})\s(?P<year>\d{4})\s(\d+:?){3}\s([+-]?\d{4})",
         )
-        .unwrap();
+            .unwrap();
 
         for cap in regex.captures_iter(&git_history) {
             // for each year insert the entry
@@ -280,18 +295,6 @@ impl Timesheet {
         }
 
         self.set_git_log_dates(year_month_map);
-
-        let timesheet = match &self.git_log_dates {
-            Some(date_map) => {
-                crate::date_parser::get_timesheet_map_from_date_hashmap(date_map.clone(), self)
-            }
-            None => {
-                eprintln!("No dates parsed from git log");
-                process::exit(exitcode::DATAERR);
-            }
-        };
-
-        self.set_timesheet(timesheet);
     }
 
     pub fn mutate_timesheet_entry(
@@ -299,7 +302,7 @@ impl Timesheet {
         year_string: &String,
         month_u32: &u32,
         day: usize,
-        entry: Vec<(String, i32)>,
+        entry: DayMap,
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
         self.timesheet
             .as_mut()
@@ -319,7 +322,7 @@ impl Timesheet {
         month_u32: &u32,
         day: usize,
         entry: String,
-    ) -> Result<Option<&i32>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<&Value>, Box<dyn std::error::Error>> {
         let value = self
             .timesheet
             .as_ref()
@@ -341,7 +344,7 @@ impl Timesheet {
         let month_u32 = check_for_valid_month(&options[2])?;
         let day_string = check_for_valid_day(&options[1], month_u32, year_string.parse().unwrap())?;
 
-        let hour: i32 = options[0].as_ref().unwrap().parse()?;
+        let hour: f64 = options[0].as_ref().unwrap().parse()?;
         let day: usize = day_string.parse()?;
 
         let is_weekend =
@@ -358,11 +361,7 @@ impl Timesheet {
             &year_string,
             &month_u32,
             day,
-            vec![
-                ("hours".to_string(), hour),
-                ("user_edited".to_string(), 1),
-                ("weekend".to_string(), is_weekend),
-            ],
+            create_single_day_object(is_weekend.as_bool().unwrap(), hour, true),
         )?;
 
         Ok(self)
@@ -372,31 +371,56 @@ impl Timesheet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
+    use serde_json::{json, Map, Number};
     use std::os::unix::process::ExitStatusExt;
     use std::process::ExitStatus;
 
     fn get_mock_year_map() -> TimesheetYears {
         let mut year_map: TimesheetYears = HashMap::new();
 
+        let mut map = Map::new();
+        map.extend(vec![("user_edited".to_string(), Value::Bool(true))]);
+
         year_map.insert(
             "2021".to_string(),
-            vec![(
-                "11".to_string(),
-                vec![vec![("user_edited".to_string(), 1)]
-                    .into_iter()
-                    .collect::<HashMap<String, i32>>()],
-            )]
-            .into_iter()
-            .collect::<HashMap<String, Vec<HashMap<String, i32>>>>(),
+            vec![("11".to_string(), vec![map])]
+                .into_iter()
+                .collect::<HashMap<String, Vec<Map<String, Value>>>>(),
         );
 
         year_map
     }
 
     #[test]
+    fn it_sets_values_from_buffer() {
+        let mut timesheet = Repository {
+            ..Default::default()
+        };
+
+        let mut ts = Repository {
+            namespace: Option::from("timesheet-gen".to_string()),
+            git_path: Option::from(".".to_string()),
+            repo_path: Option::from(
+                "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/".to_string(),
+            ),
+            ..Default::default()
+        };
+
+        timesheet.set_values_from_buffer(&mut ts);
+        let x: Vec<&String> = ts.iter().map(|y| y.as_ref().unwrap()).collect();
+        assert_eq!(
+            x,
+            [
+                &"timesheet-gen".to_string(),
+                &"/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/".to_string(),
+                &".".to_string(),
+            ]
+        );
+    }
+
+    #[test]
     fn it_mutates_timesheet_entry() {
-        let mut ts = Timesheet {
+        let mut ts = Repository {
             ..Default::default()
         };
 
@@ -407,7 +431,7 @@ mod tests {
             &"2021".to_string(),
             &11,
             0,
-            vec![("user_edited".to_string(), 0)],
+            create_single_day_object(false, 8.0, false),
         )
         .unwrap();
 
@@ -415,13 +439,13 @@ mod tests {
             ts.get_timesheet_entry(&"2021".to_string(), &11, 0, "user_edited".to_string())
                 .unwrap()
                 .unwrap(),
-            &0 as &i32
+            false
         );
     }
 
     #[test]
     fn it_gets_timesheet_entry() {
-        let mut ts = Timesheet {
+        let mut ts = Repository {
             ..Default::default()
         };
 
@@ -432,13 +456,13 @@ mod tests {
             ts.get_timesheet_entry(&"2021".to_string(), &11, 0, "user_edited".to_string())
                 .unwrap()
                 .unwrap(),
-            &1 as &i32
+            true
         );
     }
 
     #[test]
     fn it_parses_git_log_dates_from_git_history() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -489,7 +513,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
         let x = timesheet.git_log_dates.unwrap();
 
         // to check the hashmap shape is correct, lets create an array
-        // of the numeric values and order them. Not great but snapshot testing with hashmaps isn't a thing in rust...
+        // of the numeric values and order them. Not great but snapshot testing with hashmaps isn't a thing in Rust...
         let mut k = vec![];
         for (key, value) in x.into_iter() {
             k.push(key.clone());
@@ -512,7 +536,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_finds_namespace_from_git_path() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -523,7 +547,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_finds_git_path_from_directory() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -545,48 +569,55 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
         );
     }
 
-    // #[test]
-    // #[ignore]
-    // fn it_sets_user_signature() {
-    //     let mut timesheet = Timesheet {
-    //         ..Default::default()
-    //     };
-    //
-    //     timesheet.set_user_signature("user_signature".to_string());
-    //     assert_eq!(
-    //         timesheet.user_signature.unwrap(),
-    //         "user_signature".to_string()
-    //     );
-    // }
-    //
-    // #[test]
-    // #[ignore]
-    // fn it_sets_approver_signature() {
-    //     let mut timesheet = Timesheet {
-    //         ..Default::default()
-    //     };
-    //
-    //     timesheet.set_approver_signature("approver_signature".to_string());
-    //     assert_eq!(
-    //         timesheet.approver_signature.unwrap(),
-    //         "approver_signature".to_string()
-    //     );
-    // }
-    //
-    // #[test]
-    // #[ignore]
-    // fn it_sets_po_number() {
-    //     let mut timesheet = Timesheet {
-    //         ..Default::default()
-    //     };
-    //
-    //     timesheet.set_po_number("po number".to_string());
-    //     assert_eq!(timesheet.po_number.unwrap(), "po number".to_string());
-    // }
+    #[test]
+    fn it_sets_requires_approval() {
+        let mut timesheet = Repository {
+            ..Default::default()
+        };
+
+        timesheet.set_requires_approval(true);
+        assert_eq!(timesheet.requires_approval.unwrap(), true);
+    }
+
+    #[test]
+    fn it_sets_approvers_email() {
+        let mut timesheet = Repository {
+            ..Default::default()
+        };
+
+        timesheet.set_approvers_email("approver@gmail.com".to_string());
+        assert_eq!(
+            timesheet.approvers_email.unwrap(),
+            "approver@gmail.com".to_string()
+        );
+    }
+
+    #[test]
+    fn it_sets_approvers_name() {
+        let mut timesheet = Repository {
+            ..Default::default()
+        };
+
+        timesheet.set_approvers_name("Mr Approver".to_string());
+        assert_eq!(timesheet.approvers_name.unwrap(), "Mr Approver".to_string());
+    }
+
+    #[test]
+    fn it_sets_project_number() {
+        let mut timesheet = Repository {
+            ..Default::default()
+        };
+
+        timesheet.set_project_number("Project number".to_string());
+        assert_eq!(
+            timesheet.project_number.unwrap(),
+            "Project number".to_string()
+        );
+    }
 
     #[test]
     fn it_sets_namespace() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -596,7 +627,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_repo_path() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -606,7 +637,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_name() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -616,7 +647,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_email() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -626,7 +657,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_client_name() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -636,7 +667,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_client_contact_person() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -649,7 +680,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_client_address() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
@@ -662,34 +693,35 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
     #[test]
     fn it_sets_timesheet() {
-        let mut ts = Timesheet {
+        let mut ts = Repository {
             ..Default::default()
         };
 
         let mut year_map: TimesheetYears = HashMap::new();
+        let mut map = Map::new();
+        map.extend(vec![(
+            "baz".to_string(),
+            Value::Number(Number::from_f64(8.0).unwrap()),
+        )]);
+
         year_map.insert(
             "foo".to_string(),
-            vec![(
-                "bar".to_string(),
-                vec![vec![("baz".to_string(), 8)]
-                    .into_iter()
-                    .collect::<HashMap<String, i32>>()],
-            )]
-            .into_iter()
-            .collect::<HashMap<String, Vec<HashMap<String, i32>>>>(),
+            vec![("bar".to_string(), vec![map])]
+                .into_iter()
+                .collect::<HashMap<String, Vec<Map<String, Value>>>>(),
         );
 
         ts.set_timesheet(year_map);
         assert!(ts.timesheet.clone().unwrap().contains_key("foo"));
         assert_eq!(
             json!(ts.timesheet.clone()).to_string(),
-            "{\"foo\":{\"bar\":[{\"baz\":8}]}}"
+            "{\"foo\":{\"bar\":[{\"baz\":8.0}]}}"
         );
     }
 
     #[test]
     fn it_sets_git_path() {
-        let mut timesheet = Timesheet {
+        let mut timesheet = Repository {
             ..Default::default()
         };
 
