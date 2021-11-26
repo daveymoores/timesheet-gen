@@ -147,7 +147,7 @@ impl Config {
             // set th e working repo to the timesheet struct as it may be operated on
             repository.borrow_mut().set_values_from_buffer(ts_clone.0);
         } else {
-            // if it doesn't, onboard them and check whether current repo
+            // if it doesn't, onboard them and check whether (passed path) repo
             // should exist under an existing client
             prompt
                 .borrow_mut()

@@ -98,15 +98,21 @@ impl HelpPrompt {
     }
 
     pub fn confirm_repository_path(&self) -> Result<&Self, Box<dyn std::error::Error>> {
-        println!(
-            "This looks like the first time you're running timesheet-gen. \n\
-        Initialise timesheet-gen for current repository?"
-        );
+        let repo_path = self.repository.clone();
+        let mut borrow = repo_path.borrow_mut();
+        let path = borrow.repo_path.as_ref().unwrap().clone();
+
+        if path == "." {
+            println!(
+                "This looks like the first time you're running timesheet-gen. \n\
+        Initialise timesheet-gen for current repository?",
+            );
+        } else {
+            println!("With the project at this path {}?", path);
+        };
 
         if Confirm::new().default(true).interact()? {
-            self.repository
-                .borrow_mut()
-                .set_repo_path(String::from("."));
+            borrow.set_repo_path(String::from(path));
         } else {
             println!("Please give a path to the repository you would like to use");
 
@@ -117,9 +123,7 @@ impl HelpPrompt {
 
             let input: String = Input::new().with_initial_text(path).interact_text()?;
 
-            self.repository
-                .borrow_mut()
-                .set_repo_path(String::from(input));
+            borrow.set_repo_path(String::from(input));
         }
 
         Ok(self)

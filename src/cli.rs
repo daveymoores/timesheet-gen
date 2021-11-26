@@ -103,7 +103,8 @@ impl Cli<'_> {
                 "Minimal configuration, simple timesheets for sharing via pdf download or unique link.",
             ).subcommand(
             App::new("init")
-                .about("Initialise for current or specified repository"))
+                .about("Initialise for current or specified repository")
+                .arg(&path_arg))
             .subcommand(
                 App::new("run-mode")
                     .about("Whether the repository should \n\
@@ -170,8 +171,9 @@ impl Cli<'_> {
         let month = date_time.month().to_string();
         let day = date_time.day().to_string();
 
-        if let Some(_) = matches.subcommand_matches("init") {
+        if let Some(init) = matches.subcommand_matches("init") {
             // This will onboard so no need to pass the path here
+            options.push(Some(init.value_of("path").unwrap_or(".").to_string()));
             command = Some(Commands::Init);
         } else if let Some(make) = matches.subcommand_matches("make") {
             // set default value of current month
@@ -227,6 +229,11 @@ impl Cli<'_> {
         let cli: Cli = self.parse_commands(&matches)?;
 
         let config: config::Config = config::Config::new();
+
+        // pass the path so that I already know it if user is being onboarded
+        repository
+            .borrow_mut()
+            .set_repo_path(cli.options[0].clone().unwrap());
         let prompt = crate::help_prompt::HelpPrompt::new(Rc::clone(&repository));
         let rc_prompt: RcHelpPrompt = Rc::new(RefCell::new(prompt));
 
@@ -430,6 +437,16 @@ mod tests {
         let new_cli = cli.parse_commands(&cli.matches);
         let result = new_cli.unwrap();
 
+        assert_eq!(result.command.unwrap().clone(), Commands::Init);
+    }
+
+    #[test]
+    fn returns_the_passed_path_for_init() {
+        let cli: Cli = Cli::new_from(["exename", "init", "-p/this/is/a/path"].iter()).unwrap();
+        let new_cli = cli.parse_commands(&cli.matches);
+        let result = new_cli.unwrap();
+        let values = unwrap_iter_with_option::<String>(result.options);
+        assert_eq!(values, vec!["/this/is/a/path".to_string()]);
         assert_eq!(result.command.unwrap().clone(), Commands::Init);
     }
 
