@@ -27,8 +27,9 @@ impl Config {
     /// Find and update client if sheet exists, otherwise write a new one
     fn write_to_config_file(
         client_repositories: Rc<RefCell<ClientRepositories>>,
-        deserialized_config: Option<Vec<ClientRepositories>>,
+        deserialized_config: Option<&mut Vec<ClientRepositories>>,
     ) {
+        // get path for where to write the config file
         let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
         let json = crate::file_reader::serialize_config(
             deserialized_config,
@@ -47,21 +48,24 @@ impl Config {
         process::exit(exitcode::OK)
     }
 
-    fn check_for_repo_in_buffer(
+    fn check_for_repo_in_buffer<'a>(
         self,
-        deserialized_config: &mut Vec<ClientRepositories>,
-    ) -> Result<Option<(&Repository, &ClientRepositories)>, Box<dyn std::error::Error>> {
+        deserialized_config: &'a mut Vec<ClientRepositories>,
+        options: &'a Vec<Option<String>>,
+    ) -> Result<Option<(&'a Repository, &'a ClientRepositories)>, Box<dyn std::error::Error>> {
         let mut temp_repository = Repository {
-            repo_path: Option::from(".".to_string()),
+            repo_path: Option::from(options[0].as_ref().unwrap().to_string()),
             ..Default::default()
         };
 
+        // get namespace of working repository
         temp_repository
             .find_git_path_from_directory_from()?
             .find_namespace_from_git_path()?;
 
         let namespace: String = temp_repository.namespace.unwrap();
 
+        // check whether any clients contain the namespace
         let found_client_repositories = deserialized_config.iter().find(|client| {
             match client
                 .repositories
@@ -93,6 +97,7 @@ impl Config {
 
     fn check_for_config_file(
         self,
+        options: &Vec<Option<String>>,
         buffer: &mut String,
         repository: Rc<RefCell<Repository>>,
         client_repositories: Rc<RefCell<ClientRepositories>>,
@@ -119,13 +124,13 @@ impl Config {
             return;
         }
 
-        // ..if the there is an existing config file, check whether the current repository exists under any clients
+        // ..if the there is an existing config file, check whether the (passed path) repository exists under any clients
         // if it does pass Repository values to Repository
         let mut deserialized_config: Vec<ClientRepositories> = serde_json::from_str(&buffer)
             .expect("Initialisation of ClientRepository struct from buffer failed");
 
         if let Some(ts_tuple) = self
-            .check_for_repo_in_buffer(&mut deserialized_config)
+            .check_for_repo_in_buffer(&mut deserialized_config, &options)
             .unwrap_or_else(|err| {
                 eprintln!("Error trying to read from config file: {}", err);
                 std::process::exit(exitcode::DATAERR);
@@ -142,18 +147,30 @@ impl Config {
                 .exec_generate_timesheets_from_git_history()
                 .compare_logs_and_set_timesheets();
 
-            // set th e working repo to the timesheet struct as it may be operated on
+            // set the working repo to the timesheet struct as it may be operated on
             repository.borrow_mut().set_values_from_buffer(ts_clone.0);
         } else {
-            // if it doesn't, onboard them and check whether current repo
+            // if it doesn't, onboard them and check whether (passed path) repo
             // should exist under an existing client
             prompt
                 .borrow_mut()
-                .prompt_for_client(deserialized_config)
+                .prompt_for_client_then_onboard(&mut deserialized_config)
                 .unwrap_or_else(|err| {
                     eprintln!("Couldn't find client: {}", err);
                     std::process::exit(exitcode::CANTCREAT);
                 });
+
+            // ...and fetch a new batch of interaction data
+            client_repositories
+                .borrow_mut()
+                .set_values(repository.borrow())
+                .exec_generate_timesheets_from_git_history()
+                .compare_logs_and_set_timesheets();
+
+            Config::write_to_config_file(
+                client_repositories,
+                Option::from(&mut deserialized_config),
+            );
         }
     }
 }
@@ -172,7 +189,7 @@ pub trait Init {
 impl Init for Config {
     fn init(
         &self,
-        _options: Vec<Option<String>>,
+        options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
         client_repositories: Rc<RefCell<ClientRepositories>>,
         prompt: RcHelpPrompt,
@@ -180,6 +197,7 @@ impl Init for Config {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         self.check_for_config_file(
+            &options,
             &mut buffer,
             Rc::clone(&repository),
             client_repositories,
@@ -213,6 +231,7 @@ impl Make for Config {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         self.check_for_config_file(
+            &options,
             &mut buffer,
             Rc::clone(&repository),
             Rc::clone(&client_repositories),
@@ -262,6 +281,7 @@ impl Edit for Config {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         self.check_for_config_file(
+            &options,
             &mut buffer,
             Rc::clone(&repository),
             Rc::clone(&client_repositories),
@@ -306,7 +326,7 @@ pub trait RunMode {
 impl RunMode for Config {
     fn run_mode(
         &self,
-        _options: Vec<Option<String>>,
+        options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
         client_repositories: Rc<RefCell<ClientRepositories>>,
         prompt: RcHelpPrompt,
@@ -314,6 +334,7 @@ impl RunMode for Config {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         self.check_for_config_file(
+            &options,
             &mut buffer,
             Rc::clone(&repository),
             client_repositories,
@@ -349,9 +370,10 @@ mod tests {
             }]),
         }];
 
+        let options = vec![Option::from(".".to_string())];
         let config: Config = Config::new();
         let option = config
-            .check_for_repo_in_buffer(&mut deserialized_config)
+            .check_for_repo_in_buffer(&mut deserialized_config, &options)
             .unwrap();
 
         if let Some((repository, _client_repositories)) = option {
