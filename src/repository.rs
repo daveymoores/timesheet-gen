@@ -199,7 +199,7 @@ impl Repository {
             .arg("--show-toplevel")
             .output()
             .expect("Failed to find 'git_path'");
-        println!("{:?}", output_path);
+
         // TODO catch error here if path isn't found
         self.find_git_path_from_directory(output_path)?;
 

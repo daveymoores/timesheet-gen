@@ -54,12 +54,12 @@ impl HelpPrompt {
         );
     }
 
-    pub fn prompt_for_client(
+    pub fn prompt_for_client_then_onboard(
         &self,
-        deserialized_config: Vec<ClientRepositories>,
+        deserialized_config: &mut Vec<ClientRepositories>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!(
-            "Looks like this repository hasn't been initialised yet.\n\
+            "Initialising new repository.\n\
         Would you like to add it to any of these existing clients?"
         );
         let no_client_value = "Create a new client".to_string();
@@ -102,6 +102,7 @@ impl HelpPrompt {
         let mut borrow = repo_path.borrow_mut();
         let path = borrow.repo_path.as_ref().unwrap().clone();
 
+        // TODO This should be based in whether the config file was found, not on the path
         if path == "." {
             println!(
                 "This looks like the first time you're running timesheet-gen. \n\

@@ -1,6 +1,5 @@
 use crate::client_repositories::ClientRepositories;
 use crate::help_prompt::Onboarding;
-use crate::repository::Repository;
 use serde_json::json;
 use std::cell::RefCell;
 use std::fs::File;
@@ -77,7 +76,7 @@ pub fn write_json_to_config_file(
 }
 
 pub fn serialize_config(
-    deserialized_config: Option<Vec<ClientRepositories>>,
+    deserialized_config: Option<&mut Vec<ClientRepositories>>,
     client_repository: Rc<RefCell<ClientRepositories>>,
 ) -> Result<String, Box<dyn std::error::Error>> {
     // get the values from the current repo so that it can be merged back into the config
@@ -89,40 +88,45 @@ pub fn serialize_config(
         .as_ref()
         .unwrap()[0]
         .clone();
-    let namespace = repository.namespace.as_ref().unwrap();
     let client_name = &client.as_ref().unwrap().client_name;
 
     let config_data = match deserialized_config {
+        // if deserialized_config doesn't exist, then create fresh json for file
         None => {
             json!(vec![client_repository.deref()])
         }
+        // if it does exist, lets add it to the existing client repositories, or
+        // push it into the vec to add a new client
         Some(config) => {
-            let config_data: Vec<ClientRepositories> = config
+            let config_data: Vec<ClientRepositories> = if config
                 .into_iter()
-                .map(|c| {
-                    if &c.client.as_ref().unwrap().client_name == &client_name.clone() {
-                        return ClientRepositories {
-                            client: client.clone(),
-                            user: user.clone(),
-                            repositories: Some(
-                                c.clone()
-                                    .repositories
-                                    .unwrap()
-                                    .into_iter()
-                                    .map(|repo| {
-                                        if repo.namespace.as_ref().unwrap() == namespace {
-                                            return repository.to_owned();
-                                        }
+                .any(|x| &x.client.as_ref().unwrap().client_name == client_name)
+            {
+                let x: Vec<ClientRepositories> = config
+                    .iter_mut()
+                    .map(|c| {
+                        if &c.client.as_ref().unwrap().client_name == client_name {
+                            return ClientRepositories {
+                                client: client.clone(),
+                                user: user.clone(),
+                                repositories: Some(
+                                    vec![
+                                        c.clone().repositories.unwrap(),
+                                        vec![repository.to_owned()],
+                                    ]
+                                    .concat(),
+                                ),
+                            };
+                        }
+                        c.clone()
+                    })
+                    .collect();
 
-                                        repo
-                                    })
-                                    .collect(),
-                            ),
-                        };
-                    }
-                    c
-                })
-                .collect();
+                x
+            } else {
+                config.push(client_repository.borrow_mut().clone());
+                config.to_vec()
+            };
 
             json!(config_data)
         }
@@ -136,6 +140,7 @@ pub fn serialize_config(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::repository::Repository;
     use std::cell::RefCell;
     use std::error::Error;
     use std::path::Path;
@@ -262,10 +267,10 @@ mod tests {
 
         create_mock_client_repository(client_repositories.clone());
 
-        let deserialized_config = vec![client_repositories.borrow().clone()];
+        let mut deserialized_config = vec![client_repositories.borrow().clone()];
 
         let json =
-            serialize_config(Option::from(deserialized_config), client_repositories).unwrap();
+            serialize_config(Option::from(&mut deserialized_config), client_repositories).unwrap();
         let value: Vec<ClientRepositories> = serde_json::from_str(&*json).unwrap();
 
         assert_eq!(

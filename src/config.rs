@@ -27,8 +27,9 @@ impl Config {
     /// Find and update client if sheet exists, otherwise write a new one
     fn write_to_config_file(
         client_repositories: Rc<RefCell<ClientRepositories>>,
-        deserialized_config: Option<Vec<ClientRepositories>>,
+        deserialized_config: Option<&mut Vec<ClientRepositories>>,
     ) {
+        // get path for where to write the config file
         let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
         let json = crate::file_reader::serialize_config(
             deserialized_config,
@@ -57,12 +58,14 @@ impl Config {
             ..Default::default()
         };
 
+        // get namespace of working repository
         temp_repository
             .find_git_path_from_directory_from()?
             .find_namespace_from_git_path()?;
 
         let namespace: String = temp_repository.namespace.unwrap();
 
+        // check whether any clients contain the namespace
         let found_client_repositories = deserialized_config.iter().find(|client| {
             match client
                 .repositories
@@ -144,18 +147,29 @@ impl Config {
                 .exec_generate_timesheets_from_git_history()
                 .compare_logs_and_set_timesheets();
 
-            // set th e working repo to the timesheet struct as it may be operated on
+            // set the working repo to the timesheet struct as it may be operated on
             repository.borrow_mut().set_values_from_buffer(ts_clone.0);
         } else {
             // if it doesn't, onboard them and check whether (passed path) repo
             // should exist under an existing client
             prompt
                 .borrow_mut()
-                .prompt_for_client(deserialized_config)
+                .prompt_for_client_then_onboard(&mut deserialized_config)
                 .unwrap_or_else(|err| {
                     eprintln!("Couldn't find client: {}", err);
                     std::process::exit(exitcode::CANTCREAT);
                 });
+
+            client_repositories
+                .borrow_mut()
+                .set_values(repository.borrow())
+                .exec_generate_timesheets_from_git_history()
+                .compare_logs_and_set_timesheets();
+
+            Config::write_to_config_file(
+                client_repositories,
+                Option::from(&mut deserialized_config),
+            );
         }
     }
 }
