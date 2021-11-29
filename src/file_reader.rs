@@ -140,6 +140,7 @@ pub fn serialize_config(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::client_repositories::Client;
     use crate::repository::Repository;
     use std::cell::RefCell;
     use std::error::Error;
@@ -157,6 +158,76 @@ mod tests {
         });
 
         client_repository.borrow_mut().set_values(repo.borrow());
+    }
+
+    #[test]
+    fn it_serializes_a_config_and_adds_to_an_existing_client() {
+        let client_repositories = Rc::new(RefCell::new(ClientRepositories {
+            ..Default::default()
+        }));
+
+        create_mock_client_repository(client_repositories.clone());
+
+        let mut deserialized_config = vec![client_repositories.borrow_mut().deref().clone()];
+
+        let json_string =
+            serialize_config(Option::from(&mut deserialized_config), client_repositories).unwrap();
+
+        let constructed_client_repos: Vec<ClientRepositories> =
+            serde_json::from_str(&json_string).unwrap();
+
+        //before
+        assert_eq!(
+            &deserialized_config[0]
+                .repositories
+                .as_ref()
+                .unwrap()
+                .iter()
+                .len(),
+            &1
+        );
+        //after
+        assert_eq!(
+            &constructed_client_repos[0]
+                .repositories
+                .as_ref()
+                .unwrap()
+                .iter()
+                .len(),
+            &2
+        );
+    }
+
+    #[test]
+    fn it_serializes_a_config_and_adds_a_new_client() {
+        let client_repositories = Rc::new(RefCell::new(ClientRepositories {
+            ..Default::default()
+        }));
+
+        create_mock_client_repository(client_repositories.clone());
+
+        let mut deserialized_config = vec![ClientRepositories {
+            client: Some(Client {
+                client_name: "New client".to_string(),
+                client_address: "Somewhere".to_string(),
+                client_contact_person: "Jim Jones".to_string(),
+            }),
+            user: None,
+            repositories: None,
+        }];
+
+        let length_before = &deserialized_config.len();
+
+        let json_string =
+            serialize_config(Option::from(&mut deserialized_config), client_repositories).unwrap();
+
+        let constructed_client_repos: Vec<ClientRepositories> =
+            serde_json::from_str(&json_string).unwrap();
+
+        //before
+        assert_eq!(length_before, &1);
+        //after
+        assert_eq!(&constructed_client_repos.len(), &2);
     }
 
     #[test]

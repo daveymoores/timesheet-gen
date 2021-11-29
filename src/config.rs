@@ -160,6 +160,7 @@ impl Config {
                     std::process::exit(exitcode::CANTCREAT);
                 });
 
+            // ...and fetch a new batch of interaction data
             client_repositories
                 .borrow_mut()
                 .set_values(repository.borrow())
