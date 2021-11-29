@@ -312,9 +312,9 @@ impl Edit for Config {
     }
 }
 
-pub trait RunMode {
-    /// Specify a run mode
-    fn run_mode(
+pub trait Remove {
+    /// Update client or repository details
+    fn remove(
         &self,
         options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
@@ -323,8 +323,42 @@ pub trait RunMode {
     );
 }
 
-impl RunMode for Config {
-    fn run_mode(
+impl Remove for Config {
+    fn remove(
+        &self,
+        options: Vec<Option<String>>,
+        repository: Rc<RefCell<Repository>>,
+        client_repositories: Rc<RefCell<ClientRepositories>>,
+        prompt: RcHelpPrompt,
+    ) {
+        // try to read config file. Write a new one if it doesn't exist
+        let mut buffer = String::new();
+        self.check_for_config_file(
+            &options,
+            &mut buffer,
+            Rc::clone(&repository),
+            client_repositories,
+            Rc::clone(&prompt),
+        );
+
+        // if buffer is not empty, then read repository, change the run-mode and write to file
+        if !buffer.is_empty() {}
+    }
+}
+
+pub trait Update {
+    /// Update client or repository details
+    fn update(
+        &self,
+        options: Vec<Option<String>>,
+        repository: Rc<RefCell<Repository>>,
+        client_repositories: Rc<RefCell<ClientRepositories>>,
+        prompt: RcHelpPrompt,
+    );
+}
+
+impl Update for Config {
+    fn update(
         &self,
         options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
