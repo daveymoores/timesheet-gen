@@ -256,23 +256,25 @@ impl Cli<'_> {
         })
     }
 
-    // Create an instance of repository wrapped in a smart pointer
-    // Then pass this into each of the config functions as clones
-    // The clones being references to the original reference means
-    // that it can be passed into multiple functions
     pub fn run(&self) -> Result<(), clap::Error> {
+        let config: config::Config = config::Config::new();
         let repository = Rc::new(RefCell::new(repository::Repository::new()));
         let client_repositories = Rc::new(RefCell::new(ClientRepositories::new()));
-
         let matches = &self.matches;
         let cli: Cli = self.parse_commands(&matches)?;
 
-        let config: config::Config = config::Config::new();
+        // pass the path for init so that I already know it if user is being onboarded
+        match &cli.command {
+            Some(command) => {
+                if command == &Commands::Init {
+                    repository
+                        .borrow_mut()
+                        .set_repo_path(cli.options[0].clone().unwrap());
+                }
+            }
+            None => {}
+        }
 
-        // pass the path so that I already know it if user is being onboarded
-        repository
-            .borrow_mut()
-            .set_repo_path(cli.options[0].clone().unwrap());
         let prompt = crate::help_prompt::HelpPrompt::new(Rc::clone(&repository));
         let rc_prompt: RcHelpPrompt = Rc::new(RefCell::new(prompt));
 
