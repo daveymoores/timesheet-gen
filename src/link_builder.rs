@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::cell::{RefCell, RefMut};
 use std::error::Error;
-use std::ops::Deref;
 use std::rc::Rc;
 use std::{env, process};
 
@@ -19,6 +18,7 @@ struct Timesheet {
     namespace: String,
     timesheet: TimesheetHoursForMonth,
     total_hours: f64,
+    project_number: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -74,6 +74,8 @@ fn build_document<'a>(
     client_repositories: &'a RefMut<ClientRepositories>,
 ) -> TimesheetDocument {
     let repos = client_repositories;
+    // When this is serialised, it can't take references to data
+    // so make it all owned
     TimesheetDocument {
         creation_date,
         random_path: random_path.clone(),
@@ -121,7 +123,7 @@ pub async fn build_unique_uri(
 
     for i in 0..repos.len() {
         let namespace = &repos[i].namespace;
-        let namespace_deref = namespace.as_ref().unwrap().deref();
+        let project_number = &repos[i].project_number;
 
         let timesheet_hours_for_month = find_month_from_timesheet(&repos[i], &options)
             .unwrap_or_else(|err| {
@@ -131,9 +133,10 @@ pub async fn build_unique_uri(
 
         if let Some(timesheet) = timesheet_hours_for_month {
             timesheets.push(Timesheet {
-                namespace: namespace_deref.to_owned(),
+                namespace: namespace.as_ref().map(|x| x.to_owned()).unwrap(),
                 timesheet: timesheet.to_owned(),
                 total_hours: calculate_total_hours(&timesheet),
+                project_number: project_number.to_owned(),
             });
         }
     }
@@ -284,6 +287,7 @@ mod test {
             namespace: "Some project".to_string(),
             timesheet: timesheet_for_month,
             total_hours: 50.0,
+            project_number: None,
         }];
 
         let document = TimesheetDocument {

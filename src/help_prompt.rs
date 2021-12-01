@@ -177,12 +177,28 @@ impl HelpPrompt {
         Ok(self)
     }
 
-    pub fn add_project_numbers(&self) -> Result<&Self, Box<dyn Error>> {
-        println!("Does this timesheet require a project/PO number?");
-        if Confirm::new().default(true).interact()? {
-            println!("Project number");
-            let input: String = Input::new().interact_text()?;
-            self.repository.borrow_mut().set_project_number(input);
+    pub fn add_project_numbers(
+        &self,
+        client_repositories: Rc<RefCell<ClientRepositories>>,
+    ) -> Result<&Self, Box<dyn Error>> {
+        let mut cr_borrow = client_repositories.borrow_mut();
+
+        for i in 0..cr_borrow.repositories.as_ref().unwrap().len() {
+            println!(
+                "Does '{}' require a project/PO number?",
+                cr_borrow.repositories.as_ref().unwrap()[i]
+                    .namespace
+                    .as_ref()
+                    .unwrap()
+            );
+            if Confirm::new().default(true).interact()? {
+                println!("Project number");
+                let input: String = Input::new().interact_text()?;
+                cr_borrow
+                    .repositories
+                    .as_mut()
+                    .map(|repo| repo[i].set_project_number(input));
+            }
         }
 
         Ok(self)

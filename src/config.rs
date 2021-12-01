@@ -282,7 +282,7 @@ impl Make for Config {
             // TODO - add_project_number should be on a per repo basis
             prompt
                 .borrow_mut()
-                .add_project_numbers()
+                .add_project_numbers(Rc::clone(&client_repositories))
                 .unwrap_or_else(|err| {
                     eprintln!("Error parsing project number: {}", err);
                     std::process::exit(exitcode::CANTCREAT);
