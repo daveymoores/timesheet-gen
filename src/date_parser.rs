@@ -98,8 +98,8 @@ fn parse_hours_from_date(
                     }
                 };
 
-                // if it hasn't been edited, then just set it
-                if is_user_edited.unwrap() == &0 {
+                // if it hasn't been edited or the month isn't in the old data, then just set it
+                if is_user_edited.unwrap_or(&Value::Bool(false)) == &Value::Bool(false) {
                     set_day_map(is_weekend, hours_worked, false, &mut day_map);
                 } else {
                     // otherwise get the existing value from the timesheet
@@ -142,14 +142,11 @@ fn get_adjacent_git_log_days_for_month<'a>(
 ) -> Vec<HashSet<u32>> {
     let mut repo_days = vec![];
     for i in 0..adjacent_git_log_days.len() {
-        repo_days.push(
-            adjacent_git_log_days[i]
-                .get(year)
-                .unwrap()
-                .get(month)
-                .unwrap()
-                .clone(),
-        );
+        if let Some(year) = adjacent_git_log_days[i].get(year) {
+            if let Some(month) = year.get(month) {
+                repo_days.push(month.clone());
+            }
+        }
     }
 
     repo_days

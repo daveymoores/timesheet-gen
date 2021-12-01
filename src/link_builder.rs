@@ -10,10 +10,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::cell::{RefCell, RefMut};
 use std::error::Error;
-use std::io::ErrorKind;
 use std::ops::Deref;
 use std::rc::Rc;
-use std::{env, io, process};
+use std::{env, process};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Timesheet {
@@ -51,28 +50,20 @@ fn get_string_month_year(
 fn find_month_from_timesheet<'a>(
     sheet: &'a Repository,
     options: &'a Vec<Option<String>>,
-) -> Result<&'a TimesheetHoursForMonth, Box<dyn Error>> {
+) -> Result<Option<&'a TimesheetHoursForMonth>, Box<dyn Error>> {
     // safe to unwrap options here as it would have been caught above
-    let timesheet_month = sheet
+    if let Some(year) = sheet
         .timesheet
         .as_ref()
         .unwrap()
-        .get(&options[1].as_ref().unwrap().to_string())
-        .ok_or_else(|| {
-            io::Error::new(
-                ErrorKind::InvalidInput,
-                format!("Year not found in interaction data"),
-            )
-        })?
-        .get(&options[0].as_ref().unwrap().to_string())
-        .ok_or_else(|| {
-            io::Error::new(
-                ErrorKind::InvalidInput,
-                format!("Month not found in interaction data"),
-            )
-        })?;
-
-    Ok(timesheet_month)
+        .get(&options[2].as_ref().unwrap().to_string())
+    {
+        if let Some(month) = year.get(&options[1].as_ref().unwrap().to_string()) {
+            return Ok(Option::from(month));
+        }
+        return Ok(Option::None);
+    }
+    Ok(Option::None)
 }
 
 fn build_document<'a>(
@@ -113,7 +104,7 @@ pub async fn build_unique_uri(
     let mongodb_collection = env::var("MONGODB_COLLECTION")
         .expect("You must set the MONGODB_COLLECTION environment var!");
 
-    let month_year_string = get_string_month_year(&options[0], &options[1])?;
+    let month_year_string = get_string_month_year(&options[1], &options[2])?;
     println!("Generating timesheet for {}...", month_year_string);
 
     let db = db::Db::new().await?;
@@ -132,16 +123,29 @@ pub async fn build_unique_uri(
         let namespace = &repos[i].namespace;
         let namespace_deref = namespace.as_ref().unwrap().deref();
 
-        let timesheet = find_month_from_timesheet(&repos[i], &options).unwrap_or_else(|err| {
-            eprintln!("Error finding month in timesheet: {}", err);
-            std::process::exit(exitcode::DATAERR);
-        });
+        let timesheet_hours_for_month = find_month_from_timesheet(&repos[i], &options)
+            .unwrap_or_else(|err| {
+                eprintln!("Error finding year/month in timesheet data: {}", err);
+                std::process::exit(exitcode::DATAERR);
+            });
 
-        timesheets.push(Timesheet {
-            namespace: namespace_deref.to_owned(),
-            timesheet: timesheet.to_owned(),
-            total_hours: calculate_total_hours(&timesheet),
-        });
+        if let Some(timesheet) = timesheet_hours_for_month {
+            timesheets.push(Timesheet {
+                namespace: namespace_deref.to_owned(),
+                timesheet: timesheet.to_owned(),
+                total_hours: calculate_total_hours(&timesheet),
+            });
+        }
+    }
+
+    // prevent this from build a document if there aren't timesheets for the month
+    if timesheets.len() == 0 {
+        eprintln!(
+            "No days worked for any repositories in {}. \n\
+            Timesheet not generated.",
+            &month_year_string
+        );
+        std::process::exit(exitcode::DATAERR);
     }
 
     let random_path: String = db.generate_random_path(&collection).await?;

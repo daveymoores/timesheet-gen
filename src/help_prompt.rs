@@ -177,7 +177,7 @@ impl HelpPrompt {
         Ok(self)
     }
 
-    pub fn add_project_number(&self) -> Result<&Self, Box<dyn Error>> {
+    pub fn add_project_numbers(&self) -> Result<&Self, Box<dyn Error>> {
         println!("Does this timesheet require a project/PO number?");
         if Confirm::new().default(true).interact()? {
             println!("Project number");

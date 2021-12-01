@@ -59,7 +59,7 @@ impl Config {
     }
 
     // Check for repo by path or by namespace
-    fn check_for_repo_in_buffer<'a>(
+    fn check_for_client_or_repo_in_buffer<'a>(
         self,
         deserialized_config: &'a mut Vec<ClientRepositories>,
         repo_path: Option<&String>,
@@ -89,9 +89,23 @@ impl Config {
         // if a client name is passed, get ClientRepositories from that
         // if this is true, repo_path and repo_namespace will be None
         if let Some(c) = client_name {
-            for client in deserialized_config.iter() {
-                if client.client.as_ref().unwrap().client_name == c.to_owned() {
-                    option = (Option::None, Option::from(client));
+            for i in 0..deserialized_config.len() {
+                if deserialized_config[i]
+                    .client
+                    .as_ref()
+                    .unwrap()
+                    .client_name
+                    .to_lowercase()
+                    == c.to_owned().to_lowercase()
+                {
+                    option = (Option::None, Option::from(&deserialized_config[i]));
+                } else if i == &deserialized_config.len() - 1 {
+                    // if the client is passed but not found
+                    eprintln!(
+                        "Client not found. If you are trying to add a new client \n\
+                    run 'timesheet-gen init'. See https://timesheet-gen.io/docs#init"
+                    );
+                    std::process::exit(exitcode::CANTCREAT);
                 }
             }
         } else {
@@ -104,7 +118,8 @@ impl Config {
                     .unwrap()
                     .iter()
                     .find(|repository| {
-                        repository.namespace.as_ref().unwrap() == namespace.as_ref().unwrap()
+                        repository.namespace.as_ref().unwrap().to_lowercase()
+                            == namespace.as_ref().unwrap().to_lowercase()
                     }) {
                     Some(repository) => (Option::from(repository), Option::from(client)),
                     None => option,
@@ -145,7 +160,12 @@ impl Config {
             .expect("Initialisation of ClientRepository struct from buffer failed");
 
         let repo_client_tuple = self
-            .check_for_repo_in_buffer(&mut deserialized_config, options.0, options.1, options.2)
+            .check_for_client_or_repo_in_buffer(
+                &mut deserialized_config,
+                options.0,
+                options.1,
+                options.2,
+            )
             .unwrap_or_else(|err| {
                 eprintln!("Error trying to read from config file: {}", err);
                 std::process::exit(exitcode::DATAERR);
@@ -176,7 +196,7 @@ impl Config {
                 .borrow_mut()
                 .prompt_for_client_then_onboard(&mut deserialized_config)
                 .unwrap_or_else(|err| {
-                    eprintln!("Couldn't find client: {}", err);
+                    eprintln!("Error adding repository to client: {}", err);
                     std::process::exit(exitcode::CANTCREAT);
                 });
 
@@ -246,7 +266,11 @@ impl Make for Config {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         self.check_for_config_file(
-            (Option::None, Option::from(&options[0]), Option::None),
+            (
+                Option::from(&".".to_string()),
+                Option::None,
+                Option::from(&options[0]),
+            ),
             &mut buffer,
             Rc::clone(&repository),
             Rc::clone(&client_repositories),
@@ -258,7 +282,7 @@ impl Make for Config {
             // TODO - add_project_number should be on a per repo basis
             prompt
                 .borrow_mut()
-                .add_project_number()
+                .add_project_numbers()
                 .unwrap_or_else(|err| {
                     eprintln!("Error parsing project number: {}", err);
                     std::process::exit(exitcode::CANTCREAT);
@@ -427,7 +451,7 @@ mod tests {
         let config: Config = Config::new();
 
         if let Some(repository) = config
-            .check_for_repo_in_buffer(
+            .check_for_client_or_repo_in_buffer(
                 &mut vec![deserialized_config],
                 Option::from(&".".to_string()),
                 Option::None,
@@ -454,7 +478,7 @@ mod tests {
         let config: Config = Config::new();
 
         if let Some(repository) = config
-            .check_for_repo_in_buffer(
+            .check_for_client_or_repo_in_buffer(
                 &mut vec![deserialized_config],
                 Option::None,
                 Option::from(&"timesheet-gen".to_string()),
@@ -481,7 +505,7 @@ mod tests {
         let config: Config = Config::new();
 
         if let Some(client_repo) = config
-            .check_for_repo_in_buffer(
+            .check_for_client_or_repo_in_buffer(
                 &mut vec![deserialized_config],
                 Option::None,
                 Option::None,

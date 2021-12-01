@@ -172,7 +172,7 @@ impl Repository {
 
         match reg.captures(&self.git_path.clone().unwrap().as_str()) {
             None => {
-                println!("No regex matches against git path. Please check that the path contains valid characters");
+                println!("No repositories found at path. Please check that the path is valid.");
                 process::exit(exitcode::DATAERR);
             }
             Some(cap) => match cap.name("namespace") {
@@ -324,17 +324,14 @@ impl Repository {
         day: usize,
         entry: String,
     ) -> Result<Option<&Value>, Box<dyn std::error::Error>> {
-        let value = self
-            .timesheet
-            .as_ref()
-            .unwrap()
-            .get(year_string)
-            .ok_or("Passed year not found in timesheet data")?
-            .get(&*month_u32.to_string())
-            .ok_or("Passed month not found in timesheet data")?[day]
-            .get(&*entry);
+        if let Some(year) = self.timesheet.as_ref().unwrap().get(year_string) {
+            if let Some(month) = year.get(&*month_u32.to_string()) {
+                return Ok(month[day].get(&*entry));
+            };
+            return Ok(Option::None);
+        };
 
-        Ok(value)
+        Ok(Option::None)
     }
 
     pub fn update_hours_on_month_day_entry(
@@ -455,9 +452,24 @@ mod tests {
 
         assert_eq!(
             ts.get_timesheet_entry(&"2021".to_string(), &11, 0, "user_edited".to_string())
-                .unwrap()
                 .unwrap(),
-            true
+            Some(&Value::Bool(true))
+        );
+    }
+
+    #[test]
+    fn it_returns_an_option_none_if_timesheet_entry_is_not_found() {
+        let mut ts = Repository {
+            ..Default::default()
+        };
+
+        let year_map = get_mock_year_map();
+        ts.set_timesheet(year_map);
+
+        assert_eq!(
+            ts.get_timesheet_entry(&"2021".to_string(), &1, 0, "user_edited".to_string())
+                .unwrap(),
+            Option::None
         );
     }
 

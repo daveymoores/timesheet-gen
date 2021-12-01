@@ -212,11 +212,7 @@ impl Cli<'_> {
             command = Some(Commands::Init);
         } else if let Some(make) = matches.subcommand_matches("make") {
             // set default value of current month
-            options.push(Some(
-                make.value_of("namespace")
-                    .unwrap_or(&current_repository_namespace)
-                    .to_string(),
-            ));
+            options.push(make.value_of("client").map(String::from));
             options.push(Some(make.value_of("month").unwrap_or(&month).to_string()));
             options.push(Some(make.value_of("year").unwrap_or(&year).to_string()));
             command = Some(Commands::Make);
