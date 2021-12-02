@@ -179,18 +179,18 @@ impl HelpPrompt {
 
     pub fn add_project_numbers(
         &self,
-        client_repositories: Rc<RefCell<ClientRepositories>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
     ) -> Result<&Self, Box<dyn Error>> {
         let mut cr_borrow = client_repositories.borrow_mut();
         println!(
             "Finding project data for '{}'...",
-            cr_borrow.client.as_ref().unwrap().client_name
+            cr_borrow[0].client.as_ref().unwrap().client_name
         );
 
-        for i in 0..cr_borrow.repositories.as_ref().unwrap().len() {
+        for i in 0..cr_borrow[0].repositories.as_ref().unwrap().len() {
             println!(
                 "Does '{}' require a project/PO number?",
-                cr_borrow.repositories.as_ref().unwrap()[i]
+                cr_borrow[0].repositories.as_ref().unwrap()[i]
                     .namespace
                     .as_ref()
                     .unwrap()
@@ -198,7 +198,7 @@ impl HelpPrompt {
             if Confirm::new().default(true).interact()? {
                 println!("Project number");
                 let input: String = Input::new().interact_text()?;
-                cr_borrow
+                cr_borrow[0]
                     .repositories
                     .as_mut()
                     .map(|repo| repo[i].set_project_number(input));

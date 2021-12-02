@@ -8,7 +8,7 @@ use mongodb::bson::doc;
 use num_traits::cast::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::cell::{RefCell, RefMut};
+use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
 use std::{env, process};
@@ -69,7 +69,7 @@ fn build_document<'a>(
     random_path: &'a String,
     month_year_string: &'a String,
     timesheets: &'a Vec<Timesheet>,
-    client_repositories: &'a RefMut<ClientRepositories>,
+    client_repositories: &'a ClientRepositories,
 ) -> TimesheetDocument {
     let repos = client_repositories;
     // When this is serialised, it can't take references to data
@@ -95,7 +95,7 @@ fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> f64 {
 }
 
 pub async fn build_unique_uri(
-    client_repositories: Rc<RefCell<ClientRepositories>>,
+    client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
     options: Vec<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
     dotenv::dotenv().ok();
@@ -116,7 +116,7 @@ pub async fn build_unique_uri(
     let mut timesheets: Vec<Timesheet> = vec![];
 
     let client_repos = client_repositories.borrow_mut();
-    let repos_option = &client_repos.repositories;
+    let repos_option = &client_repos[0].repositories;
     let repos = repos_option.as_ref().unwrap();
 
     for i in 0..repos.len() {
@@ -155,7 +155,7 @@ pub async fn build_unique_uri(
         &random_path,
         &month_year_string,
         &timesheets,
-        &client_repos,
+        &client_repos[0],
     );
 
     // Check for existing index for TTL on the collection
@@ -247,7 +247,7 @@ mod test {
         let date_hashmap: GitLogDates = get_timesheet_hashmap();
         let timesheet =
             get_timesheet_map_from_date_hashmap(date_hashmap, &mut Default::default(), vec![]);
-        println!("{:#?}", timesheet);
+
         let repository = Repository {
             timesheet: Option::from(timesheet),
             ..Default::default()

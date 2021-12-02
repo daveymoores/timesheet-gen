@@ -25,10 +25,10 @@ impl New for Config {
 
 impl Config {
     fn fetch_interaction_data(
-        mut client_repositories: RefMut<ClientRepositories>,
+        mut client_repositories: RefMut<Vec<ClientRepositories>>,
         repository: Ref<Repository>,
     ) {
-        client_repositories
+        client_repositories[0]
             .set_values(repository)
             .exec_generate_timesheets_from_git_history()
             .compare_logs_and_set_timesheets();
@@ -36,14 +36,14 @@ impl Config {
 
     /// Find and update client if sheet exists, otherwise write a new one
     fn write_to_config_file(
-        client_repositories: Rc<RefCell<ClientRepositories>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         deserialized_config: Option<&mut Vec<ClientRepositories>>,
     ) {
         // get path for where to write the config file
         let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
         let json = crate::file_reader::serialize_config(
-            deserialized_config,
             Rc::clone(&client_repositories),
+            deserialized_config,
         )
         .unwrap_or_else(|err| {
             eprintln!("Error serializing json: {}", err);
@@ -135,7 +135,7 @@ impl Config {
         options: (Option<&String>, Option<&String>, Option<&String>),
         buffer: &mut String,
         repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<ClientRepositories>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: RcHelpPrompt,
     ) {
         // pass a prompt for if the config file doesn't exist
@@ -177,8 +177,7 @@ impl Config {
             let ts_clone = repo_client_tuple.clone();
 
             // ...and fetch a new batch of interaction data
-            client_repositories
-                .borrow_mut()
+            client_repositories.borrow_mut()[0]
                 .set_values_from_buffer(ts_clone.1.unwrap())
                 .exec_generate_timesheets_from_git_history()
                 .compare_logs_and_set_timesheets();
@@ -216,7 +215,7 @@ pub trait Init {
         &self,
         options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<ClientRepositories>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: RcHelpPrompt,
     );
 }
@@ -226,7 +225,7 @@ impl Init for Config {
         &self,
         options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<ClientRepositories>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
@@ -249,7 +248,7 @@ pub trait Make {
         &self,
         options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<ClientRepositories>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: RcHelpPrompt,
     );
 }
@@ -260,7 +259,7 @@ impl Make for Config {
         &self,
         options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<ClientRepositories>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
@@ -277,8 +276,7 @@ impl Make for Config {
             prompt.clone(),
         );
 
-        // if buffer is not empty, then read client_repositories and generate the link
-        if !buffer.is_empty() {
+        if crate::utils::config_file_found(&mut buffer) {
             prompt
                 .borrow_mut()
                 .add_project_numbers(Rc::clone(&client_repositories))
@@ -303,7 +301,7 @@ pub trait Edit {
         &self,
         options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<ClientRepositories>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: RcHelpPrompt,
     );
 }
@@ -313,7 +311,7 @@ impl Edit for Config {
         &self,
         options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<ClientRepositories>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
@@ -326,8 +324,7 @@ impl Edit for Config {
             prompt,
         );
 
-        // if buffer is not empty, then read repository, edit a value and write to file
-        if !buffer.is_empty() {
+        if crate::utils::config_file_found(&mut buffer) {
             // otherwise lets set the repository struct values
             // and fetch a new batch of interaction data
             repository
@@ -338,8 +335,7 @@ impl Edit for Config {
                     process::exit(exitcode::DATAERR);
                 });
 
-            client_repositories
-                .borrow_mut()
+            client_repositories.borrow_mut()[0]
                 .set_values(repository.borrow())
                 .exec_generate_timesheets_from_git_history()
                 .compare_logs_and_set_timesheets();
@@ -355,7 +351,7 @@ pub trait Remove {
         &self,
         options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<ClientRepositories>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: RcHelpPrompt,
     );
 }
@@ -365,21 +361,42 @@ impl Remove for Config {
         &self,
         options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<ClientRepositories>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         self.check_for_config_file(
-            (Option::None, Option::None, Option::from(&options[0])),
+            (
+                Option::None,
+                Option::from(&options[1]),
+                Option::from(&options[0]),
+            ),
             &mut buffer,
             Rc::clone(&repository),
             client_repositories,
             Rc::clone(&prompt),
         );
 
-        // if buffer is not empty, then read repository, change the run-mode and write to file
-        if !buffer.is_empty() {}
+        // Find repo or client and remove them from config file
+        if crate::utils::config_file_found(&mut buffer) {
+            let mut deserialized_config: Vec<ClientRepositories> =
+                serde_json::from_str(&mut buffer)
+                    .expect("Initialisation of ClientRepository struct from buffer failed");
+
+            if options[1].is_some() {
+                // remove the namespace from ClientRepositories
+            } else {
+                // client is required and will be set, so remove from deserialized config
+                deserialized_config.retain(|client_repo| {
+                    &client_repo.client.as_ref().unwrap().client_name
+                        != options[2].as_ref().unwrap()
+                });
+
+                // pass modified config as new client_repository and thus write it straight to file
+                Config::write_to_config_file(Rc::new(RefCell::new(deserialized_config)), None);
+            }
+        }
     }
 }
 
@@ -389,7 +406,7 @@ pub trait Update {
         &self,
         options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<ClientRepositories>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: RcHelpPrompt,
     );
 }
@@ -399,7 +416,7 @@ impl Update for Config {
         &self,
         options: Vec<Option<String>>,
         repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<ClientRepositories>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
@@ -412,8 +429,7 @@ impl Update for Config {
             Rc::clone(&prompt),
         );
 
-        // if buffer is not empty, then read repository, change the run-mode and write to file
-        if !buffer.is_empty() {}
+        if crate::utils::config_file_found(&mut buffer) {}
     }
 }
 
