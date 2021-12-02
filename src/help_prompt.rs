@@ -182,6 +182,10 @@ impl HelpPrompt {
         client_repositories: Rc<RefCell<ClientRepositories>>,
     ) -> Result<&Self, Box<dyn Error>> {
         let mut cr_borrow = client_repositories.borrow_mut();
+        println!(
+            "Finding project data for '{}'...",
+            cr_borrow.client.as_ref().unwrap().client_name
+        );
 
         for i in 0..cr_borrow.repositories.as_ref().unwrap().len() {
             println!(
