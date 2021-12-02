@@ -311,7 +311,7 @@ impl Repository {
             .get_mut(year_string)
             .ok_or("Passed year not found in timesheet data")?
             .get_mut(&*month_u32.to_string())
-            .ok_or("Passed month not found in timesheet data")?[day]
+            .ok_or("Passed month not found in timesheet data")?[day - 1]
             .extend(entry);
 
         Ok(self)
@@ -340,11 +340,11 @@ impl Repository {
         &mut self,
         options: &Vec<Option<String>>,
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
-        let year_string = check_for_valid_year(&options[3])?;
-        let month_u32 = check_for_valid_month(&options[2])?;
-        let day_string = check_for_valid_day(&options[1], month_u32, year_string.parse().unwrap())?;
+        let year_string = check_for_valid_year(&options[4])?;
+        let month_u32 = check_for_valid_month(&options[3])?;
+        let day_string = check_for_valid_day(&options[2], month_u32, year_string.parse().unwrap())?;
 
-        let hour: f64 = options[0].as_ref().unwrap().parse()?;
+        let hour: f64 = options[1].as_ref().unwrap().parse()?;
         let day: usize = day_string.parse()?;
 
         let is_weekend =

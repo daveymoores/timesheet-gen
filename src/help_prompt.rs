@@ -258,7 +258,7 @@ impl HelpPrompt {
                             .remove_repository_by_namespace(options[1].as_ref().unwrap());
 
                         if repo_len != deserialized_config[i].repositories.as_ref().unwrap().len() {
-                            println!("'{}' removed.", &options[1].as_ref().unwrap());
+                            println!("Success! '{}' removed.", &options[1].as_ref().unwrap());
                         } else {
                             println!("Client or repository not found. Nothing removed.");
                         }
@@ -281,7 +281,7 @@ impl HelpPrompt {
                 });
 
                 if config_len != deserialized_config.len() {
-                    println!("'{}' removed.", &options[0].as_ref().unwrap());
+                    println!("Success! '{}' removed.", &options[0].as_ref().unwrap());
                 } else {
                     println!("Client not found. Nothing removed.");
                 }

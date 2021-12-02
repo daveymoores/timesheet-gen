@@ -253,7 +253,7 @@ impl Cli<'_> {
     }
 
     pub fn run(&self) -> Result<(), clap::Error> {
-        // curry these into check_for_config_file
+        //TODO - curry these into check_for_config_file
         let config: config::Config = config::Config::new();
         let repository = Rc::new(RefCell::new(repository::Repository::new()));
         let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories::new()]));
