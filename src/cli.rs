@@ -540,17 +540,19 @@ mod tests {
         let new_cli = cli.parse_commands(&cli.matches);
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<String>(result.options);
-        assert_eq!(values, vec!["timesheet-gen".to_string(), month, year]);
+        assert_eq!(values, vec!["None".to_string(), month, year]);
         assert_eq!(result.command.unwrap().clone(), Commands::Make);
     }
 
     #[test]
     fn returns_a_passed_value_for_make() {
-        let cli: Cli = Cli::new_from(["exename", "make", "-m10", "-y2020"].iter()).unwrap();
+        let cli: Cli =
+            Cli::new_from(["exename", "make", "--client=Alphabet", "-m10", "-y2020"].iter())
+                .unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<String>(result.options);
-        assert_eq!(values, vec!["timesheet-gen", "10", "2020"]);
+        assert_eq!(values, vec!["Alphabet", "10", "2020"]);
     }
 
     #[test]

@@ -279,7 +279,7 @@ impl Make for Config {
 
         // if buffer is not empty, then read client_repositories and generate the link
         if !buffer.is_empty() {
-            // TODO - add_project_number should be on a per repo basis
+            // TODO - need some sort of prompt here to say which client is being generated
             prompt
                 .borrow_mut()
                 .add_project_numbers(Rc::clone(&client_repositories))

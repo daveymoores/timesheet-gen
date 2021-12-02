@@ -52,18 +52,16 @@ fn find_month_from_timesheet<'a>(
     options: &'a Vec<Option<String>>,
 ) -> Result<Option<&'a TimesheetHoursForMonth>, Box<dyn Error>> {
     // safe to unwrap options here as it would have been caught above
-    if let Some(year) = sheet
+    let option = sheet
         .timesheet
         .as_ref()
         .unwrap()
         .get(&options[2].as_ref().unwrap().to_string())
-    {
-        if let Some(month) = year.get(&options[1].as_ref().unwrap().to_string()) {
-            return Ok(Option::from(month));
-        }
-        return Ok(Option::None);
-    }
-    Ok(Option::None)
+        .and_then(|year| {
+            year.get(&options[1].as_ref().unwrap().to_string())
+                .and_then(|month| Option::from(month))
+        });
+    Ok(option)
 }
 
 fn build_document<'a>(
@@ -249,7 +247,7 @@ mod test {
         let date_hashmap: GitLogDates = get_timesheet_hashmap();
         let timesheet =
             get_timesheet_map_from_date_hashmap(date_hashmap, &mut Default::default(), vec![]);
-
+        println!("{:#?}", timesheet);
         let repository = Repository {
             timesheet: Option::from(timesheet),
             ..Default::default()
@@ -372,24 +370,36 @@ mod test {
     }
 
     #[test]
-    fn it_throws_error_if_month_cannot_be_found() {
+    fn returns_none_if_month_cannot_be_found() {
         let options = vec![
+            Option::None,
             Option::from("2".to_owned()),
             Option::from("2021".to_owned()),
         ];
 
         let timesheet = create_mock_repository();
-        assert!(find_month_from_timesheet(&timesheet, &options).is_err());
+        assert_eq!(
+            find_month_from_timesheet(&timesheet, &options).unwrap(),
+            Option::None
+        );
     }
 
     #[test]
     fn it_returns_month_from_timesheet() {
         let options = vec![
+            Option::None,
             Option::from("10".to_owned()),
             Option::from("2021".to_owned()),
         ];
 
         let timesheet = create_mock_repository();
         assert!(find_month_from_timesheet(&timesheet, &options).is_ok());
+        assert_eq!(
+            find_month_from_timesheet(&timesheet, &options)
+                .unwrap()
+                .unwrap()
+                .len(),
+            31
+        );
     }
 }

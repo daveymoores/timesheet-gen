@@ -324,14 +324,16 @@ impl Repository {
         day: usize,
         entry: String,
     ) -> Result<Option<&Value>, Box<dyn std::error::Error>> {
-        if let Some(year) = self.timesheet.as_ref().unwrap().get(year_string) {
-            if let Some(month) = year.get(&*month_u32.to_string()) {
-                return Ok(month[day].get(&*entry));
-            };
-            return Ok(Option::None);
-        };
-
-        Ok(Option::None)
+        let option = self
+            .timesheet
+            .as_ref()
+            .unwrap()
+            .get(year_string)
+            .and_then(|year| {
+                year.get(&*month_u32.to_string())
+                    .and_then(|month| month[day].get(&*entry))
+            });
+        Ok(option)
     }
 
     pub fn update_hours_on_month_day_entry(
