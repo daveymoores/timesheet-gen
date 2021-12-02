@@ -55,7 +55,7 @@ impl HelpPrompt {
     }
 
     pub fn prompt_for_client_then_onboard(
-        &self,
+        &mut self,
         deserialized_config: &mut Vec<ClientRepositories>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!(
@@ -202,6 +202,89 @@ impl HelpPrompt {
                     .repositories
                     .as_mut()
                     .map(|repo| repo[i].set_project_number(input));
+            }
+        }
+
+        Ok(self)
+    }
+
+    pub fn show_write_new_config_success(&mut self) -> &mut Self {
+        println!(
+            "timesheet-gen initialised! \n\
+    Try 'timesheet-gen make' to create your first timesheet \n\
+    or 'timesheet-gen help' for more options."
+        );
+        self
+    }
+
+    pub fn show_write_new_repo_success(&mut self) -> &mut Self {
+        println!(
+            "timesheet-gen initialised! \n\
+    Try 'timesheet-gen make' to create your first timesheet \n\
+    or 'timesheet-gen help' for more options."
+        );
+        self
+    }
+
+    pub fn show_edited_config_success(&mut self) -> &mut Self {
+        println!("timesheet-gen successfully edited!");
+        self
+    }
+
+    pub fn prompt_for_client_repo_removal(
+        &self,
+        deserialized_config: &mut Vec<ClientRepositories>,
+        options: Vec<Option<String>>,
+    ) -> Result<&Self, Box<dyn Error>> {
+        if options[1].is_some() {
+            println!(
+                "Remove '{}' from client '{}'?",
+                &options[1].as_ref().unwrap(),
+                &options[0].as_ref().unwrap()
+            );
+            // remove the namespace from a client
+            if Confirm::new().default(true).interact()? {
+                for i in 0..deserialized_config.len() {
+                    if deserialized_config[i]
+                        .client
+                        .as_ref()
+                        .unwrap()
+                        .client_name
+                        .to_lowercase()
+                        == options[0].as_ref().unwrap().to_lowercase()
+                    {
+                        let repo_len = deserialized_config[i].repositories.as_ref().unwrap().len();
+                        deserialized_config[i]
+                            .remove_repository_by_namespace(options[1].as_ref().unwrap());
+
+                        if repo_len != deserialized_config[i].repositories.as_ref().unwrap().len() {
+                            println!("'{}' removed.", &options[1].as_ref().unwrap());
+                        } else {
+                            println!("Client or repository not found. Nothing removed.");
+                        }
+                    }
+                }
+            }
+        } else {
+            println!("Remove client '{}'?", &options[0].as_ref().unwrap());
+            // client is required and will be set, so remove from deserialized config
+            if Confirm::new().default(true).interact()? {
+                let config_len = deserialized_config.len();
+                deserialized_config.retain(|client_repo| {
+                    &client_repo
+                        .client
+                        .as_ref()
+                        .unwrap()
+                        .client_name
+                        .to_lowercase()
+                        != &options[0].as_ref().unwrap().to_lowercase()
+                });
+
+                if config_len != deserialized_config.len() {
+                    println!("'{}' removed.", &options[0].as_ref().unwrap());
+                } else {
+                    println!("Client not found. Nothing removed.");
+                }
             }
         }
 

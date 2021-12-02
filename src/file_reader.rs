@@ -1,7 +1,7 @@
 use crate::client_repositories::ClientRepositories;
 use crate::help_prompt::Onboarding;
 use serde_json::json;
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Deref;
@@ -65,12 +65,6 @@ pub fn write_json_to_config_file(
     let mut file = File::create(config_path)?;
 
     file.write_all(json.as_bytes())?;
-
-    println!(
-        "timesheet-gen initialised! \n\
-    Try 'timesheet-gen make' to create your first timesheet \n\
-    or 'timesheet-gen help' for more options."
-    );
 
     Ok(())
 }

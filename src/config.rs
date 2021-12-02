@@ -6,6 +6,8 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::process;
 use std::rc::Rc;
 
+type OptionsTuple<'a> = (Option<&'a String>, Option<&'a String>, Option<&'a String>);
+
 /// Creates and modifies the config file. Config does not directly hold the information
 /// contained in the config file, but provides the various operations that can be
 /// performed on it. The data is a stored within the Repository struct.
@@ -101,10 +103,9 @@ impl Config {
                     option = (Option::None, Option::from(&deserialized_config[i]));
                 } else if i == &deserialized_config.len() - 1 {
                     // if the client is passed but not found
+                    //TODO - if this happens it would be good to give options - i.e list of clients, and list of repos
                     eprintln!(
-                        "Client not found. If you are trying to add a new client \n\
-                    run 'timesheet-gen init'. See https://timesheet-gen.io/docs#init"
-                    );
+                        "The client, or client + namespace combination you passed has not be found.");
                     std::process::exit(exitcode::CANTCREAT);
                 }
             }
@@ -132,12 +133,14 @@ impl Config {
 
     fn check_for_config_file(
         self,
-        options: (Option<&String>, Option<&String>, Option<&String>),
+        options: OptionsTuple,
         buffer: &mut String,
         repository: Rc<RefCell<Repository>>,
         client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: RcHelpPrompt,
     ) {
+        let prompt_rc_clone = prompt.clone();
+        let mut mut_prompt_ref = prompt_rc_clone.borrow_mut();
         // pass a prompt for if the config file doesn't exist
         crate::file_reader::read_data_from_config_file(buffer, prompt.clone()).unwrap_or_else(
             |err| {
@@ -151,6 +154,7 @@ impl Config {
         if buffer.is_empty() {
             Config::fetch_interaction_data(client_repositories.borrow_mut(), repository.borrow());
             Config::write_to_config_file(client_repositories, None);
+            mut_prompt_ref.show_write_new_config_success();
             return;
         }
 
@@ -191,8 +195,7 @@ impl Config {
         } else {
             // if it doesn't, onboard them and check whether (passed path or namespace) repo
             // should exist under an existing client
-            prompt
-                .borrow_mut()
+            mut_prompt_ref
                 .prompt_for_client_then_onboard(&mut deserialized_config)
                 .unwrap_or_else(|err| {
                     eprintln!("Error adding repository to client: {}", err);
@@ -205,6 +208,7 @@ impl Config {
                 client_repositories,
                 Option::from(&mut deserialized_config),
             );
+            mut_prompt_ref.show_write_new_repo_success();
         }
     }
 }
@@ -321,7 +325,7 @@ impl Edit for Config {
             &mut buffer,
             Rc::clone(&repository),
             Rc::clone(&client_repositories),
-            prompt,
+            Rc::clone(&prompt),
         );
 
         if crate::utils::config_file_found(&mut buffer) {
@@ -341,6 +345,7 @@ impl Edit for Config {
                 .compare_logs_and_set_timesheets();
 
             Config::write_to_config_file(client_repositories, None);
+            prompt.borrow_mut().show_edited_config_success();
         }
     }
 }
@@ -374,7 +379,7 @@ impl Remove for Config {
             ),
             &mut buffer,
             Rc::clone(&repository),
-            client_repositories,
+            Rc::clone(&client_repositories),
             Rc::clone(&prompt),
         );
 
@@ -384,18 +389,13 @@ impl Remove for Config {
                 serde_json::from_str(&mut buffer)
                     .expect("Initialisation of ClientRepository struct from buffer failed");
 
-            if options[1].is_some() {
-                // remove the namespace from ClientRepositories
-            } else {
-                // client is required and will be set, so remove from deserialized config
-                deserialized_config.retain(|client_repo| {
-                    &client_repo.client.as_ref().unwrap().client_name
-                        != options[2].as_ref().unwrap()
-                });
+            prompt
+                .borrow_mut()
+                .prompt_for_client_repo_removal(&mut deserialized_config, options)
+                .expect("Remove failed");
 
-                // pass modified config as new client_repository and thus write it straight to file
-                Config::write_to_config_file(Rc::new(RefCell::new(deserialized_config)), None);
-            }
+            // pass modified config as new client_repository and thus write it straight to file
+            Config::write_to_config_file(Rc::new(RefCell::new(deserialized_config)), None);
         }
     }
 }
