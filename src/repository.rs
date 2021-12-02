@@ -331,7 +331,7 @@ impl Repository {
             .get(year_string)
             .and_then(|year| {
                 year.get(&*month_u32.to_string())
-                    .and_then(|month| month[day].get(&*entry))
+                    .and_then(|month| month[day - 1].get(&*entry))
             });
         Ok(option)
     }
@@ -379,16 +379,48 @@ mod tests {
         let mut year_map: TimesheetYears = HashMap::new();
 
         let mut map = Map::new();
-        map.extend(vec![("user_edited".to_string(), Value::Bool(true))]);
+        map.extend([
+            ("weekend".to_string(), Value::Bool(false)),
+            (
+                "hours".to_string(),
+                Value::Number(Number::from_f64(0 as f64).unwrap()),
+            ),
+            ("user_edited".to_string(), Value::Bool(true)),
+        ]);
 
         year_map.insert(
             "2021".to_string(),
-            vec![("11".to_string(), vec![map])]
+            vec![("11".to_string(), vec![map.clone(), map.clone()])]
                 .into_iter()
                 .collect::<HashMap<String, Vec<Map<String, Value>>>>(),
         );
 
         year_map
+    }
+
+    #[test]
+    fn it_updates_hours() {
+        let mut ts = Repository {
+            ..Default::default()
+        };
+
+        let year_map = get_mock_year_map();
+        ts.set_timesheet(year_map);
+        ts.update_hours_on_month_day_entry(&vec![
+            None,
+            Some("33".to_string()),
+            Some("2".to_string()),
+            Some("11".to_string()),
+            Some("2021".to_string()),
+        ])
+        .unwrap();
+
+        assert_eq!(
+            ts.get_timesheet_entry(&"2021".to_string(), &11, 2, "hours".to_string())
+                .unwrap()
+                .unwrap(),
+            &Value::Number(Number::from_f64(33 as f64).unwrap())
+        );
     }
 
     #[test]

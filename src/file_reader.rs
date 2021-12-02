@@ -1,7 +1,7 @@
 use crate::client_repositories::ClientRepositories;
 use crate::help_prompt::Onboarding;
 use serde_json::json;
-use std::cell::{RefCell, RefMut};
+use std::cell::RefCell;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Deref;
