@@ -84,7 +84,7 @@ fn parse_hours_from_date(
             // if there is a timesheet then lets check whether the day value has been edited
             // before setting the hour value
             Some(_) => {
-                let day_index: usize = usize::try_from(day).unwrap() - 1;
+                let day_index: usize = usize::try_from(day).unwrap();
                 let is_user_edited = match repository.get_timesheet_entry(
                     &date_tuple.0.to_string(),
                     &date_tuple.1,

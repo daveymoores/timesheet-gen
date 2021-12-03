@@ -331,7 +331,7 @@ impl Repository {
             .get(year_string)
             .and_then(|year| {
                 year.get(&*month_u32.to_string())
-                    .and_then(|month| month[day].get(&*entry))
+                    .and_then(|month| month[day - 1].get(&*entry))
             });
         Ok(option)
     }
@@ -462,13 +462,13 @@ mod tests {
         ts.mutate_timesheet_entry(
             &"2021".to_string(),
             &11,
-            0,
+            2,
             create_single_day_object(false, 8.0, false),
         )
         .unwrap();
 
         assert_eq!(
-            ts.get_timesheet_entry(&"2021".to_string(), &11, 0, "user_edited".to_string())
+            ts.get_timesheet_entry(&"2021".to_string(), &11, 2, "user_edited".to_string())
                 .unwrap()
                 .unwrap(),
             false
@@ -485,7 +485,7 @@ mod tests {
         ts.set_timesheet(year_map);
 
         assert_eq!(
-            ts.get_timesheet_entry(&"2021".to_string(), &11, 0, "user_edited".to_string())
+            ts.get_timesheet_entry(&"2021".to_string(), &11, 1, "user_edited".to_string())
                 .unwrap(),
             Some(&Value::Bool(true))
         );

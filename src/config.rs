@@ -238,7 +238,7 @@ impl Init for Config {
             client_repositories,
             prompt,
         );
-        println!("Does it get here?");
+
         crate::help_prompt::HelpPrompt::repo_already_initialised();
     }
 }
