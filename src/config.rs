@@ -286,7 +286,6 @@ impl Make for Config {
                     std::process::exit(exitcode::CANTCREAT);
                 });
             // generate timesheet-gen.io link using existing config
-            // TODO - this shouldn't build if there are no repositories under the client
             link_builder::build_unique_uri(Rc::clone(&client_repositories), options)
                 .await
                 .unwrap_or_else(|err| {

@@ -1,7 +1,9 @@
 use crate::client_repositories::ClientRepositories;
 use crate::help_prompt::Onboarding;
+use dotenv::dotenv;
 use serde_json::json;
 use std::cell::RefCell;
+use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Deref;
@@ -20,8 +22,15 @@ pub fn get_home_path() -> PathBuf {
 
 /// Create filepath to config file
 pub fn get_filepath(path: PathBuf) -> String {
-    let home_path = path.to_str();
-    home_path.unwrap().to_owned() + "/" + CONFIG_FILE_NAME
+    dotenv().ok();
+    //TODO - use https://doc.rust-lang.org/nightly/std/fs/fn.canonicalize.html instead of rel path
+    let test_mode = env::var("TEST_MODE").expect("TEST MODE not set");
+    return if test_mode.parse().unwrap() {
+        "./testing-utils".to_owned() + "/" + CONFIG_FILE_NAME
+    } else {
+        let home_path = path.to_str();
+        home_path.unwrap().to_owned() + "/" + CONFIG_FILE_NAME
+    };
 }
 
 /// Read config file or throw error and call error function
@@ -223,6 +232,7 @@ mod tests {
 
     #[test]
     fn get_filepath_returns_path_with_file_name() {
+        env::set_var("TEST_MODE", "false");
         let path_buf = PathBuf::from("/path/to/usr");
         assert_eq!(get_filepath(path_buf), "/path/to/usr/.timesheet-gen.txt");
     }
