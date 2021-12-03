@@ -1,9 +1,10 @@
 extern crate clap;
 use crate::client_repositories::ClientRepositories;
 use crate::config;
-use crate::config::{Edit, Init, Make, New, RunMode};
+use crate::config::{Edit, Init, Make, New, Remove, Update};
 use crate::help_prompt::HelpPrompt;
 use crate::repository;
+use crate::repository::Repository;
 use chrono::prelude::*;
 use clap::{App, Arg, ArgMatches, Error};
 use std::cell::RefCell;
@@ -18,7 +19,7 @@ pub enum Commands {
     Make,
     Edit,
     Remove,
-    RunMode,
+    Update,
 }
 
 #[derive(Debug, Default)]
@@ -26,15 +27,6 @@ pub struct Cli<'a> {
     matches: ArgMatches<'a>,
     command: Option<Commands>,
     options: Vec<Option<String>>,
-}
-
-fn has_cb_or_d(v: String) -> Result<(), String> {
-    if v == "d" || v == "cb" {
-        return Ok(());
-    }
-    Err(String::from(
-        "Permitted values are 'cb' (commit-based) or 'd' (default)",
-    ))
 }
 
 impl Cli<'_> {
@@ -47,13 +39,13 @@ impl Cli<'_> {
         I: Iterator<Item = T>,
         T: Into<OsString> + Clone,
     {
-        let path_arg = Arg::with_name("path")
-            .short("p")
-            .long("path")
-            .value_name("path")
+        let namespace_arg = Arg::with_name("namespace")
+            .short("n")
+            .long("namespace")
+            .value_name("namespace")
             .help(
-                "Pass optional 'path' to git repository. Defaults \n\
-                            to current directory",
+                "Pass optional namespace/project name of git repository. Defaults \n\
+                            to project within the current directory",
             );
 
         let hour_arg = Arg::with_name("hour")
@@ -104,43 +96,66 @@ impl Cli<'_> {
             ).subcommand(
             App::new("init")
                 .about("Initialise for current or specified repository")
-                .arg(&path_arg))
-            .subcommand(
-                App::new("run-mode")
-                    .about("Whether the repository should \n\
-               be initialised as commit based (cb) or default (d)")
-                    .arg(&path_arg)
-                    .arg(
-                    Arg::with_name("mode")
-                        .value_name("mode")
-                        .validator(has_cb_or_d)
-                        .help(
-                            "Whether the repository should \n\
-               be initialised as commit based (cb) or default (d)",
-                        )))
+                .arg(Arg::with_name("path")
+                    .short("p")
+                    .long("path")
+                    .value_name("path")
+                    .help(
+                        "Pass optional 'path' to git repository. Defaults \n\
+                            to current directory",
+                    )))
             .subcommand(App::new("edit")
                 .about("Change the hours worked value for a given day")
-                .arg(&path_arg)
+                .arg(&namespace_arg)
                 .arg(&hour_arg)
                 .arg(&day_arg)
                 .arg(&month_arg)
                 .arg(&year_arg))
             .subcommand(App::new("remove")
-                .about("Remove the entry for a given day")
-                .arg(&path_arg)
-                .arg(Arg::with_name("day")
-                    .short("d")
-                    .long("day")
-                    .value_name("xx")
+                .about("Remove a client or repository")
+                .arg(Arg::with_name("client")
+                    .short("c")
+                    .long("client")
+                    .value_name("client")
+                    .help("Required client name. If the namespace isn't passed, this command \n\
+                    will remove the passed client (after a prompt)",
+                    ).required(true))
+                .arg(Arg::with_name("namespace")
+                    .requires("client")
+                    .short("n")
+                    .long("namespace")
+                    .value_name("namespace")
                     .help(
-                        "sets the day value. When the month/year \n\
-                    isn't set, it defaults to the current day",
-                    ))
-                .arg(&month_arg)
-                .arg(&year_arg))
+                        "Pass an optional namespace/project name of git repository. Defaults \n\
+                            to project within the current directory",
+                    )))
+            .subcommand(App::new("update")
+                .about("Update details for a client or repository")
+                .arg(Arg::with_name("client")
+                    .short("c")
+                    .long("client")
+                    .value_name("client")
+                    .help("Required client name. If the namespace isn't passed, this command \n\
+                    will edit the passed client",
+                    ).required(true))
+                .arg(Arg::with_name("namespace")
+                    .requires("client")
+                    .short("n")
+                    .long("namespace")
+                    .value_name("namespace")
+                    .help(
+                        "Pass an optional namespace/project name of the git repository",
+                    )))
             .subcommand(App::new("make")
-                .about("Change the hours worked value for a given day")
-                .arg(&path_arg)
+                .about("Generate a new timesheet on a unique link")
+                .arg(Arg::with_name("client")
+                    .short("c")
+                    .long("client")
+                    .value_name("client")
+                    .help(
+                        "Pass optional client name. Defaults \n\
+                            to client of current directory",
+                    ))
                 .arg(Arg::with_name("month")
                     .short("m")
                     .long("month")
@@ -171,37 +186,57 @@ impl Cli<'_> {
         let month = date_time.month().to_string();
         let day = date_time.day().to_string();
 
+        let mut temp_repository = Repository {
+            repo_path: Option::from(".".to_string()),
+            ..Default::default()
+        };
+
+        // get namespace of working repository
+        temp_repository
+            .find_git_path_from_directory_from()
+            .unwrap_or_else(|err| {
+                eprintln!("Error finding git path from project directory: {}", err);
+                std::process::exit(exitcode::CANTCREAT);
+            })
+            .find_namespace_from_git_path()
+            .unwrap_or_else(|err| {
+                eprintln!("Error finding namespace from git path: {}", err);
+                std::process::exit(exitcode::CANTCREAT);
+            });
+
+        let current_repository_namespace: String = temp_repository.namespace.unwrap();
+
         if let Some(init) = matches.subcommand_matches("init") {
             // This will onboard so no need to pass the path here
             options.push(Some(init.value_of("path").unwrap_or(".").to_string()));
             command = Some(Commands::Init);
         } else if let Some(make) = matches.subcommand_matches("make") {
             // set default value of current month
-            options.push(Some(make.value_of("path").unwrap_or(".").to_string()));
+            options.push(make.value_of("client").map(String::from));
             options.push(Some(make.value_of("month").unwrap_or(&month).to_string()));
             options.push(Some(make.value_of("year").unwrap_or(&year).to_string()));
             command = Some(Commands::Make);
         } else if let Some(edit) = matches.subcommand_matches("edit") {
             // this will error out if the preceding date value isn't passed
             // so I can happily set default here knowing that just the day/month/year will make it through
-            options.push(Some(edit.value_of("path").unwrap_or(".").to_string()));
+            options.push(Some(
+                edit.value_of("namespace")
+                    .unwrap_or(&current_repository_namespace)
+                    .to_string(),
+            ));
             options.push(Some(edit.value_of("hour").unwrap().to_string()));
             options.push(Some(edit.value_of("day").unwrap_or(&day).to_string()));
             options.push(Some(edit.value_of("month").unwrap_or(&month).to_string()));
             options.push(Some(edit.value_of("year").unwrap_or(&year).to_string()));
             command = Some(Commands::Edit);
         } else if let Some(remove) = matches.subcommand_matches("remove") {
-            // same here...
-            options.push(Some(remove.value_of("path").unwrap_or(".").to_string()));
-            options.push(Some("0".to_string()));
-            options.push(Some(remove.value_of("day").unwrap_or(&day).to_string()));
-            options.push(Some(remove.value_of("month").unwrap_or(&month).to_string()));
-            options.push(Some(remove.value_of("year").unwrap_or(&year).to_string()));
+            options.push(Some(remove.value_of("client").unwrap().to_string()));
+            options.push(remove.value_of("namespace").map(String::from));
             command = Some(Commands::Remove);
-        } else if let Some(run_mode) = matches.subcommand_matches("run-mode") {
-            options.push(Some(run_mode.value_of("path").unwrap_or(".").to_string()));
-            options.push(Some(run_mode.value_of("mode").unwrap_or("d").to_string()));
-            command = Some(Commands::RunMode);
+        } else if let Some(update) = matches.subcommand_matches("update") {
+            options.push(Some(update.value_of("client").unwrap().to_string()));
+            options.push(update.value_of("namespace").map(String::from));
+            command = Some(Commands::Update);
         } else {
             return Err(Error {
                 message: "No matches for inputs".to_string(),
@@ -217,23 +252,26 @@ impl Cli<'_> {
         })
     }
 
-    // Create an instance of repository wrapped in a smart pointer
-    // Then pass this into each of the config functions as clones
-    // The clones being references to the original reference means
-    // that it can be passed into multiple functions
     pub fn run(&self) -> Result<(), clap::Error> {
+        //TODO - curry these into check_for_config_file
+        let config: config::Config = config::Config::new();
         let repository = Rc::new(RefCell::new(repository::Repository::new()));
-        let client_repositories = Rc::new(RefCell::new(ClientRepositories::new()));
-
+        let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories::new()]));
         let matches = &self.matches;
         let cli: Cli = self.parse_commands(&matches)?;
 
-        let config: config::Config = config::Config::new();
+        // pass the path for init so that I already know it if user is being onboarded
+        match &cli.command {
+            Some(command) => {
+                if command == &Commands::Init {
+                    repository
+                        .borrow_mut()
+                        .set_repo_path(cli.options[0].clone().unwrap());
+                }
+            }
+            None => {}
+        }
 
-        // pass the path so that I already know it if user is being onboarded
-        repository
-            .borrow_mut()
-            .set_repo_path(cli.options[0].clone().unwrap());
         let prompt = crate::help_prompt::HelpPrompt::new(Rc::clone(&repository));
         let rc_prompt: RcHelpPrompt = Rc::new(RefCell::new(prompt));
 
@@ -246,10 +284,10 @@ impl Cli<'_> {
         cli: Cli,
         config: T,
         repository: &Rc<RefCell<repository::Repository>>,
-        client_repositories: &Rc<RefCell<ClientRepositories>>,
+        client_repositories: &Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: &RcHelpPrompt,
     ) where
-        T: Init + Make + Edit + RunMode,
+        T: Init + Make + Edit + Update + Remove,
     {
         match cli.command {
             None => {
@@ -274,13 +312,13 @@ impl Cli<'_> {
                     Rc::clone(client_repositories),
                     Rc::clone(prompt),
                 ),
-                Commands::Remove => config.edit(
+                Commands::Remove => config.remove(
                     cli.options,
                     Rc::clone(&repository),
                     Rc::clone(client_repositories),
                     Rc::clone(prompt),
                 ),
-                Commands::RunMode => config.run_mode(
+                Commands::Update => config.update(
                     cli.options,
                     Rc::clone(&repository),
                     Rc::clone(client_repositories),
@@ -294,7 +332,7 @@ impl Cli<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::New;
+    use crate::config::{New, Remove};
     use crate::repository::Repository;
     use std::fmt::Debug;
     use std::str::FromStr;
@@ -304,7 +342,12 @@ mod tests {
         <T as FromStr>::Err: Debug,
     {
         args.into_iter()
-            .map(|x| x.unwrap().parse::<T>().unwrap().clone())
+            .map(|x| {
+                x.unwrap_or("None".to_string())
+                    .parse::<T>()
+                    .unwrap()
+                    .clone()
+            })
             .collect()
     }
 
@@ -312,7 +355,7 @@ mod tests {
     where
         I: Iterator<Item = T>,
         T: Into<OsString> + Clone,
-        K: Init + Make + Edit + RunMode,
+        K: Init + Make + Edit + Update + Remove,
     {
         let cli = Cli::new_from(commands).unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
@@ -323,7 +366,7 @@ mod tests {
             })));
 
         let repository = Rc::new(RefCell::new(Repository::new()));
-        let client_repositories = Rc::new(RefCell::new(ClientRepositories::new()));
+        let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories::new()]));
 
         let rc_prompt = Rc::new(RefCell::new(prompt));
 
@@ -347,7 +390,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<ClientRepositories>>,
+            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -359,7 +402,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<ClientRepositories>>,
+            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -371,19 +414,31 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<ClientRepositories>>,
+            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
         }
     }
 
-    impl RunMode for MockConfig {
-        fn run_mode(
+    impl Update for MockConfig {
+        fn update(
             &self,
             _options: Vec<Option<String>>,
             _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<ClientRepositories>>,
+            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+            _prompt: RcHelpPrompt,
+        ) {
+            assert!(true);
+        }
+    }
+
+    impl Remove for MockConfig {
+        fn remove(
+            &self,
+            _options: Vec<Option<String>>,
+            _repository: Rc<RefCell<repository::Repository>>,
+            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -406,13 +461,39 @@ mod tests {
     }
 
     #[test]
-    fn calls_config_remove_with_a_remove_command() {
+    #[should_panic]
+    fn calls_config_remove_without_required_argument_and_errors() {
         call_command_from_mock_config(["exename", "remove"].iter(), MockConfig::new());
     }
 
     #[test]
-    fn calls_config_runmode_with_a_runmode_command() {
-        call_command_from_mock_config(["exename", "run-mode"].iter(), MockConfig::new());
+    fn calls_config_remove_with_required_argument() {
+        call_command_from_mock_config(
+            ["exename", "remove", "--client=tomato"].iter(),
+            MockConfig::new(),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn calls_config_update_without_required_argument_and_errors() {
+        call_command_from_mock_config(["exename", "update"].iter(), MockConfig::new());
+    }
+
+    #[test]
+    fn calls_config_update_with_required_argument() {
+        call_command_from_mock_config(
+            ["exename", "update", "--client=tomato"].iter(),
+            MockConfig::new(),
+        );
+    }
+
+    #[test]
+    fn calls_config_update_with_required_argument_and_optional_argument() {
+        call_command_from_mock_config(
+            ["exename", "update", "--client=tomato", "--namespace=potato"].iter(),
+            MockConfig::new(),
+        );
     }
 
     #[test]
@@ -460,17 +541,19 @@ mod tests {
         let new_cli = cli.parse_commands(&cli.matches);
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<String>(result.options);
-        assert_eq!(values, vec![".".to_string(), month, year]);
+        assert_eq!(values, vec!["None".to_string(), month, year]);
         assert_eq!(result.command.unwrap().clone(), Commands::Make);
     }
 
     #[test]
     fn returns_a_passed_value_for_make() {
-        let cli: Cli = Cli::new_from(["exename", "make", "-m10", "-y2020"].iter()).unwrap();
+        let cli: Cli =
+            Cli::new_from(["exename", "make", "--client=Alphabet", "-m10", "-y2020"].iter())
+                .unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<String>(result.options);
-        assert_eq!(values, vec![".", "10", "2020"]);
+        assert_eq!(values, vec!["Alphabet", "10", "2020"]);
     }
 
     #[test]
@@ -504,7 +587,7 @@ mod tests {
         let new_cli = cli.parse_commands(&cli.matches);
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<String>(result.options);
-        assert_eq!(values, vec![".", "5", "15", "12", "2021"]);
+        assert_eq!(values, vec!["timesheet-gen", "5", "15", "12", "2021"]);
     }
 
     #[test]
@@ -520,37 +603,47 @@ mod tests {
     }
 
     #[test]
-    fn returns_a_passed_value_for_remove() {
-        let cli: Cli = Cli::new_from(
-            [
-                "exename",
-                "remove",
-                "-p/this/is/a/path",
-                "-d21",
-                "-m03",
-                "-y2021",
-            ]
-            .iter(),
-        )
-        .unwrap();
+    fn returns_a_passed_value_for_remove_with_a_none_optional_value() {
+        let cli: Cli = Cli::new_from(["exename", "remove", "-c=tomato"].iter()).unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<String>(result.options);
-        assert_eq!(values, vec!["/this/is/a/path", "0", "21", "03", "2021"]);
+        assert_eq!(values, vec!["tomato", "None"]);
     }
 
     #[test]
-    fn returns_a_default_value_for_run_mode() {
-        let cli: Cli = Cli::new_from(["exename", "run-mode"].iter()).unwrap();
+    fn returns_a_passed_values_for_remove() {
+        let cli: Cli =
+            Cli::new_from(["exename", "remove", "-c=tomato", "-n=genius"].iter()).unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<String>(result.options);
-        assert_eq!(values, vec![".", "d"]);
+        assert_eq!(values, vec!["tomato", "genius"]);
     }
 
     #[test]
-    fn throws_an_error_if_an_incorrect_arg_is_passed_in_run_mode() {
-        let result: Result<Cli, Error> = Cli::new_from(["exename", "run-mode", "nn"].iter());
+    fn returns_a_value_for_update_with_a_none_optional_value() {
+        let cli: Cli = Cli::new_from(["exename", "update", "--client=tomato"].iter()).unwrap();
+        let new_cli = cli.parse_commands(&cli.matches);
+        let result = new_cli.unwrap();
+        let values = unwrap_iter_with_option::<String>(result.options);
+        assert_eq!(values, vec!["tomato", "None"]);
+    }
+
+    #[test]
+    fn returns_a_value_for_update_with_client_and_namespace() {
+        let cli: Cli =
+            Cli::new_from(["exename", "update", "--client=tomato", "--namespace=genius"].iter())
+                .unwrap();
+        let new_cli = cli.parse_commands(&cli.matches);
+        let result = new_cli.unwrap();
+        let values = unwrap_iter_with_option::<String>(result.options);
+        assert_eq!(values, vec!["tomato", "genius"]);
+    }
+
+    #[test]
+    fn throws_an_error_if_an_incorrect_arg_is_passed_in_update() {
+        let result: Result<Cli, Error> = Cli::new_from(["exename", "update", "nn"].iter());
         assert!(result.is_err());
     }
 }

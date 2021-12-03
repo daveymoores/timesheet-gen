@@ -86,14 +86,30 @@ pub fn check_for_valid_day(
     Ok(day_string)
 }
 
+pub fn config_file_found(buffer: &mut String) -> bool {
+    !buffer.is_empty()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::utils::{
-        check_for_valid_day, check_for_valid_month, check_for_valid_year, generate_random_path,
-        get_days_from_month, trim_output_from_utf8,
+        check_for_valid_day, check_for_valid_month, check_for_valid_year, config_file_found,
+        generate_random_path, get_days_from_month, trim_output_from_utf8,
     };
     use std::os::unix::process::ExitStatusExt;
     use std::process::{ExitStatus, Output};
+
+    #[test]
+    fn should_return_true_if_config_file_is_found() {
+        let mut buffer = String::new();
+        assert_eq!(config_file_found(&mut buffer), false);
+    }
+
+    #[test]
+    fn should_return_false_if_config_file_is_not_found() {
+        let mut buffer = String::from("buffer is full");
+        assert_eq!(config_file_found(&mut buffer), true);
+    }
 
     #[test]
     fn it_checks_for_valid_day_and_throws() {

@@ -8,18 +8,17 @@ use mongodb::bson::doc;
 use num_traits::cast::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::cell::{RefCell, RefMut};
+use std::cell::RefCell;
 use std::error::Error;
-use std::io::ErrorKind;
-use std::ops::Deref;
 use std::rc::Rc;
-use std::{env, io, process};
+use std::{env, process};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Timesheet {
     namespace: String,
     timesheet: TimesheetHoursForMonth,
     total_hours: f64,
+    project_number: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -51,28 +50,18 @@ fn get_string_month_year(
 fn find_month_from_timesheet<'a>(
     sheet: &'a Repository,
     options: &'a Vec<Option<String>>,
-) -> Result<&'a TimesheetHoursForMonth, Box<dyn Error>> {
+) -> Result<Option<&'a TimesheetHoursForMonth>, Box<dyn Error>> {
     // safe to unwrap options here as it would have been caught above
-    let timesheet_month = sheet
+    let option = sheet
         .timesheet
         .as_ref()
         .unwrap()
-        .get(&options[1].as_ref().unwrap().to_string())
-        .ok_or_else(|| {
-            io::Error::new(
-                ErrorKind::InvalidInput,
-                format!("Year not found in interaction data"),
-            )
-        })?
-        .get(&options[0].as_ref().unwrap().to_string())
-        .ok_or_else(|| {
-            io::Error::new(
-                ErrorKind::InvalidInput,
-                format!("Month not found in interaction data"),
-            )
-        })?;
-
-    Ok(timesheet_month)
+        .get(&options[2].as_ref().unwrap().to_string())
+        .and_then(|year| {
+            year.get(&options[1].as_ref().unwrap().to_string())
+                .and_then(|month| Option::from(month))
+        });
+    Ok(option)
 }
 
 fn build_document<'a>(
@@ -80,9 +69,11 @@ fn build_document<'a>(
     random_path: &'a String,
     month_year_string: &'a String,
     timesheets: &'a Vec<Timesheet>,
-    client_repositories: &'a RefMut<ClientRepositories>,
+    client_repositories: &'a ClientRepositories,
 ) -> TimesheetDocument {
     let repos = client_repositories;
+    // When this is serialised, it can't take references to data
+    // so make it all owned
     TimesheetDocument {
         creation_date,
         random_path: random_path.clone(),
@@ -104,7 +95,7 @@ fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> f64 {
 }
 
 pub async fn build_unique_uri(
-    client_repositories: Rc<RefCell<ClientRepositories>>,
+    client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
     options: Vec<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
     dotenv::dotenv().ok();
@@ -113,7 +104,7 @@ pub async fn build_unique_uri(
     let mongodb_collection = env::var("MONGODB_COLLECTION")
         .expect("You must set the MONGODB_COLLECTION environment var!");
 
-    let month_year_string = get_string_month_year(&options[0], &options[1])?;
+    let month_year_string = get_string_month_year(&options[1], &options[2])?;
     println!("Generating timesheet for {}...", month_year_string);
 
     let db = db::Db::new().await?;
@@ -125,23 +116,37 @@ pub async fn build_unique_uri(
     let mut timesheets: Vec<Timesheet> = vec![];
 
     let client_repos = client_repositories.borrow_mut();
-    let repos_option = &client_repos.repositories;
+    let repos_option = &client_repos[0].repositories;
     let repos = repos_option.as_ref().unwrap();
 
     for i in 0..repos.len() {
         let namespace = &repos[i].namespace;
-        let namespace_deref = namespace.as_ref().unwrap().deref();
+        let project_number = &repos[i].project_number;
 
-        let timesheet = find_month_from_timesheet(&repos[i], &options).unwrap_or_else(|err| {
-            eprintln!("Error finding month in timesheet: {}", err);
-            std::process::exit(exitcode::DATAERR);
-        });
+        let timesheet_hours_for_month = find_month_from_timesheet(&repos[i], &options)
+            .unwrap_or_else(|err| {
+                eprintln!("Error finding year/month in timesheet data: {}", err);
+                std::process::exit(exitcode::DATAERR);
+            });
 
-        timesheets.push(Timesheet {
-            namespace: namespace_deref.to_owned(),
-            timesheet: timesheet.to_owned(),
-            total_hours: calculate_total_hours(&timesheet),
-        });
+        if let Some(timesheet) = timesheet_hours_for_month {
+            timesheets.push(Timesheet {
+                namespace: namespace.as_ref().map(|x| x.to_owned()).unwrap(),
+                timesheet: timesheet.to_owned(),
+                total_hours: calculate_total_hours(&timesheet),
+                project_number: project_number.to_owned(),
+            });
+        }
+    }
+
+    // prevent this from build a document if there aren't timesheets for the month
+    if timesheets.len() == 0 {
+        eprintln!(
+            "No days worked for any repositories in {}. \n\
+            Timesheet not generated.",
+            &month_year_string
+        );
+        std::process::exit(exitcode::DATAERR);
     }
 
     let random_path: String = db.generate_random_path(&collection).await?;
@@ -150,7 +155,7 @@ pub async fn build_unique_uri(
         &random_path,
         &month_year_string,
         &timesheets,
-        &client_repos,
+        &client_repos[0],
     );
 
     // Check for existing index for TTL on the collection
@@ -280,6 +285,7 @@ mod test {
             namespace: "Some project".to_string(),
             timesheet: timesheet_for_month,
             total_hours: 50.0,
+            project_number: None,
         }];
 
         let document = TimesheetDocument {
@@ -364,24 +370,36 @@ mod test {
     }
 
     #[test]
-    fn it_throws_error_if_month_cannot_be_found() {
+    fn returns_none_if_month_cannot_be_found() {
         let options = vec![
+            Option::None,
             Option::from("2".to_owned()),
             Option::from("2021".to_owned()),
         ];
 
         let timesheet = create_mock_repository();
-        assert!(find_month_from_timesheet(&timesheet, &options).is_err());
+        assert_eq!(
+            find_month_from_timesheet(&timesheet, &options).unwrap(),
+            Option::None
+        );
     }
 
     #[test]
     fn it_returns_month_from_timesheet() {
         let options = vec![
+            Option::None,
             Option::from("10".to_owned()),
             Option::from("2021".to_owned()),
         ];
 
         let timesheet = create_mock_repository();
         assert!(find_month_from_timesheet(&timesheet, &options).is_ok());
+        assert_eq!(
+            find_month_from_timesheet(&timesheet, &options)
+                .unwrap()
+                .unwrap()
+                .len(),
+            31
+        );
     }
 }

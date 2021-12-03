@@ -78,6 +78,16 @@ impl ClientRepositories {
         self
     }
 
+    pub fn remove_repository_by_namespace(&mut self, namespace: &String) -> &mut Self {
+        self.repositories.as_mut().map(|repos| {
+            repos.retain(|repo| {
+                repo.namespace.as_ref().unwrap().to_lowercase() != namespace.to_lowercase()
+            })
+        });
+
+        self
+    }
+
     pub fn exec_generate_timesheets_from_git_history(&mut self) -> &mut Self {
         if let Some(repositories) = &mut self.repositories {
             for repository in repositories {

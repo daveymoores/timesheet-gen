@@ -172,7 +172,7 @@ impl Repository {
 
         match reg.captures(&self.git_path.clone().unwrap().as_str()) {
             None => {
-                println!("No regex matches against git path. Please check that the path contains valid characters");
+                println!("No repositories found at path. Please check that the path is valid.");
                 process::exit(exitcode::DATAERR);
             }
             Some(cap) => match cap.name("namespace") {
@@ -311,7 +311,7 @@ impl Repository {
             .get_mut(year_string)
             .ok_or("Passed year not found in timesheet data")?
             .get_mut(&*month_u32.to_string())
-            .ok_or("Passed month not found in timesheet data")?[day]
+            .ok_or("Passed month not found in timesheet data")?[day - 1]
             .extend(entry);
 
         Ok(self)
@@ -324,28 +324,27 @@ impl Repository {
         day: usize,
         entry: String,
     ) -> Result<Option<&Value>, Box<dyn std::error::Error>> {
-        let value = self
+        let option = self
             .timesheet
             .as_ref()
             .unwrap()
             .get(year_string)
-            .ok_or("Passed year not found in timesheet data")?
-            .get(&*month_u32.to_string())
-            .ok_or("Passed month not found in timesheet data")?[day]
-            .get(&*entry);
-
-        Ok(value)
+            .and_then(|year| {
+                year.get(&*month_u32.to_string())
+                    .and_then(|month| month[day - 1].get(&*entry))
+            });
+        Ok(option)
     }
 
     pub fn update_hours_on_month_day_entry(
         &mut self,
         options: &Vec<Option<String>>,
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
-        let year_string = check_for_valid_year(&options[3])?;
-        let month_u32 = check_for_valid_month(&options[2])?;
-        let day_string = check_for_valid_day(&options[1], month_u32, year_string.parse().unwrap())?;
+        let year_string = check_for_valid_year(&options[4])?;
+        let month_u32 = check_for_valid_month(&options[3])?;
+        let day_string = check_for_valid_day(&options[2], month_u32, year_string.parse().unwrap())?;
 
-        let hour: f64 = options[0].as_ref().unwrap().parse()?;
+        let hour: f64 = options[1].as_ref().unwrap().parse()?;
         let day: usize = day_string.parse()?;
 
         let is_weekend =
@@ -380,16 +379,48 @@ mod tests {
         let mut year_map: TimesheetYears = HashMap::new();
 
         let mut map = Map::new();
-        map.extend(vec![("user_edited".to_string(), Value::Bool(true))]);
+        map.extend([
+            ("weekend".to_string(), Value::Bool(false)),
+            (
+                "hours".to_string(),
+                Value::Number(Number::from_f64(0 as f64).unwrap()),
+            ),
+            ("user_edited".to_string(), Value::Bool(true)),
+        ]);
 
         year_map.insert(
             "2021".to_string(),
-            vec![("11".to_string(), vec![map])]
+            vec![("11".to_string(), vec![map.clone(), map.clone()])]
                 .into_iter()
                 .collect::<HashMap<String, Vec<Map<String, Value>>>>(),
         );
 
         year_map
+    }
+
+    #[test]
+    fn it_updates_hours() {
+        let mut ts = Repository {
+            ..Default::default()
+        };
+
+        let year_map = get_mock_year_map();
+        ts.set_timesheet(year_map);
+        ts.update_hours_on_month_day_entry(&vec![
+            None,
+            Some("33".to_string()),
+            Some("2".to_string()),
+            Some("11".to_string()),
+            Some("2021".to_string()),
+        ])
+        .unwrap();
+
+        assert_eq!(
+            ts.get_timesheet_entry(&"2021".to_string(), &11, 2, "hours".to_string())
+                .unwrap()
+                .unwrap(),
+            &Value::Number(Number::from_f64(33 as f64).unwrap())
+        );
     }
 
     #[test]
@@ -431,13 +462,13 @@ mod tests {
         ts.mutate_timesheet_entry(
             &"2021".to_string(),
             &11,
-            0,
+            2,
             create_single_day_object(false, 8.0, false),
         )
         .unwrap();
 
         assert_eq!(
-            ts.get_timesheet_entry(&"2021".to_string(), &11, 0, "user_edited".to_string())
+            ts.get_timesheet_entry(&"2021".to_string(), &11, 2, "user_edited".to_string())
                 .unwrap()
                 .unwrap(),
             false
@@ -454,10 +485,25 @@ mod tests {
         ts.set_timesheet(year_map);
 
         assert_eq!(
-            ts.get_timesheet_entry(&"2021".to_string(), &11, 0, "user_edited".to_string())
-                .unwrap()
+            ts.get_timesheet_entry(&"2021".to_string(), &11, 1, "user_edited".to_string())
                 .unwrap(),
-            true
+            Some(&Value::Bool(true))
+        );
+    }
+
+    #[test]
+    fn it_returns_an_option_none_if_timesheet_entry_is_not_found() {
+        let mut ts = Repository {
+            ..Default::default()
+        };
+
+        let year_map = get_mock_year_map();
+        ts.set_timesheet(year_map);
+
+        assert_eq!(
+            ts.get_timesheet_entry(&"2021".to_string(), &1, 0, "user_edited".to_string())
+                .unwrap(),
+            Option::None
         );
     }
 

@@ -13,7 +13,7 @@ pub struct HelpPrompt {
 }
 
 pub trait Onboarding {
-    fn onboarding(&self) -> Result<(), Box<dyn std::error::Error>>;
+    fn onboarding(&self, new_user: bool) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 pub trait ExistingClientOnboarding {
@@ -21,8 +21,8 @@ pub trait ExistingClientOnboarding {
 }
 
 impl Onboarding for HelpPrompt {
-    fn onboarding(&self) -> Result<(), Box<dyn Error>> {
-        self.confirm_repository_path()?
+    fn onboarding(&self, new_user: bool) -> Result<(), Box<dyn Error>> {
+        self.confirm_repository_path(new_user)?
             .search_for_repository_details()?
             .add_client_details()?
             .prompt_for_manager_approval()?
@@ -33,7 +33,7 @@ impl Onboarding for HelpPrompt {
 
 impl ExistingClientOnboarding for HelpPrompt {
     fn existing_client_onboarding(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.confirm_repository_path()?
+        self.confirm_repository_path(false)?
             .search_for_repository_details()?
             .prompt_for_manager_approval()?
             .show_details();
@@ -52,30 +52,58 @@ impl HelpPrompt {
     Try 'timesheet-gen make' to create your first timesheet \n\
     or 'timesheet-gen help' for more options."
         );
+        std::process::exit(exitcode::OK);
+    }
+
+    pub fn show_write_new_config_success() {
+        println!(
+            "timesheet-gen initialised! \n\
+    Try 'timesheet-gen make' to create your first timesheet \n\
+    or 'timesheet-gen help' for more options."
+        );
+        std::process::exit(exitcode::OK);
+    }
+
+    pub fn show_write_new_repo_success() {
+        println!(
+            "timesheet-gen initialised! \n\
+    Try 'timesheet-gen make' to create your first timesheet \n\
+    or 'timesheet-gen help' for more options."
+        );
+        std::process::exit(exitcode::OK);
+    }
+
+    pub fn show_edited_config_success() {
+        println!("timesheet-gen successfully edited!");
+        std::process::exit(exitcode::OK);
     }
 
     pub fn prompt_for_client_then_onboard(
-        &self,
+        &mut self,
         deserialized_config: &mut Vec<ClientRepositories>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        println!(
-            "Initialising new repository.\n\
-        Would you like to add it to any of these existing clients?"
-        );
-        let no_client_value = "Create a new client".to_string();
+        println!("Initialising new repository.");
 
         let mut clients: Vec<String> = deserialized_config
             .iter()
             .map(|client| client.client.as_ref().unwrap().client_name.clone())
             .collect();
+
+        // If the clients array is empty, lets just onboard
+        if clients.len() == 0 {
+            self.onboarding(false)?;
+        }
+
+        let no_client_value = "Create a new client".to_string();
         clients.push(no_client_value.clone());
 
+        println!("Would you like to add it to any of these existing clients?");
         let selection: usize = Select::new().items(&clients).interact()?;
         let client_name = &clients[selection];
 
         // if this is a new client, onboard as normal
         if client_name == &no_client_value {
-            self.onboarding()?;
+            self.onboarding(false)?;
         } else {
             // otherwise pre-populate the client details
             let client = deserialized_config
@@ -97,17 +125,20 @@ impl HelpPrompt {
         Ok(())
     }
 
-    pub fn confirm_repository_path(&self) -> Result<&Self, Box<dyn std::error::Error>> {
+    pub fn confirm_repository_path(
+        &self,
+        new_user: bool,
+    ) -> Result<&Self, Box<dyn std::error::Error>> {
         let repo_path = self.repository.clone();
         let mut borrow = repo_path.borrow_mut();
         let path = borrow.repo_path.as_ref().unwrap().clone();
 
-        // TODO This should be based in whether the config file was found, not on the path
+        if new_user {
+            println!("This looks like the first time you're running timesheet-gen.");
+        }
+
         if path == "." {
-            println!(
-                "This looks like the first time you're running timesheet-gen. \n\
-        Initialise timesheet-gen for current repository?",
-            );
+            println!("Initialise timesheet-gen for current repository?");
         } else {
             println!("With the project at this path {}?", path);
         };
@@ -177,12 +208,92 @@ impl HelpPrompt {
         Ok(self)
     }
 
-    pub fn add_project_number(&self) -> Result<&Self, Box<dyn Error>> {
-        println!("Does this timesheet require a project/PO number?");
-        if Confirm::new().default(true).interact()? {
-            println!("Project number");
-            let input: String = Input::new().interact_text()?;
-            self.repository.borrow_mut().set_project_number(input);
+    pub fn add_project_numbers(
+        &self,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+    ) -> Result<&Self, Box<dyn Error>> {
+        let mut cr_borrow = client_repositories.borrow_mut();
+        println!(
+            "Finding project data for '{}'...",
+            cr_borrow[0].client.as_ref().unwrap().client_name
+        );
+
+        for i in 0..cr_borrow[0].repositories.as_ref().unwrap().len() {
+            println!(
+                "Does '{}' require a project/PO number?",
+                cr_borrow[0].repositories.as_ref().unwrap()[i]
+                    .namespace
+                    .as_ref()
+                    .unwrap()
+            );
+            if Confirm::new().default(true).interact()? {
+                println!("Project number");
+                let input: String = Input::new().interact_text()?;
+                cr_borrow[0]
+                    .repositories
+                    .as_mut()
+                    .map(|repo| repo[i].set_project_number(input));
+            }
+        }
+
+        Ok(self)
+    }
+
+    pub fn prompt_for_client_repo_removal(
+        &self,
+        deserialized_config: &mut Vec<ClientRepositories>,
+        options: Vec<Option<String>>,
+    ) -> Result<&Self, Box<dyn Error>> {
+        if options[1].is_some() {
+            println!(
+                "Remove '{}' from client '{}'?",
+                &options[1].as_ref().unwrap(),
+                &options[0].as_ref().unwrap()
+            );
+            // remove the namespace from a client
+            if Confirm::new().default(true).interact()? {
+                for i in 0..deserialized_config.len() {
+                    if deserialized_config[i]
+                        .client
+                        .as_ref()
+                        .unwrap()
+                        .client_name
+                        .to_lowercase()
+                        == options[0].as_ref().unwrap().to_lowercase()
+                    {
+                        let repo_len = deserialized_config[i].repositories.as_ref().unwrap().len();
+                        deserialized_config[i]
+                            .remove_repository_by_namespace(options[1].as_ref().unwrap());
+
+                        if repo_len != deserialized_config[i].repositories.as_ref().unwrap().len() {
+                            println!("Success! '{}' removed.", &options[1].as_ref().unwrap());
+                        } else {
+                            println!("Client or repository not found. Nothing removed.");
+                        }
+                    }
+                }
+            }
+        } else {
+            println!("Remove client '{}'?", &options[0].as_ref().unwrap());
+            // client is required and will be set, so remove from deserialized config
+            if Confirm::new().default(true).interact()? {
+                let config_len = deserialized_config.len();
+                deserialized_config.retain(|client_repo| {
+                    &client_repo
+                        .client
+                        .as_ref()
+                        .unwrap()
+                        .client_name
+                        .to_lowercase()
+                        != &options[0].as_ref().unwrap().to_lowercase()
+                });
+
+                if config_len != deserialized_config.len() {
+                    println!("Success! '{}' removed.", &options[0].as_ref().unwrap());
+                } else {
+                    println!("Client not found. Nothing removed.");
+                }
+            }
         }
 
         Ok(self)
