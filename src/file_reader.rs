@@ -1,6 +1,5 @@
 use crate::client_repositories::ClientRepositories;
 use crate::help_prompt::Onboarding;
-use crate::repository::Repository;
 use dotenv::dotenv;
 use serde_json::json;
 use std::cell::RefCell;
@@ -24,7 +23,7 @@ pub fn get_home_path() -> PathBuf {
 /// Create filepath to config file
 pub fn get_filepath(path: PathBuf) -> String {
     dotenv().ok();
-
+    //TODO - use https://doc.rust-lang.org/nightly/std/fs/fn.canonicalize.html instead of rel path
     let test_mode = env::var("TEST_MODE").expect("TEST MODE not set");
     return if test_mode.parse().unwrap() {
         "./testing-utils".to_owned() + "/" + CONFIG_FILE_NAME

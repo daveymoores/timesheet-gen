@@ -7,6 +7,7 @@ use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
 
+//TODO - consider using termion https://docs.rs/termion/1.5.6/termion/
 #[derive(Debug, Clone)]
 pub struct HelpPrompt {
     repository: Rc<RefCell<Repository>>,

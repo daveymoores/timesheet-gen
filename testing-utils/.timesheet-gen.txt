@@ -1,9 +1,13 @@
 [
   {
     "client": {
-       "client_name": "Alphabet",
-       "client_contact_person": "John Jones",
-       "client_address": "Something\nSomething\nSomething",
+      "client_name": "apple",
+      "client_address": "Somewhere,\nSomeplace,\nUSA",
+      "client_contact_person": "Jim Sorebury"
+    },
+    "user": {
+      "name": "Davey Moores",
+      "email": "daveymoores@gmail.com"
     },
     "repositories": [
       {
@@ -12,352 +16,520 @@
         "git_path": "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/",
         "git_log_dates": {
           "2021": {
-            "10": [
-              21,
-              13,
-              12,
-              19,
-              20,
-              14
-            ],
             "11": [
-              12,
-              22,
-              21,
-              19,
-              11,
-              20,
-              3,
-              4,
-              1,
               13,
+              3,
+              25,
+              19,
+              29,
+              23,
+              21,
+              26,
+              24,
+              1,
+              30,
+              2,
+              11,
               7,
+              20,
+              22,
+              12,
+              4
+            ],
+            "12": [
+              1,
+              3,
               2
+            ],
+            "10": [
+              12,
+              21,
+              14,
+              13,
+              20,
+              19
             ]
           }
         },
         "name": "Davey Moores",
         "email": "daveymoores@gmail.com",
-        "client_name": "Alphabet",
-        "client_contact_person": "John Jones",
-        "client_address": "Something\nSomething\nSomething",
+        "client_name": "apple",
+        "client_contact_person": "Jim Sorebury",
+        "client_address": "Somewhere,\nSomeplace,\nUSA",
         "project_number": null,
         "timesheet": {
           "2021": {
+            "12": [
+              {
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 20.0,
+                "user_edited": true
+              },
+              {
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
+              },
+              {
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              },
+              {
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
+              }
+            ],
             "10": [
               {
-                "hours": 0,
-                "weekend": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "hours": 0,
-                "weekend": 1
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "hours": 0,
-                "user_edited": 0,
-                "weekend": 1
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "hours": 0,
-                "weekend": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "hours": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "hours": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "hours": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "weekend": 0,
-                "hours": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "weekend": 1,
-                "hours": 0
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 1,
-                "hours": 0,
-                "user_edited": 0
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "hours": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "hours": 8,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "hours": 8,
-                "weekend": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "hours": 8,
-                "user_edited": 0,
-                "weekend": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "weekend": 0,
-                "hours": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "hours": 0,
-                "user_edited": 0,
-                "weekend": 1
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "hours": 0,
-                "user_edited": 0,
-                "weekend": 1
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "hours": 0,
-                "user_edited": 0,
-                "weekend": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "hours": 8,
-                "weekend": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "weekend": 0,
-                "hours": 8
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "hours": 8,
-                "user_edited": 0,
-                "weekend": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "hours": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "hours": 0,
-                "weekend": 1
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "hours": 0,
-                "user_edited": 0,
-                "weekend": 1
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "user_edited": 0,
-                "hours": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "hours": 0,
-                "user_edited": 0,
-                "weekend": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "user_edited": 0,
-                "hours": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "hours": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "user_edited": 0,
-                "hours": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 1,
-                "user_edited": 0,
-                "hours": 0
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 1,
-                "hours": 0,
-                "user_edited": 0
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               }
             ],
             "11": [
               {
-                "weekend": 0,
-                "hours": 8,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "weekend": 0,
-                "hours": 8
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "hours": 8,
-                "user_edited": 0,
-                "weekend": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "weekend": 0,
-                "hours": 8
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "hours": 0,
-                "weekend": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "weekend": 1,
-                "hours": 0
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "hours": 8,
-                "weekend": 1,
-                "user_edited": 0
+                "weekend": true,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "hours": 0,
-                "user_edited": 0,
-                "weekend": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "weekend": 0,
-                "hours": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "hours": 0,
-                "weekend": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "hours": 8,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "hours": 8,
-                "user_edited": 0,
-                "weekend": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "hours": 8,
-                "user_edited": 0,
-                "weekend": 1
+                "weekend": true,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "weekend": 1,
-                "hours": 0
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "weekend": 0,
-                "hours": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "hours": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "hours": 0,
-                "weekend": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "weekend": 0,
-                "hours": 0
+                "weekend": false,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "hours": 8,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "hours": 8,
-                "weekend": 1,
-                "user_edited": 0
+                "weekend": true,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "hours": 8,
-                "weekend": 1
+                "weekend": true,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "hours": 8,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "hours": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "hours": 0,
-                "weekend": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "weekend": 0,
-                "hours": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "user_edited": 0,
-                "weekend": 0,
-                "hours": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "weekend": 1,
-                "hours": 0,
-                "user_edited": 0
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "weekend": 1,
-                "hours": 0,
-                "user_edited": 0
+                "weekend": true,
+                "hours": 0.0,
+                "user_edited": false
               },
               {
-                "hours": 0,
-                "weekend": 0,
-                "user_edited": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               },
               {
-                "hours": 0,
-                "user_edited": 0,
-                "weekend": 0
+                "weekend": false,
+                "hours": 8.0,
+                "user_edited": false
               }
             ]
           }
         },
         "requires_approval": true,
-        "approvers_name": "Tony Brannen",
-        "approvers_email": "tony@gmail.com",
+        "approvers_name": "Paul Whitehouse",
+        "approvers_email": "paul@whitehouse.com",
         "user_signature": null,
         "approver_signature": null
       }
