@@ -1,9 +1,11 @@
-use assert_cmd::prelude::*; // Add methods on commands
-use predicates::prelude::*; // Used for writing assertions
+use assert_cmd::Command;
+
+//TODO - why does this need a timeout
+const TIMEOUT_MILLISECONDS: u64 = 500;
 
 #[test]
 fn runs_binary_with_a_command_that_doesnt_exist() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = assert_cmd::Command::cargo_bin("timesheet-gen")?;
+    let mut cmd = Command::cargo_bin("timesheet-gen")?;
     cmd.arg("foo");
     cmd.assert().failure();
 
@@ -12,30 +14,32 @@ fn runs_binary_with_a_command_that_doesnt_exist() -> Result<(), Box<dyn std::err
 
 #[test]
 fn runs_binary_with_a_command_that_does_exist() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = assert_cmd::Command::cargo_bin("timesheet-gen")?;
+    let mut cmd = Command::cargo_bin("timesheet-gen")?;
     cmd.arg("--help");
     cmd.assert().success();
 
     Ok(())
 }
 
-// #[test]
-// fn runs_init_for_repo_outside_of_current_directory() {
-//     let mut cmd = assert_cmd::Command::cargo_bin("timesheet-gen").unwrap();
-//     let assert = cmd
-//         .env("TEST_MODE", "true")
-//         .arg("init")
-//         .arg("--path=./tests")
-//         .assert();
-//
-//     assert
-//         .failure()
-//         .stdout("No repositories found at path. Please check that the path is valid.\n");
-// }
+#[test]
+#[ignore]
+fn runs_init_for_repo_outside_of_current_directory() {
+    let mut cmd = Command::cargo_bin("timesheet-gen").unwrap();
+    let assert = cmd
+        .env("TEST_MODE", "true")
+        .arg("init")
+        .arg("--path=./tests")
+        .timeout(std::time::Duration::from_millis(TIMEOUT_MILLISECONDS))
+        .assert();
+
+    assert
+        .failure()
+        .stdout("Initialising new repository.\nWould you like to add it to any of these existing clients?\n");
+}
 
 #[test]
 fn runs_init_for_path_that_doesnt_exist() {
-    let mut cmd = assert_cmd::Command::cargo_bin("timesheet-gen").unwrap();
+    let mut cmd = Command::cargo_bin("timesheet-gen").unwrap();
     let assert = cmd
         .env("TEST_MODE", "true")
         .arg("init")
@@ -49,7 +53,7 @@ fn runs_init_for_path_that_doesnt_exist() {
 
 #[test]
 fn runs_init_with_args() {
-    let mut cmd = assert_cmd::Command::cargo_bin("timesheet-gen").unwrap();
+    let mut cmd = Command::cargo_bin("timesheet-gen").unwrap();
     let assert = cmd.env("TEST_MODE", "true").arg("init").assert();
 
     assert.success().stdout(
@@ -62,28 +66,64 @@ fn runs_init_with_args() {
 #[test]
 #[ignore]
 fn runs_make_with_success() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = assert_cmd::Command::cargo_bin("timesheet-gen")?;
-    cmd.arg("make");
-    cmd.assert().success();
+    let mut cmd = Command::cargo_bin("timesheet-gen")?;
+    let assert = cmd
+        .arg("make")
+        .timeout(std::time::Duration::from_millis(TIMEOUT_MILLISECONDS))
+        .assert();
+    assert
+        .failure()
+        .stdout("Finding project data for \'apple\'...\nDoes \'timesheet-gen\' require a project/PO number?\n");
+    Ok(())
+}
+
+#[test]
+fn runs_remove_with_failure() -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::cargo_bin("timesheet-gen")?;
+    let assert = cmd
+        .env("TEST_MODE", "true")
+        .arg("remove")
+        .arg("--client=doesn't exist")
+        .assert();
+
+    assert
+        .failure()
+        .stderr("The client, or client + namespace combination you passed has not be found.\n");
 
     Ok(())
 }
 
 #[test]
 #[ignore]
-fn runs_edit_with_success() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = assert_cmd::Command::cargo_bin("timesheet-gen")?;
-    cmd.arg("make");
-    cmd.assert().success();
+fn runs_remove_and_prompts_to_remove_client() -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::cargo_bin("timesheet-gen")?;
+    let assert = cmd
+        .env("TEST_MODE", "true")
+        .arg("remove")
+        .arg("--client=apple")
+        .timeout(std::time::Duration::from_millis(TIMEOUT_MILLISECONDS))
+        .assert();
+
+    assert.failure().stdout("Remove client \'apple\'?\n");
 
     Ok(())
 }
 
 #[test]
-fn runs_remove_with_success() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = assert_cmd::Command::cargo_bin("timesheet-gen")?;
-    cmd.arg("remove");
-    cmd.assert().success();
+#[ignore]
+fn runs_remove_and_prompts_to_remove_namespace() -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::cargo_bin("timesheet-gen")?;
+    let assert = cmd
+        .env("TEST_MODE", "true")
+        .arg("remove")
+        .arg("--client=apple")
+        .arg("--namespace=timesheet-gen")
+        .timeout(std::time::Duration::from_millis(TIMEOUT_MILLISECONDS))
+        .assert();
+
+    assert
+        .failure()
+        .stdout("Remove \'timesheet-gen\' from client \'apple\'?\n");
 
     Ok(())
 }

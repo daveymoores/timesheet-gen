@@ -232,6 +232,7 @@ mod tests {
 
     #[test]
     fn get_filepath_returns_path_with_file_name() {
+        env::set_var("TEST_MODE", "false");
         let path_buf = PathBuf::from("/path/to/usr");
         assert_eq!(get_filepath(path_buf), "/path/to/usr/.timesheet-gen.txt");
     }
