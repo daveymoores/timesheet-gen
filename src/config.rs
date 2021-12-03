@@ -137,8 +137,6 @@ impl Config {
         client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         prompt: RcHelpPrompt,
     ) {
-        let prompt_rc_clone = prompt.clone();
-        let mut mut_prompt_ref = prompt_rc_clone.borrow_mut();
         // pass a prompt for if the config file doesn't exist
         crate::file_reader::read_data_from_config_file(buffer, prompt.clone()).unwrap_or_else(
             |err| {
@@ -152,7 +150,7 @@ impl Config {
         if buffer.is_empty() {
             Config::fetch_interaction_data(client_repositories.borrow_mut(), repository.borrow());
             Config::write_to_config_file(client_repositories, None);
-            mut_prompt_ref.show_write_new_config_success();
+            crate::help_prompt::HelpPrompt::show_write_new_config_success();
             return;
         }
 
@@ -193,7 +191,8 @@ impl Config {
         } else {
             // if it doesn't, onboard them and check whether (passed path or namespace) repo
             // should exist under an existing client
-            mut_prompt_ref
+            prompt
+                .borrow_mut()
                 .prompt_for_client_then_onboard(&mut deserialized_config)
                 .unwrap_or_else(|err| {
                     eprintln!("Error adding repository to client: {}", err);
@@ -206,7 +205,7 @@ impl Config {
                 client_repositories,
                 Option::from(&mut deserialized_config),
             );
-            mut_prompt_ref.show_write_new_repo_success();
+            crate::help_prompt::HelpPrompt::show_write_new_repo_success();
         }
     }
 }
@@ -239,7 +238,7 @@ impl Init for Config {
             client_repositories,
             prompt,
         );
-
+        println!("Does it get here?");
         crate::help_prompt::HelpPrompt::repo_already_initialised();
     }
 }
@@ -344,7 +343,7 @@ impl Edit for Config {
                 .compare_logs_and_set_timesheets();
 
             Config::write_to_config_file(client_repositories, None);
-            prompt.borrow_mut().show_edited_config_success();
+            crate::help_prompt::HelpPrompt::show_edited_config_success();
         }
     }
 }

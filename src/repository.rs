@@ -331,7 +331,7 @@ impl Repository {
             .get(year_string)
             .and_then(|year| {
                 year.get(&*month_u32.to_string())
-                    .and_then(|month| month[day - 1].get(&*entry))
+                    .and_then(|month| month[day].get(&*entry))
             });
         Ok(option)
     }

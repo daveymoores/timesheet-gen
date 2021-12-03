@@ -38,7 +38,7 @@ where
             file.read_to_string(buffer)?;
         }
         Err(_) => {
-            prompt.borrow_mut().onboarding()?;
+            prompt.borrow_mut().onboarding(true)?;
         }
     };
 
@@ -241,7 +241,7 @@ mod tests {
         struct MockPrompt {}
 
         impl Onboarding for MockPrompt {
-            fn onboarding(&self) -> Result<(), Box<dyn Error>> {
+            fn onboarding(&self, _new_user: bool) -> Result<(), Box<dyn Error>> {
                 assert!(false);
                 Ok(())
             }
@@ -267,7 +267,7 @@ mod tests {
         struct MockPrompt {}
 
         impl Onboarding for MockPrompt {
-            fn onboarding(&self) -> Result<(), Box<dyn Error>> {
+            fn onboarding(&self, _new_user: bool) -> Result<(), Box<dyn Error>> {
                 assert!(true);
                 Ok(())
             }
