@@ -79,6 +79,74 @@ impl HelpPrompt {
         std::process::exit(exitcode::OK);
     }
 
+    pub fn prompt_for_update(
+        &mut self,
+        deserialized_config: &mut Vec<ClientRepositories>,
+        options: Vec<Option<String>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        if options[1].is_some() {
+            println!(
+                "Updating project '{}' for client '{}'. What would you like to update?",
+                &options[1].as_ref().unwrap(),
+                &options[0].as_ref().unwrap()
+            );
+
+            let opt = vec!["Approver name", "Approver email"];
+            let selection: usize = Select::new().items(&opt).interact()?;
+            let value = opt[selection];
+
+            match value {
+                "Approver name" => {
+                    println!("Approver name");
+                    let input: String = Input::new().interact_text()?;
+                    deserialized_config[0]
+                        .update_approver_name(input, options[1].as_ref().unwrap());
+                }
+                "Approver email" => {
+                    println!("Approver email");
+                    let input: String = Input::new().interact_text()?;
+                    deserialized_config[0]
+                        .update_approver_email(input, options[1].as_ref().unwrap());
+                }
+                _ => {}
+            };
+        } else {
+            println!(
+                "Updating client '{}'. What would you like to update?",
+                &options[0].as_ref().unwrap()
+            );
+
+            let opt = vec![
+                "Client company name",
+                "Client contact person",
+                "Client address",
+            ];
+            let selection: usize = Select::new().items(&opt).interact()?;
+            let value = opt[selection];
+
+            match value {
+                "Client company name" => {
+                    println!("Client company name");
+                    let input: String = Input::new().interact_text()?;
+                    deserialized_config[0].update_client_name(input);
+                }
+                "Client contact person" => {
+                    println!("Client contact person");
+                    let input: String = Input::new().interact_text()?;
+                    deserialized_config[0].update_client_contact_person(input);
+                }
+                "Client address" => {
+                    println!("Client address");
+                    let input: String = Input::new().interact_text()?;
+                    deserialized_config[0].update_client_address(input);
+                }
+                _ => {}
+            };
+        }
+
+        Ok(())
+    }
+
     pub fn prompt_for_client_then_onboard(
         &mut self,
         deserialized_config: &mut Vec<ClientRepositories>,

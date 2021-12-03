@@ -70,6 +70,84 @@ impl ClientRepositories {
         self
     }
 
+    pub fn update_client_name(&mut self, value: String) -> &mut Self {
+        self.client
+            .as_mut()
+            .map(|mut client| client.client_name = value.clone());
+        self.repositories.as_mut().map(|repos| {
+            repos
+                .iter_mut()
+                .map(|repo| {
+                    repo.client_name = Some(value.clone());
+                    repo
+                })
+                .collect::<Vec<&mut Repository>>()
+        });
+        self
+    }
+
+    pub fn update_client_address(&mut self, value: String) -> &mut Self {
+        self.client
+            .as_mut()
+            .map(|mut client| client.client_address = value.clone());
+        self.repositories.as_mut().map(|repos| {
+            repos
+                .iter_mut()
+                .map(|repo| {
+                    repo.client_address = Some(value.clone());
+                    repo
+                })
+                .collect::<Vec<&mut Repository>>()
+        });
+        self
+    }
+
+    pub fn update_client_contact_person(&mut self, value: String) -> &mut Self {
+        self.client
+            .as_mut()
+            .map(|mut client| client.client_contact_person = value.clone());
+        self.repositories.as_mut().map(|repos| {
+            repos
+                .iter_mut()
+                .map(|repo| {
+                    repo.client_contact_person = Some(value.clone());
+                    repo
+                })
+                .collect::<Vec<&mut Repository>>()
+        });
+        self
+    }
+
+    pub fn update_approver_name(&mut self, value: String, namespace: &String) -> &mut Self {
+        self.repositories.as_mut().map(|repos| {
+            repos
+                .iter_mut()
+                .map(|repo| {
+                    if repo.namespace.as_ref().unwrap() == namespace {
+                        repo.approvers_name = Some(value.clone());
+                    }
+                    repo
+                })
+                .collect::<Vec<&mut Repository>>()
+        });
+        self
+    }
+
+    pub fn update_approver_email(&mut self, value: String, namespace: &String) -> &mut Self {
+        self.repositories.as_mut().map(|repos| {
+            repos
+                .iter_mut()
+                .map(|repo| {
+                    if repo.namespace.as_ref().unwrap() == namespace {
+                        repo.approvers_email = Some(value.clone());
+                    }
+                    repo
+                })
+                .collect::<Vec<&mut Repository>>()
+        });
+        self
+    }
+
     pub fn set_values_from_buffer(
         &mut self,
         client_repositories: &ClientRepositories,
@@ -171,6 +249,139 @@ mod tests {
                 HashMap::from([(9, HashSet::from(days)), (2, HashSet::from(days))]),
             ),
         ])
+    }
+
+    fn create_mock_client_repository(client_repository: &mut ClientRepositories) {
+        let repo = RefCell::new(Repository {
+            client_name: Option::from("alphabet".to_string()),
+            client_address: Option::from("Spaghetti Way, USA".to_string()),
+            client_contact_person: Option::from("John Smith".to_string()),
+            name: Option::from("Jim Jones".to_string()),
+            email: Option::from("jim@jones.com".to_string()),
+            namespace: Option::from("timesheet-gen".to_string()),
+            ..Default::default()
+        });
+
+        client_repository.set_values(repo.borrow());
+    }
+
+    #[test]
+    fn it_updates_client_name() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.update_client_name("James".to_string());
+        assert_eq!(
+            client_repo.client.as_ref().unwrap().client_name,
+            "James".to_string()
+        );
+        assert_eq!(
+            client_repo.repositories.as_ref().unwrap()[0]
+                .client_name
+                .as_ref()
+                .unwrap(),
+            &"James".to_string()
+        );
+    }
+
+    #[test]
+    fn it_updates_client_address() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.update_client_address("Something, Somewhere, USA".to_string());
+        assert_eq!(
+            client_repo.client.as_ref().unwrap().client_address,
+            "Something, Somewhere, USA".to_string()
+        );
+        assert_eq!(
+            client_repo.repositories.as_ref().unwrap()[0]
+                .client_address
+                .as_ref()
+                .unwrap(),
+            &"Something, Somewhere, USA".to_string()
+        );
+    }
+
+    #[test]
+    fn it_updates_client_contact_person() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.update_client_contact_person("Jimmy Bones".to_string());
+        assert_eq!(
+            client_repo.client.as_ref().unwrap().client_contact_person,
+            "Jimmy Bones".to_string()
+        );
+        assert_eq!(
+            client_repo.repositories.as_ref().unwrap()[0]
+                .client_contact_person
+                .as_ref()
+                .unwrap(),
+            &"Jimmy Bones".to_string()
+        );
+    }
+
+    #[test]
+    fn it_updates_approvers_name() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.update_approver_name("Jimmy Bones".to_string(), &"timesheet-gen".to_string());
+        assert_eq!(
+            client_repo.repositories.as_ref().unwrap()[0]
+                .approvers_name
+                .as_ref()
+                .unwrap(),
+            &"Jimmy Bones".to_string()
+        );
+    }
+
+    #[test]
+    fn it_updates_approvers_email() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo
+            .update_approver_name("jimmy@bones.com".to_string(), &"timesheet-gen".to_string());
+        assert_eq!(
+            client_repo.repositories.as_ref().unwrap()[0]
+                .approvers_name
+                .as_ref()
+                .unwrap(),
+            &"jimmy@bones.com".to_string()
+        );
+    }
+
+    #[test]
+    fn it_doesnt_update_as_namespace_is_not_found() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo
+            .update_approver_name("jimmy@bones.com".to_string(), &"some project".to_string());
+        assert_eq!(
+            client_repo.repositories.as_ref().unwrap()[0].approvers_name,
+            None
+        );
     }
 
     #[test]

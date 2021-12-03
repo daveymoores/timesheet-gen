@@ -426,7 +426,19 @@ impl Update for Config {
             Rc::clone(&prompt),
         );
 
-        if crate::utils::config_file_found(&mut buffer) {}
+        if crate::utils::config_file_found(&mut buffer) {
+            let mut deserialized_config: Vec<ClientRepositories> =
+                serde_json::from_str(&mut buffer)
+                    .expect("Initialisation of ClientRepository struct from buffer failed");
+
+            prompt
+                .borrow_mut()
+                .prompt_for_update(&mut deserialized_config, options)
+                .expect("Update failed");
+
+            // pass modified config as new client_repository and thus write it straight to file
+            Config::write_to_config_file(Rc::new(RefCell::new(deserialized_config)), None);
+        }
     }
 }
 
