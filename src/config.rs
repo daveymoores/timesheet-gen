@@ -391,6 +391,14 @@ impl Remove for Config {
                 .prompt_for_client_repo_removal(&mut deserialized_config, options)
                 .expect("Remove failed");
 
+            // if there are no clients, lets remove the file and next time will be onboarding
+            //TODO - would be nice to improve this
+            if deserialized_config.len() == 0 {
+                crate::file_reader::delete_config_file()
+                    .expect("Config file was empty so we tried to remove it. That failed.");
+                std::process::exit(exitcode::OK);
+            }
+
             // pass modified config as new client_repository and thus write it straight to file
             Config::write_to_config_file(Rc::new(RefCell::new(deserialized_config)), None);
         }

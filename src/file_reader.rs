@@ -67,6 +67,13 @@ where
     Ok(())
 }
 
+pub fn delete_config_file() -> Result<(), Box<dyn std::error::Error>> {
+    let config_path = get_filepath(get_home_path());
+    std::fs::remove_file(config_path)?;
+
+    Ok(())
+}
+
 pub fn write_json_to_config_file(
     json: String,
     config_path: String,

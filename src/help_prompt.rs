@@ -203,11 +203,16 @@ impl HelpPrompt {
         let path = borrow.repo_path.as_ref().unwrap().clone();
 
         if new_user {
-            println!("This looks like the first time you're running timesheet-gen.");
+            println!(
+                "  __  _ _ ____ ___  _   ___  ___\n\
+                   /_`) ))`) ))  )) ) ))  )) ) ))_\n\
+                 (( ( ((_( ((  ((_( ((__((_( ((_(\n\
+                 "
+            );
         }
 
         if path == "." {
-            println!("Initialise timesheet-gen for current repository?");
+            println!("Initialise for current repository?");
         } else {
             println!("With the project at this path {}?", path);
         };
