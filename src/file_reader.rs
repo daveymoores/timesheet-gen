@@ -102,6 +102,7 @@ pub fn serialize_config(
             let client_repo_borrow = client_repository.borrow_mut();
             let client = client_repo_borrow[0].client.clone();
             let user = client_repo_borrow[0].user.clone();
+            let approver = client_repo_borrow[0].approver.clone();
             let repository = client_repo_borrow[0].repositories.as_ref().unwrap()[0].clone();
             let client_name = &client.as_ref().unwrap().client_name;
 
@@ -114,6 +115,7 @@ pub fn serialize_config(
                     .map(|c| {
                         if &c.client.as_ref().unwrap().client_name == client_name {
                             return ClientRepositories {
+                                approver: approver.clone(),
                                 client: client.clone(),
                                 user: user.clone(),
                                 repositories: Some(
@@ -123,6 +125,7 @@ pub fn serialize_config(
                                     ]
                                     .concat(),
                                 ),
+                                ..Default::default()
                             };
                         }
                         c.clone()
@@ -221,6 +224,7 @@ mod tests {
             }),
             user: None,
             repositories: None,
+            ..Default::default()
         }];
 
         let length_before = &deserialized_config.len();

@@ -3,6 +3,7 @@ use crate::client_repositories::ClientRepositories;
 use crate::link_builder;
 use crate::repository::Repository;
 use std::cell::{Ref, RefCell, RefMut};
+use std::ops::Deref;
 use std::process;
 use std::rc::Rc;
 
@@ -284,7 +285,13 @@ impl Make for Config {
                 .unwrap_or_else(|err| {
                     eprintln!("Error parsing project number: {}", err);
                     std::process::exit(exitcode::CANTCREAT);
+                })
+                .prompt_for_manager_approval(Rc::clone(&client_repositories))
+                .unwrap_or_else(|err| {
+                    eprintln!("Error setting manager approval: {}", err);
+                    std::process::exit(exitcode::CANTCREAT);
                 });
+
             // generate timesheet-gen.io link using existing config
             link_builder::build_unique_uri(Rc::clone(&client_repositories), options)
                 .await
@@ -427,25 +434,52 @@ impl Update for Config {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
         self.check_for_config_file(
-            (Option::None, Option::None, Option::from(&options[0])),
+            (
+                Option::None,
+                Option::from(&options[1]),
+                Option::from(&options[0]),
+            ),
             &mut buffer,
             Rc::clone(&repository),
-            client_repositories,
+            Rc::clone(&client_repositories),
             Rc::clone(&prompt),
         );
 
         if crate::utils::config_file_found(&mut buffer) {
-            let mut deserialized_config: Vec<ClientRepositories> =
-                serde_json::from_str(&mut buffer)
-                    .expect("Initialisation of ClientRepository struct from buffer failed");
+            let deserialized_config: Vec<ClientRepositories> = serde_json::from_str(&mut buffer)
+                .expect("Initialisation of ClientRepository struct from buffer failed");
 
             prompt
                 .borrow_mut()
-                .prompt_for_update(&mut deserialized_config, options)
+                .prompt_for_update(Rc::clone(&client_repositories), options)
                 .expect("Update failed");
 
+            let client_borrow = client_repositories.borrow();
+            let client_name = client_borrow[0]
+                .client
+                .as_ref()
+                .unwrap()
+                .clone()
+                .client_name;
+
+            let mut new_client_repos = vec![];
+            for i in 0..deserialized_config.len() {
+                if deserialized_config[i]
+                    .client
+                    .as_ref()
+                    .unwrap()
+                    .clone()
+                    .client_name
+                    == client_name
+                {
+                    new_client_repos.push(client_borrow.deref()[0].clone())
+                } else {
+                    new_client_repos.push(deserialized_config[i].clone())
+                }
+            }
+
             // pass modified config as new client_repository and thus write it straight to file
-            Config::write_to_config_file(Rc::new(RefCell::new(deserialized_config)), None);
+            Config::write_to_config_file(Rc::new(RefCell::new(new_client_repos)), None);
         }
     }
 }

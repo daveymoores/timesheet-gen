@@ -26,7 +26,6 @@ impl Onboarding for HelpPrompt {
         self.confirm_repository_path(new_user)?
             .search_for_repository_details()?
             .add_client_details()?
-            .prompt_for_manager_approval()?
             .show_details();
         Ok(())
     }
@@ -36,7 +35,6 @@ impl ExistingClientOnboarding for HelpPrompt {
     fn existing_client_onboarding(&self) -> Result<(), Box<dyn std::error::Error>> {
         self.confirm_repository_path(false)?
             .search_for_repository_details()?
-            .prompt_for_manager_approval()?
             .show_details();
         Ok(())
     }
@@ -81,9 +79,11 @@ impl HelpPrompt {
 
     pub fn prompt_for_update(
         &mut self,
-        deserialized_config: &mut Vec<ClientRepositories>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         options: Vec<Option<String>>,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut client_repo_borrow = client_repositories.borrow_mut();
+
         if options[1].is_some() {
             println!(
                 "Updating project '{}' for client '{}'. What would you like to update?",
@@ -91,22 +91,25 @@ impl HelpPrompt {
                 &options[0].as_ref().unwrap()
             );
 
-            let opt = vec!["Approver name", "Approver email"];
+            let opt = vec!["Namespace", "Repository path"];
             let selection: usize = Select::new().items(&opt).interact()?;
             let value = opt[selection];
 
             match value {
-                "Approver name" => {
-                    println!("Approver name");
+                "Namespace" => {
                     let input: String = Input::new().interact_text()?;
-                    deserialized_config[0]
-                        .update_approver_name(input, options[1].as_ref().unwrap());
+                    client_repo_borrow[0]
+                        .repositories
+                        .as_mut()
+                        .map(|repo| repo[0].set_namespace(input));
                 }
-                "Approver email" => {
-                    println!("Approver email");
+                "Repository path" => {
+                    //TODO - need to check this path exists before allowing update
                     let input: String = Input::new().interact_text()?;
-                    deserialized_config[0]
-                        .update_approver_email(input, options[1].as_ref().unwrap());
+                    client_repo_borrow[0]
+                        .repositories
+                        .as_mut()
+                        .map(|repo| repo[0].set_repo_path(input));
                 }
                 _ => {}
             };
@@ -117,6 +120,8 @@ impl HelpPrompt {
             );
 
             let opt = vec![
+                "Approver name",
+                "Approver email",
                 "Client company name",
                 "Client contact person",
                 "Client address",
@@ -125,20 +130,30 @@ impl HelpPrompt {
             let value = opt[selection];
 
             match value {
+                "Approver name" => {
+                    println!("Approver's name");
+                    let input: String = Input::new().interact_text()?;
+                    client_repo_borrow[0].set_approvers_name(input);
+                }
+                "Approver email" => {
+                    println!("Approver's email");
+                    let input: String = Input::new().interact_text()?;
+                    client_repo_borrow[0].set_approvers_email(input);
+                }
                 "Client company name" => {
                     println!("Client company name");
                     let input: String = Input::new().interact_text()?;
-                    deserialized_config[0].update_client_name(input);
+                    client_repo_borrow[0].update_client_name(input);
                 }
                 "Client contact person" => {
                     println!("Client contact person");
                     let input: String = Input::new().interact_text()?;
-                    deserialized_config[0].update_client_contact_person(input);
+                    client_repo_borrow[0].update_client_contact_person(input);
                 }
                 "Client address" => {
                     println!("Client address");
                     let input: String = Input::new().interact_text()?;
-                    deserialized_config[0].update_client_address(input);
+                    client_repo_borrow[0].update_client_address(input);
                 }
                 _ => {}
             };
@@ -220,7 +235,7 @@ impl HelpPrompt {
         if Confirm::new().default(true).interact()? {
             borrow.set_repo_path(String::from(path));
         } else {
-            println!("Please give a path to the repository you would like to use");
+            println!("Give a path to the repository you would like to use");
 
             let path = crate::file_reader::get_home_path()
                 .to_str()
@@ -263,20 +278,25 @@ impl HelpPrompt {
         Ok(self)
     }
 
-    pub fn prompt_for_manager_approval(&self) -> Result<&Self, Box<dyn Error>> {
+    pub fn prompt_for_manager_approval(
+        &self,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+    ) -> Result<&Self, Box<dyn Error>> {
+        let mut client_repos_borrow = client_repositories.borrow_mut();
+
         println!("Does your timesheet need approval? (This will enable signing functionality, see https://timesheet-gen.io/docs/signing)");
         if Confirm::new().default(true).interact()? {
-            self.repository.borrow_mut().set_requires_approval(true);
+            client_repos_borrow[0].set_requires_approval(true);
 
             println!("Approvers name");
             let input: String = Input::new().interact_text()?;
-            self.repository.borrow_mut().set_approvers_name(input);
+            client_repos_borrow[0].set_approvers_name(input);
 
             println!("Approvers email");
             let input: String = Input::new().interact_text()?;
-            self.repository.borrow_mut().set_approvers_email(input);
+            client_repos_borrow[0].set_approvers_email(input);
         } else {
-            self.repository.borrow_mut().set_requires_approval(false);
+            client_repos_borrow[0].set_requires_approval(false);
         }
 
         Ok(self)
@@ -394,12 +414,6 @@ impl HelpPrompt {
         }
         if let Some(client_address) = &self.repository.borrow().client_address.clone() {
             println!("Client address: {}", client_address);
-        }
-        if let Some(approvers_name) = &self.repository.borrow().approvers_name.clone() {
-            println!("Approvers name: {}", approvers_name);
-        }
-        if let Some(approvers_email) = &self.repository.borrow().approvers_email.clone() {
-            println!("Approvers email: {}", approvers_email);
         }
 
         self

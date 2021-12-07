@@ -308,6 +308,7 @@ mod test {
                 repositories: Option::from(vec![Repository {
                     ..Default::default()
                 }]),
+                ..Default::default()
             }))
             .borrow_mut(),
         );

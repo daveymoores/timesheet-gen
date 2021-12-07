@@ -25,11 +25,6 @@ pub struct Repository {
     pub client_address: Option<String>,
     pub project_number: Option<String>,
     pub timesheet: Option<TimesheetYears>,
-    pub requires_approval: Option<bool>,
-    pub approvers_name: Option<String>,
-    pub approvers_email: Option<String>,
-    pub user_signature: Option<String>,
-    pub approver_signature: Option<String>,
 }
 
 impl Default for Repository {
@@ -46,11 +41,6 @@ impl Default for Repository {
             client_address: None,
             project_number: None,
             timesheet: None,
-            requires_approval: None,
-            approvers_name: None,
-            approvers_email: None,
-            user_signature: None,
-            approver_signature: None,
         }
     }
 }
@@ -92,21 +82,6 @@ impl Repository {
     /// Get values from buffer and set these to the Repository struct fields
     pub fn set_values_from_buffer(&mut self, repository: &Repository) -> &mut Repository {
         *self = repository.clone();
-        self
-    }
-
-    pub fn set_approvers_name(&mut self, value: String) -> &mut Self {
-        self.approvers_name = Option::from(value);
-        self
-    }
-
-    pub fn set_approvers_email(&mut self, value: String) -> &mut Self {
-        self.approvers_email = Option::from(value);
-        self
-    }
-
-    pub fn set_requires_approval(&mut self, value: bool) -> &mut Self {
-        self.requires_approval = Option::from(value);
         self
     }
 
@@ -614,39 +589,6 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
             timesheet.git_path.unwrap(),
             "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/".to_string()
         );
-    }
-
-    #[test]
-    fn it_sets_requires_approval() {
-        let mut timesheet = Repository {
-            ..Default::default()
-        };
-
-        timesheet.set_requires_approval(true);
-        assert_eq!(timesheet.requires_approval.unwrap(), true);
-    }
-
-    #[test]
-    fn it_sets_approvers_email() {
-        let mut timesheet = Repository {
-            ..Default::default()
-        };
-
-        timesheet.set_approvers_email("approver@gmail.com".to_string());
-        assert_eq!(
-            timesheet.approvers_email.unwrap(),
-            "approver@gmail.com".to_string()
-        );
-    }
-
-    #[test]
-    fn it_sets_approvers_name() {
-        let mut timesheet = Repository {
-            ..Default::default()
-        };
-
-        timesheet.set_approvers_name("Mr Approver".to_string());
-        assert_eq!(timesheet.approvers_name.unwrap(), "Mr Approver".to_string());
     }
 
     #[test]

@@ -12,6 +12,12 @@ use std::process::Command;
 /// against all the repos under the same client, and hence generate the correct working hours.
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Approver {
+    pub approvers_name: Option<String>,
+    pub approvers_email: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Client {
     pub client_name: String,
     pub client_address: String,
@@ -29,6 +35,10 @@ pub struct ClientRepositories {
     pub client: Option<Client>,
     pub user: Option<User>,
     pub repositories: Option<Vec<Repository>>,
+    pub requires_approval: bool,
+    pub user_signature: Option<String>,
+    pub approver_signature: Option<String>,
+    pub approver: Option<Approver>,
 }
 
 impl New for ClientRepositories {
@@ -44,6 +54,10 @@ impl Default for ClientRepositories {
         Self {
             client: None,
             user: None,
+            approver: None,
+            requires_approval: false,
+            user_signature: None,
+            approver_signature: None,
             repositories: None,
         }
     }
@@ -118,36 +132,6 @@ impl ClientRepositories {
         self
     }
 
-    pub fn update_approver_name(&mut self, value: String, namespace: &String) -> &mut Self {
-        self.repositories.as_mut().map(|repos| {
-            repos
-                .iter_mut()
-                .map(|repo| {
-                    if repo.namespace.as_ref().unwrap() == namespace {
-                        repo.approvers_name = Some(value.clone());
-                    }
-                    repo
-                })
-                .collect::<Vec<&mut Repository>>()
-        });
-        self
-    }
-
-    pub fn update_approver_email(&mut self, value: String, namespace: &String) -> &mut Self {
-        self.repositories.as_mut().map(|repos| {
-            repos
-                .iter_mut()
-                .map(|repo| {
-                    if repo.namespace.as_ref().unwrap() == namespace {
-                        repo.approvers_email = Some(value.clone());
-                    }
-                    repo
-                })
-                .collect::<Vec<&mut Repository>>()
-        });
-        self
-    }
-
     pub fn set_values_from_buffer(
         &mut self,
         client_repositories: &ClientRepositories,
@@ -163,6 +147,41 @@ impl ClientRepositories {
             })
         });
 
+        self
+    }
+
+    pub fn set_approvers_name(&mut self, value: String) -> &mut Self {
+        if let Some(_) = self.approver {
+            self.approver
+                .as_mut()
+                .map(|approver| approver.approvers_name = Option::from(value));
+        } else {
+            self.approver = Option::Some(Approver {
+                approvers_name: Option::from(value),
+                approvers_email: Option::None,
+            });
+        }
+
+        self
+    }
+
+    pub fn set_approvers_email(&mut self, value: String) -> &mut Self {
+        if let Some(_) = self.approver {
+            self.approver
+                .as_mut()
+                .map(|approver| approver.approvers_email = Option::from(value));
+        } else {
+            self.approver = Option::Some(Approver {
+                approvers_name: Option::None,
+                approvers_email: Option::from(value),
+            });
+        }
+
+        self
+    }
+
+    pub fn set_requires_approval(&mut self, value: bool) -> &mut Self {
+        self.requires_approval = value;
         self
     }
 
@@ -339,13 +358,10 @@ mod tests {
 
         create_mock_client_repository(&mut client_repo);
 
-        client_repo.update_approver_name("Jimmy Bones".to_string(), &"timesheet-gen".to_string());
+        client_repo.set_approvers_name("Jimmy Bones".to_string());
         assert_eq!(
-            client_repo.repositories.as_ref().unwrap()[0]
-                .approvers_name
-                .as_ref()
-                .unwrap(),
-            &"Jimmy Bones".to_string()
+            client_repo.approver.as_ref().unwrap().approvers_name,
+            "Jimmy Bones".to_string()
         );
     }
 
@@ -357,30 +373,10 @@ mod tests {
 
         create_mock_client_repository(&mut client_repo);
 
-        client_repo
-            .update_approver_name("jimmy@bones.com".to_string(), &"timesheet-gen".to_string());
+        client_repo.set_approvers_email("jimmy@bones.com".to_string());
         assert_eq!(
-            client_repo.repositories.as_ref().unwrap()[0]
-                .approvers_name
-                .as_ref()
-                .unwrap(),
-            &"jimmy@bones.com".to_string()
-        );
-    }
-
-    #[test]
-    fn it_doesnt_update_as_namespace_is_not_found() {
-        let mut client_repo = ClientRepositories {
-            ..Default::default()
-        };
-
-        create_mock_client_repository(&mut client_repo);
-
-        client_repo
-            .update_approver_name("jimmy@bones.com".to_string(), &"some project".to_string());
-        assert_eq!(
-            client_repo.repositories.as_ref().unwrap()[0].approvers_name,
-            None
+            client_repo.approver.as_ref().unwrap().approvers_email,
+            "jimmy@bones.com".to_string()
         );
     }
 
@@ -443,6 +439,7 @@ mod tests {
                     ..Default::default()
                 },
             ]),
+            ..Default::default()
         };
 
         client_repositories.compare_logs_and_set_timesheets();
