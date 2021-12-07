@@ -65,7 +65,7 @@ impl HelpPrompt {
 
     pub fn show_write_new_repo_success() {
         println!(
-            "timesheet-gen initialised! \n\
+            "New repository added! \n\
     Try 'timesheet-gen make' to create your first timesheet \n\
     or 'timesheet-gen help' for more options."
         );
@@ -74,6 +74,11 @@ impl HelpPrompt {
 
     pub fn show_edited_config_success() {
         println!("timesheet-gen successfully edited!");
+        std::process::exit(exitcode::OK);
+    }
+
+    pub fn show_updated_config_success() {
+        println!("timesheet-gen successfully updated!");
         std::process::exit(exitcode::OK);
     }
 
@@ -170,7 +175,7 @@ impl HelpPrompt {
 
         let mut clients: Vec<String> = deserialized_config
             .iter()
-            .map(|client| client.client.as_ref().unwrap().client_name.clone())
+            .map(|client| client.get_client_name().clone())
             .collect();
 
         // If the clients array is empty, lets just onboard
@@ -192,7 +197,7 @@ impl HelpPrompt {
             // otherwise pre-populate the client details
             let client = deserialized_config
                 .iter()
-                .find(|client| &client.client.as_ref().unwrap().client_name.clone() == client_name)
+                .find(|client| &client.get_client_name() == client_name)
                 .unwrap();
 
             let unwrapped_client = client.client.as_ref().unwrap();
@@ -255,6 +260,9 @@ impl HelpPrompt {
             .borrow_mut()
             .find_repository_details_from()?;
 
+        self.repository.borrow_mut().set_user_id();
+        self.repository.borrow_mut().set_repository_id();
+
         println!("Repository details found!");
         Ok(self)
     }
@@ -274,6 +282,8 @@ impl HelpPrompt {
         if let Some(input) = Editor::new().edit("Enter an address").unwrap() {
             self.repository.borrow_mut().set_client_address(input);
         }
+
+        self.repository.borrow_mut().set_client_id();
 
         Ok(self)
     }
@@ -309,7 +319,7 @@ impl HelpPrompt {
         let mut cr_borrow = client_repositories.borrow_mut();
         println!(
             "Finding project data for '{}'...",
-            cr_borrow[0].client.as_ref().unwrap().client_name
+            cr_borrow[0].get_client_name()
         );
 
         for i in 0..cr_borrow[0].repositories.as_ref().unwrap().len() {

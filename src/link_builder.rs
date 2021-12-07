@@ -214,6 +214,7 @@ mod test {
     };
     use crate::repository::{GitLogDates, Repository};
     use chrono::{TimeZone, Utc};
+    use nanoid::nanoid;
     use serde_json::{json, Map, Number, Value};
     use std::cell::RefCell;
     use std::collections::{HashMap, HashSet};
@@ -271,12 +272,14 @@ mod test {
         let timesheet_for_month = create_mock_timesheet_hours_for_month();
 
         let client = Option::from(Client {
+            id: nanoid!(),
             client_name: "alphabet".to_string(),
             client_address: "Spaghetti Way, USA".to_string(),
             client_contact_person: "John Smith".to_string(),
         });
 
         let user = Option::from(User {
+            id: nanoid!(),
             name: "Jim Jones".to_string(),
             email: "jim@jones.com".to_string(),
         });

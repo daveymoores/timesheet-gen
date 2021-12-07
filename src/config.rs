@@ -91,12 +91,7 @@ impl Config {
         // if this is true, repo_path and repo_namespace will be None
         if let Some(c) = client_name {
             for i in 0..deserialized_config.len() {
-                if deserialized_config[i]
-                    .client
-                    .as_ref()
-                    .unwrap()
-                    .client_name
-                    .to_lowercase()
+                if deserialized_config[i].get_client_name().to_lowercase()
                     == c.to_owned().to_lowercase()
                 {
                     option = (Option::None, Option::from(&deserialized_config[i]));
@@ -335,6 +330,9 @@ impl Edit for Config {
         if crate::utils::config_file_found(&mut buffer) {
             // otherwise lets set the repository struct values
             // and fetch a new batch of interaction data
+            let deserialized_config: Vec<ClientRepositories> = serde_json::from_str(&mut buffer)
+                .expect("Initialisation of ClientRepository struct from buffer failed");
+
             repository
                 .borrow_mut()
                 .update_hours_on_month_day_entry(&options)
@@ -348,7 +346,19 @@ impl Edit for Config {
                 .exec_generate_timesheets_from_git_history()
                 .compare_logs_and_set_timesheets();
 
-            Config::write_to_config_file(client_repositories, None);
+            let client_borrow = client_repositories.borrow();
+            let client_id = client_borrow[0].get_client_id();
+
+            let mut new_client_repos = vec![];
+            for i in 0..deserialized_config.len() {
+                if deserialized_config[i].get_client_id() == client_id {
+                    new_client_repos.push(client_borrow.deref()[0].clone())
+                } else {
+                    new_client_repos.push(deserialized_config[i].clone())
+                }
+            }
+
+            Config::write_to_config_file(Rc::new(RefCell::new(deserialized_config)), None);
             crate::help_prompt::HelpPrompt::show_edited_config_success();
         }
     }
@@ -401,8 +411,9 @@ impl Remove for Config {
             // if there are no clients, lets remove the file and next time will be onboarding
             //TODO - would be nice to improve this
             if deserialized_config.len() == 0 {
-                crate::file_reader::delete_config_file()
-                    .expect("Config file was empty so we tried to remove it. That failed.");
+                crate::file_reader::delete_config_file().expect(
+                    "Config file was empty so timesheet-gen tried to remove it. That failed.",
+                );
                 std::process::exit(exitcode::OK);
             }
 
@@ -455,23 +466,11 @@ impl Update for Config {
                 .expect("Update failed");
 
             let client_borrow = client_repositories.borrow();
-            let client_name = client_borrow[0]
-                .client
-                .as_ref()
-                .unwrap()
-                .clone()
-                .client_name;
+            let client_id = client_borrow[0].get_client_id();
 
             let mut new_client_repos = vec![];
             for i in 0..deserialized_config.len() {
-                if deserialized_config[i]
-                    .client
-                    .as_ref()
-                    .unwrap()
-                    .clone()
-                    .client_name
-                    == client_name
-                {
+                if deserialized_config[i].get_client_id() == client_id {
                     new_client_repos.push(client_borrow.deref()[0].clone())
                 } else {
                     new_client_repos.push(deserialized_config[i].clone())
@@ -480,6 +479,7 @@ impl Update for Config {
 
             // pass modified config as new client_repository and thus write it straight to file
             Config::write_to_config_file(Rc::new(RefCell::new(new_client_repos)), None);
+            crate::help_prompt::HelpPrompt::show_updated_config_success();
         }
     }
 }

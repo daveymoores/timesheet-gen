@@ -1,6 +1,7 @@
 use crate::date_parser::{create_single_day_object, DayMap, TimesheetYears};
 use crate::utils::{check_for_valid_day, check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Datelike};
+use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
@@ -14,12 +15,15 @@ pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Repository {
+    pub id: Option<String>,
     pub namespace: Option<String>,
     pub repo_path: Option<String>,
     pub git_path: Option<String>,
     pub git_log_dates: Option<GitLogDates>,
+    pub user_id: Option<String>,
     pub name: Option<String>,
     pub email: Option<String>,
+    pub client_id: Option<String>,
     pub client_name: Option<String>,
     pub client_contact_person: Option<String>,
     pub client_address: Option<String>,
@@ -30,12 +34,15 @@ pub struct Repository {
 impl Default for Repository {
     fn default() -> Self {
         Self {
+            id: None,
             namespace: None,
             repo_path: None,
             git_path: None,
             git_log_dates: None,
+            user_id: None,
             name: None,
             email: None,
+            client_id: None,
             client_name: None,
             client_contact_person: None,
             client_address: None,
@@ -77,6 +84,21 @@ impl Repository {
             inner: self,
             index: 0,
         }
+    }
+
+    pub fn set_repository_id(&mut self) -> &mut Self {
+        self.id = Option::from(nanoid!());
+        self
+    }
+
+    pub fn set_user_id(&mut self) -> &mut Self {
+        self.user_id = Option::from(nanoid!());
+        self
+    }
+
+    pub fn set_client_id(&mut self) -> &mut Self {
+        self.client_id = Option::from(nanoid!());
+        self
     }
 
     /// Get values from buffer and set these to the Repository struct fields

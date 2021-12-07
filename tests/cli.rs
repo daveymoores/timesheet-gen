@@ -4,6 +4,7 @@ use assert_cmd::Command;
 const TIMEOUT_MILLISECONDS: u64 = 500;
 
 #[test]
+#[ignore]
 fn runs_binary_with_a_command_that_doesnt_exist() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("timesheet-gen")?;
     cmd.arg("foo");
@@ -13,6 +14,7 @@ fn runs_binary_with_a_command_that_doesnt_exist() -> Result<(), Box<dyn std::err
 }
 
 #[test]
+#[ignore]
 fn runs_binary_with_a_command_that_does_exist() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("timesheet-gen")?;
     cmd.arg("--help");
@@ -38,6 +40,7 @@ fn runs_init_for_repo_outside_of_current_directory() {
 }
 
 #[test]
+#[ignore]
 fn runs_init_for_path_that_doesnt_exist() {
     let mut cmd = Command::cargo_bin("timesheet-gen").unwrap();
     let assert = cmd
@@ -52,6 +55,7 @@ fn runs_init_for_path_that_doesnt_exist() {
 }
 
 #[test]
+#[ignore]
 fn runs_init_with_args() {
     let mut cmd = Command::cargo_bin("timesheet-gen").unwrap();
     let assert = cmd.env("TEST_MODE", "true").arg("init").assert();
@@ -78,6 +82,7 @@ fn runs_make_with_success() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
+#[ignore]
 fn runs_remove_with_failure() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("timesheet-gen")?;
     let assert = cmd

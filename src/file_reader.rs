@@ -108,12 +108,12 @@ pub fn serialize_config(
 
             let config_data: Vec<ClientRepositories> = if config
                 .into_iter()
-                .any(|x| &x.client.as_ref().unwrap().client_name == client_name)
+                .any(|x| &x.get_client_name() == client_name)
             {
                 let x: Vec<ClientRepositories> = config
                     .iter_mut()
                     .map(|c| {
-                        if &c.client.as_ref().unwrap().client_name == client_name {
+                        if &c.get_client_name() == client_name {
                             return ClientRepositories {
                                 approver: approver.clone(),
                                 client: client.clone(),
@@ -152,6 +152,7 @@ mod tests {
     use super::*;
     use crate::client_repositories::Client;
     use crate::repository::Repository;
+    use nanoid::nanoid;
     use std::cell::RefCell;
     use std::error::Error;
     use std::path::Path;
@@ -218,6 +219,7 @@ mod tests {
 
         let mut deserialized_config = vec![ClientRepositories {
             client: Some(Client {
+                id: nanoid!(),
                 client_name: "New client".to_string(),
                 client_address: "Somewhere".to_string(),
                 client_contact_person: "Jim Jones".to_string(),
