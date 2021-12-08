@@ -1,4 +1,5 @@
 use chrono::NaiveDate;
+use dialoguer::Confirm;
 use dotenv::dotenv;
 use random_string::generate;
 use regex::Regex;
@@ -7,6 +8,14 @@ use std::error::Error;
 use std::io;
 use std::io::ErrorKind;
 use std::process::Output;
+
+pub fn confirm() -> Result<bool, Box<dyn Error>> {
+    if is_test_mode() {
+        return Ok(true);
+    }
+
+    Ok(Confirm::new().default(true).interact()?)
+}
 
 pub fn is_test_mode() -> bool {
     dotenv().ok();
@@ -107,24 +116,19 @@ pub fn config_file_found(buffer: &mut String) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use envtestkit::lock::lock_test;
-    use envtestkit::set_env;
-    use std::ffi::OsString;
     use std::os::unix::process::ExitStatusExt;
     use std::process::{ExitStatus, Output};
 
     #[test]
     fn it_returns_test_mode_is_true() {
-        let _lock = lock_test();
-        let _test = set_env(OsString::from("TEST_MODE"), "true");
+        env::set_var("TEST_MODE", "true");
 
         assert_eq!(is_test_mode(), true);
     }
 
     #[test]
     fn it_returns_test_mode_is_false() {
-        let _lock = lock_test();
-        let _test = set_env(OsString::from("TEST_MODE"), "false");
+        env::set_var("TEST_MODE", "false");
 
         assert_eq!(is_test_mode(), false);
     }

@@ -1,9 +1,7 @@
 use crate::client_repositories::ClientRepositories;
 use crate::help_prompt::Onboarding;
-use dotenv::dotenv;
 use serde_json::json;
 use std::cell::RefCell;
-use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Deref;
@@ -23,10 +21,8 @@ pub fn get_home_path() -> PathBuf {
 
 /// Create filepath to config file
 pub fn get_filepath(path: PathBuf) -> String {
-    dotenv().ok();
     //TODO - use https://doc.rust-lang.org/nightly/std/fs/fn.canonicalize.html instead of rel path
-    let test_mode = env::var("TEST_MODE").expect("TEST MODE not set");
-    return if test_mode.parse::<bool>().unwrap() {
+    return if crate::utils::is_test_mode() {
         "./testing-utils".to_owned() + "/" + CONFIG_FILE_NAME
     } else {
         let home_path = path.to_str();
@@ -69,6 +65,10 @@ where
 }
 
 pub fn delete_config_file() -> Result<(), Box<dyn std::error::Error>> {
+    if crate::utils::is_test_mode() {
+        return Ok(());
+    }
+
     let config_path = get_filepath(get_home_path());
     std::fs::remove_file(config_path)?;
 
@@ -79,10 +79,7 @@ pub fn write_json_to_config_file(
     json: String,
     config_path: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    dotenv().ok();
-    let test_mode = env::var("TEST_MODE").expect("TEST MODE not set");
-
-    if test_mode.parse::<bool>().unwrap() {
+    if crate::utils::is_test_mode() {
         let mut file = tempfile()?;
         file.write_all(json.as_bytes())?;
         return Ok(());
@@ -164,6 +161,7 @@ mod tests {
     use crate::repository::Repository;
     use nanoid::nanoid;
     use std::cell::RefCell;
+    use std::env;
     use std::error::Error;
     use std::path::Path;
 

@@ -3,7 +3,7 @@ use crate::repository::Repository;
 /// Help prompt handles all of the interactions with the user.
 /// It writes to the std output, and returns input data or a boolean
 use dialoguer::{Confirm, Editor, Input, Select};
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use std::error::Error;
 use std::rc::Rc;
 
@@ -345,7 +345,7 @@ impl HelpPrompt {
 
     pub fn prompt_for_client_repo_removal(
         &self,
-        deserialized_config: &mut Vec<ClientRepositories>,
+        mut client_repositories: RefMut<Vec<ClientRepositories>>,
         options: Vec<Option<String>>,
     ) -> Result<&Self, Box<dyn Error>> {
         if options[1].is_some() {
@@ -355,9 +355,9 @@ impl HelpPrompt {
                 &options[0].as_ref().unwrap()
             );
             // remove the namespace from a client
-            if Confirm::new().default(true).interact()? {
-                for i in 0..deserialized_config.len() {
-                    if deserialized_config[i]
+            if crate::utils::confirm()? {
+                for i in 0..client_repositories.len() {
+                    if client_repositories[i]
                         .client
                         .as_ref()
                         .unwrap()
@@ -365,11 +365,11 @@ impl HelpPrompt {
                         .to_lowercase()
                         == options[0].as_ref().unwrap().to_lowercase()
                     {
-                        let repo_len = deserialized_config[i].repositories.as_ref().unwrap().len();
-                        deserialized_config[i]
+                        let repo_len = client_repositories[i].repositories.as_ref().unwrap().len();
+                        client_repositories[i]
                             .remove_repository_by_namespace(options[1].as_ref().unwrap());
 
-                        if repo_len != deserialized_config[i].repositories.as_ref().unwrap().len() {
+                        if repo_len != client_repositories[i].repositories.as_ref().unwrap().len() {
                             println!("Success! '{}' removed.", &options[1].as_ref().unwrap());
                         } else {
                             println!("Client or repository not found. Nothing removed.");
@@ -380,9 +380,9 @@ impl HelpPrompt {
         } else {
             println!("Remove client '{}'?", &options[0].as_ref().unwrap());
             // client is required and will be set, so remove from deserialized config
-            if Confirm::new().default(true).interact()? {
-                let config_len = deserialized_config.len();
-                deserialized_config.retain(|client_repo| {
+            if crate::utils::confirm()? {
+                let config_len = client_repositories.len();
+                client_repositories.retain(|client_repo| {
                     &client_repo
                         .client
                         .as_ref()
@@ -392,7 +392,7 @@ impl HelpPrompt {
                         != &options[0].as_ref().unwrap().to_lowercase()
                 });
 
-                if config_len != deserialized_config.len() {
+                if config_len != client_repositories.len() {
                     println!("Success! '{}' removed.", &options[0].as_ref().unwrap());
                 } else {
                     println!("Client not found. Nothing removed.");
