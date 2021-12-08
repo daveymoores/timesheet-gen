@@ -67,6 +67,7 @@ impl Default for ClientRepositories {
 
 impl ClientRepositories {
     pub fn set_values(&mut self, repository: Ref<Repository>) -> &mut Self {
+        println!(">>> {:#?}", repository);
         self.client = Option::from(Client {
             id: repository.client_id.clone().unwrap_or("None".to_string()),
             client_name: repository.client_name.clone().unwrap_or("None".to_string()),

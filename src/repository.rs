@@ -1,7 +1,6 @@
 use crate::date_parser::{create_single_day_object, DayMap, TimesheetYears};
 use crate::utils::{check_for_valid_day, check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Datelike};
-use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
@@ -86,18 +85,18 @@ impl Repository {
         }
     }
 
-    pub fn set_repository_id(&mut self) -> &mut Self {
-        self.id = Option::from(nanoid!());
+    pub fn set_repository_id(&mut self, id: String) -> &mut Self {
+        self.id = Option::from(id);
         self
     }
 
-    pub fn set_user_id(&mut self) -> &mut Self {
-        self.user_id = Option::from(nanoid!());
+    pub fn set_user_id(&mut self, id: String) -> &mut Self {
+        self.user_id = Option::from(id);
         self
     }
 
-    pub fn set_client_id(&mut self) -> &mut Self {
-        self.client_id = Option::from(nanoid!());
+    pub fn set_client_id(&mut self, id: String) -> &mut Self {
+        self.client_id = Option::from(id);
         self
     }
 

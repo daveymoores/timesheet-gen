@@ -1,8 +1,10 @@
 use crate::client_repositories::ClientRepositories;
 use crate::repository::Repository;
+use crate::utils::exit_process;
 /// Help prompt handles all of the interactions with the user.
 /// It writes to the std output, and returns input data or a boolean
 use dialoguer::{Confirm, Editor, Input, Select};
+use nanoid::nanoid;
 use std::cell::{RefCell, RefMut};
 use std::error::Error;
 use std::rc::Rc;
@@ -204,6 +206,7 @@ impl HelpPrompt {
 
             self.repository
                 .borrow_mut()
+                .set_client_id(unwrapped_client.id.clone())
                 .set_client_name(unwrapped_client.client_name.clone())
                 .set_client_address(unwrapped_client.client_address.clone())
                 .set_client_contact_person(unwrapped_client.client_contact_person.clone());
@@ -260,8 +263,8 @@ impl HelpPrompt {
             .borrow_mut()
             .find_repository_details_from()?;
 
-        self.repository.borrow_mut().set_user_id();
-        self.repository.borrow_mut().set_repository_id();
+        self.repository.borrow_mut().set_user_id(nanoid!());
+        self.repository.borrow_mut().set_repository_id(nanoid!());
 
         println!("Repository details found!");
         Ok(self)
@@ -283,7 +286,7 @@ impl HelpPrompt {
             self.repository.borrow_mut().set_client_address(input);
         }
 
-        self.repository.borrow_mut().set_client_id();
+        self.repository.borrow_mut().set_client_id(nanoid!());
 
         Ok(self)
     }
@@ -371,6 +374,7 @@ impl HelpPrompt {
 
                         if repo_len != client_repositories[i].repositories.as_ref().unwrap().len() {
                             println!("Success! '{}' removed.", &options[1].as_ref().unwrap());
+                            crate::utils::exit_process();
                         } else {
                             println!("Client or repository not found. Nothing removed.");
                         }
