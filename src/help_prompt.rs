@@ -74,12 +74,12 @@ impl HelpPrompt {
 
     pub fn show_edited_config_success() {
         println!("timesheet-gen successfully edited!");
-        std::process::exit(exitcode::OK);
+        crate::utils::exit_process();
     }
 
     pub fn show_updated_config_success() {
         println!("timesheet-gen successfully updated!");
-        std::process::exit(exitcode::OK);
+        crate::utils::exit_process();
     }
 
     pub fn prompt_for_update(

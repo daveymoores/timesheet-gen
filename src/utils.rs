@@ -1,10 +1,24 @@
 use chrono::NaiveDate;
+use dotenv::dotenv;
 use random_string::generate;
 use regex::Regex;
+use std::env;
 use std::error::Error;
 use std::io;
 use std::io::ErrorKind;
 use std::process::Output;
+
+pub fn is_test_mode() -> bool {
+    dotenv().ok();
+    let test_mode = env::var("TEST_MODE").expect("TEST MODE not set");
+    test_mode.parse::<bool>().unwrap()
+}
+
+pub fn exit_process() {
+    if !is_test_mode() {
+        std::process::exit(exitcode::OK);
+    }
+}
 
 pub fn trim_output_from_utf8(output: Output) -> Result<String, Box<dyn std::error::Error>> {
     let x = String::from_utf8(output.stdout)?.trim().parse().unwrap();
@@ -92,12 +106,28 @@ pub fn config_file_found(buffer: &mut String) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::{
-        check_for_valid_day, check_for_valid_month, check_for_valid_year, config_file_found,
-        generate_random_path, get_days_from_month, trim_output_from_utf8,
-    };
+    use super::*;
+    use envtestkit::lock::lock_test;
+    use envtestkit::set_env;
+    use std::ffi::OsString;
     use std::os::unix::process::ExitStatusExt;
     use std::process::{ExitStatus, Output};
+
+    #[test]
+    fn it_returns_test_mode_is_true() {
+        let _lock = lock_test();
+        let _test = set_env(OsString::from("TEST_MODE"), "true");
+
+        assert_eq!(is_test_mode(), true);
+    }
+
+    #[test]
+    fn it_returns_test_mode_is_false() {
+        let _lock = lock_test();
+        let _test = set_env(OsString::from("TEST_MODE"), "false");
+
+        assert_eq!(is_test_mode(), false);
+    }
 
     #[test]
     fn should_return_true_if_config_file_is_found() {

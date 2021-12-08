@@ -487,9 +487,14 @@ impl Update for Config {
 #[cfg(test)]
 mod tests {
     use crate::client_repositories::ClientRepositories;
-    use crate::config::{Config, New};
+    use crate::config::{Config, Edit, New};
     use crate::repository::Repository;
+    use envtestkit::lock::lock_test;
+    use envtestkit::set_env;
+    use serde_json::{Number, Value};
     use std::cell::RefCell;
+    use std::ffi::OsString;
+    use std::rc::Rc;
 
     fn create_mock_client_repository(client_repository: &mut ClientRepositories) {
         let repo = RefCell::new(Repository {
@@ -503,6 +508,60 @@ mod tests {
         });
 
         client_repository.set_values(repo.borrow());
+    }
+
+    #[test]
+    fn it_modifies_the_hour_entry_in_a_client_repository_day_entry() {
+        let _lock = lock_test();
+        let _test = set_env(OsString::from("TEST_MODE"), "true");
+
+        let config = Config::new();
+        let options = vec![
+            Option::from("timesheet-gen".to_string()),
+            Option::from("20".to_string()),
+            Option::from("1".to_string()),
+            Option::from("11".to_string()),
+            Option::from("2021".to_string()),
+        ];
+
+        let client_repos = Rc::new(RefCell::new(vec![ClientRepositories {
+            ..Default::default()
+        }]));
+
+        let repo = Rc::new(RefCell::new(Repository {
+            ..Default::default()
+        }));
+
+        let prompt = Rc::new(RefCell::new(crate::help_prompt::HelpPrompt::new(
+            Rc::clone(&repo),
+        )));
+
+        config.edit(
+            options,
+            Rc::clone(&repo),
+            Rc::clone(&client_repos),
+            Rc::clone(&prompt),
+        );
+
+        let repo_borrow = repo.borrow();
+
+        let month = repo_borrow
+            .timesheet
+            .as_ref()
+            .unwrap()
+            .get("2021")
+            .as_ref()
+            .unwrap()
+            .get("11")
+            .as_ref()
+            .unwrap()
+            .clone();
+
+        let hour_value = month[0].get("hours").as_ref().unwrap().clone();
+        let edited_value = month[0].get("user_edited").as_ref().unwrap().clone();
+
+        assert_eq!(hour_value, &Value::Number(Number::from_f64(20.0).unwrap()));
+        assert_eq!(edited_value, &Value::Bool(true));
     }
 
     #[test]

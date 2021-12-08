@@ -9,6 +9,7 @@ use std::io::{Read, Write};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::rc::Rc;
+use tempfile::tempfile;
 
 const CONFIG_FILE_NAME: &str = ".timesheet-gen.txt";
 
@@ -25,7 +26,7 @@ pub fn get_filepath(path: PathBuf) -> String {
     dotenv().ok();
     //TODO - use https://doc.rust-lang.org/nightly/std/fs/fn.canonicalize.html instead of rel path
     let test_mode = env::var("TEST_MODE").expect("TEST MODE not set");
-    return if test_mode.parse().unwrap() {
+    return if test_mode.parse::<bool>().unwrap() {
         "./testing-utils".to_owned() + "/" + CONFIG_FILE_NAME
     } else {
         let home_path = path.to_str();
@@ -78,6 +79,15 @@ pub fn write_json_to_config_file(
     json: String,
     config_path: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    dotenv().ok();
+    let test_mode = env::var("TEST_MODE").expect("TEST MODE not set");
+
+    if test_mode.parse::<bool>().unwrap() {
+        let mut file = tempfile()?;
+        file.write_all(json.as_bytes())?;
+        return Ok(());
+    }
+
     let mut file = File::create(config_path)?;
 
     file.write_all(json.as_bytes())?;
