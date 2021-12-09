@@ -43,7 +43,12 @@ impl Config {
         deserialized_config: Option<&mut Vec<ClientRepositories>>,
     ) {
         // get path for where to write the config file
-        let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path());
+        let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path())
+            .unwrap_or_else(|err| {
+                eprintln!("Error constructing filepath: {}", err);
+                std::process::exit(exitcode::CANTCREAT);
+            });
+
         let json = crate::file_reader::serialize_config(
             Rc::clone(&client_repositories),
             deserialized_config,
@@ -261,9 +266,10 @@ impl Make for Config {
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
+        let current_repo_path = crate::utils::get_canonical_path(".");
         self.check_for_config_file(
             (
-                Option::from(&".".to_string()),
+                Option::from(&current_repo_path),
                 Option::None,
                 Option::from(&options[0]),
             ),

@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Deref;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use tempfile::tempfile;
 
@@ -20,13 +20,15 @@ pub fn get_home_path() -> PathBuf {
 }
 
 /// Create filepath to config file
-pub fn get_filepath(path: PathBuf) -> String {
-    //TODO - use https://doc.rust-lang.org/nightly/std/fs/fn.canonicalize.html instead of rel path
+pub fn get_filepath(path: PathBuf) -> Result<String, Box<dyn std::error::Error>> {
     return if crate::utils::is_test_mode() {
-        "./testing-utils".to_owned() + "/" + CONFIG_FILE_NAME
+        let path_string = &*format!("./testing-utils/{}", CONFIG_FILE_NAME);
+        let path = Path::new(path_string);
+        let full_path = std::fs::canonicalize(path)?;
+        Ok(full_path.to_str().unwrap().to_owned())
     } else {
         let home_path = path.to_str();
-        home_path.unwrap().to_owned() + "/" + CONFIG_FILE_NAME
+        Ok(home_path.unwrap().to_owned() + "/" + CONFIG_FILE_NAME)
     };
 }
 
@@ -58,7 +60,7 @@ pub fn read_data_from_config_file<T>(
 where
     T: Onboarding,
 {
-    let config_path = get_filepath(get_home_path());
+    let config_path = get_filepath(get_home_path())?;
     read_file(buffer, config_path, prompt)?;
 
     Ok(())
@@ -69,7 +71,7 @@ pub fn delete_config_file() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    let config_path = get_filepath(get_home_path());
+    let config_path = get_filepath(get_home_path())?;
     std::fs::remove_file(config_path)?;
 
     Ok(())
@@ -255,7 +257,10 @@ mod tests {
     fn get_filepath_returns_path_with_file_name() {
         env::set_var("TEST_MODE", "false");
         let path_buf = PathBuf::from("/path/to/usr");
-        assert_eq!(get_filepath(path_buf), "/path/to/usr/.timesheet-gen.txt");
+        assert_eq!(
+            get_filepath(path_buf).unwrap(),
+            "/path/to/usr/.timesheet-gen.txt"
+        );
     }
 
     #[test]

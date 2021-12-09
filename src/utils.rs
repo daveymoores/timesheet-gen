@@ -9,6 +9,14 @@ use std::io;
 use std::io::ErrorKind;
 use std::process::Output;
 
+pub fn get_canonical_path(path: &str) -> String {
+    let path = std::fs::canonicalize(path).unwrap_or_else(|err| {
+        println!("Canonicalization of repo path failed: {}", err);
+        std::process::exit(exitcode::CANTCREAT);
+    });
+    path.to_str().map(|x| x.to_string()).unwrap()
+}
+
 pub fn confirm() -> Result<bool, Box<dyn Error>> {
     if is_test_mode() {
         return Ok(true);

@@ -258,7 +258,8 @@ impl HelpPrompt {
             ascii_table.print(logo);
         }
 
-        if path == "." {
+        let current_repo_path = crate::utils::get_canonical_path(".");
+        if path == current_repo_path {
             Self::print_question("Initialise for current repository?");
         } else {
             Self::print_question(&*format!("With the project at this path {}?", path));
