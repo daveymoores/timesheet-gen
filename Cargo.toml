@@ -26,6 +26,7 @@ nanoid = "0.4.0"
 tempfile = "3.2.0"
 ascii_table = "3.0.2"
 ansi_term = "0.12.1"
+envtestkit = "1.1.2"
 
 [dev-dependencies]
 assert_cmd = "2.0.2"

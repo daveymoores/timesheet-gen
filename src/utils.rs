@@ -124,19 +124,24 @@ pub fn config_file_found(buffer: &mut String) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use envtestkit::lock::lock_test;
+    use envtestkit::set_env;
+    use std::ffi::OsString;
     use std::os::unix::process::ExitStatusExt;
     use std::process::{ExitStatus, Output};
 
     #[test]
     fn it_returns_test_mode_is_true() {
-        env::set_var("TEST_MODE", "true");
+        let _lock = lock_test();
+        let _test = set_env(OsString::from("TEST_MODE"), "true");
 
         assert_eq!(is_test_mode(), true);
     }
 
     #[test]
     fn it_returns_test_mode_is_false() {
-        env::set_var("TEST_MODE", "false");
+        let _lock = lock_test();
+        let _test = set_env(OsString::from("TEST_MODE"), "false");
 
         assert_eq!(is_test_mode(), false);
     }

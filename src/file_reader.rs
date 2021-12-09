@@ -161,10 +161,12 @@ mod tests {
     use super::*;
     use crate::client_repositories::Client;
     use crate::repository::Repository;
+    use envtestkit::lock::lock_test;
+    use envtestkit::set_env;
     use nanoid::nanoid;
     use std::cell::RefCell;
-    use std::env;
     use std::error::Error;
+    use std::ffi::OsString;
     use std::path::Path;
 
     fn create_mock_client_repository(client_repository: Rc<RefCell<Vec<ClientRepositories>>>) {
@@ -255,7 +257,9 @@ mod tests {
 
     #[test]
     fn get_filepath_returns_path_with_file_name() {
-        env::set_var("TEST_MODE", "false");
+        let _lock = lock_test();
+        let _test = set_env(OsString::from("TEST_MODE"), "true");
+
         let path_buf = PathBuf::from("/path/to/usr");
         assert_eq!(
             get_filepath(path_buf).unwrap(),

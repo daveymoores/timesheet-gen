@@ -159,30 +159,30 @@ pub fn get_timesheet_map_from_date_hashmap(
 ) -> TimesheetYears {
     let timesheet_years: TimesheetYears = git_log_dates
         .into_iter()
-        .map(|year_tuple| {
-            let month_map: TimesheetMonths = year_tuple
-                .1
+        .map(|(year, months)| {
+            let month_map: TimesheetMonths = months
                 .clone()
                 .into_iter()
-                .map(|month_tuple| {
-                    let mut worked_days = month_tuple.1.into_iter().collect::<Vec<u32>>();
+                .map(|(month, days)| {
+                    let mut worked_days = days.into_iter().collect::<Vec<u32>>();
                     worked_days.sort();
-                    let days_in_month = get_days_from_month(year_tuple.0, month_tuple.0);
+                    let days_in_month = get_days_from_month(year, month);
                     let adjacent_days_in_month = get_adjacent_git_log_days_for_month(
                         adjacent_git_log_dates.clone(),
-                        &year_tuple.0,
-                        &month_tuple.0,
+                        &year,
+                        &month,
                     );
+
                     let worked_hours_for_month = parse_hours_from_date(
-                        (year_tuple.0, month_tuple.0, days_in_month),
+                        (year, month, days_in_month),
                         worked_days,
                         repository,
                         adjacent_days_in_month,
                     );
-                    (month_tuple.0.to_string(), worked_hours_for_month)
+                    (month.to_string(), worked_hours_for_month)
                 })
                 .collect();
-            (year_tuple.0.to_string(), month_map)
+            (year.to_string(), month_map)
         })
         .collect();
 

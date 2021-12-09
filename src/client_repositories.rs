@@ -235,7 +235,7 @@ impl ClientRepositories {
                     .filter(|(index, _)| index != &i)
                     .map(|(_, repo)| repo.git_log_dates.as_ref().unwrap().clone())
                     .collect();
-                println!("{:#?}", adjacent_git_log_dates);
+
                 let timesheet = match &repositories[i].git_log_dates {
                     Some(git_log_dates) => crate::date_parser::get_timesheet_map_from_date_hashmap(
                         git_log_dates.clone(),

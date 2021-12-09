@@ -103,6 +103,11 @@ impl HelpPrompt {
         println!("{}", text);
     }
 
+    pub fn client_or_repository_not_found() {
+        println!("\n\u{1F916} Client or repository not found.");
+        crate::utils::exit_process();
+    }
+
     pub fn show_new_link_success(expire_time: i32, uri: &str) {
         Self::print_question(&*format!(
             "Timesheet now available for {} minutes @ {} \u{1F389}",
