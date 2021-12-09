@@ -325,6 +325,9 @@ mod tests {
 
     #[test]
     fn it_writes_a_config_file_when_file_exists() {
+        let _lock = lock_test();
+        let _test = set_env(OsString::from("TEST_MODE"), "true");
+
         let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories {
             ..Default::default()
         }]));
