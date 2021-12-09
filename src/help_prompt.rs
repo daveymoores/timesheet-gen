@@ -50,7 +50,7 @@ impl HelpPrompt {
 
     pub fn repo_already_initialised() {
         println!(
-            "timesheet-gen has already been initialised for this repository \u{1F916} \n\
+            "\u{1F916} timesheet-gen has already been initialised for this repository.\n\
     Try 'timesheet-gen make' to create your first timesheet \n\
     or 'timesheet-gen help' for more options."
         );
@@ -86,13 +86,28 @@ impl HelpPrompt {
     }
 
     pub fn show_edited_config_success() {
-        println!("timesheet-gen successfully edited \u{1F389}");
+        println!("\ntimesheet-gen successfully edited \u{1F389}");
         crate::utils::exit_process();
     }
 
     pub fn show_updated_config_success() {
-        println!("timesheet-gen successfully updated \u{1F389}");
+        println!("\ntimesheet-gen successfully updated \u{1F389}");
         crate::utils::exit_process();
+    }
+
+    pub fn show_generating_timesheet_message(month_year_string: &str) {
+        let text = Self::dim_text(&*format!(
+            "\n\u{1F916} Generating timesheet for {}...",
+            month_year_string
+        ));
+        println!("{}", text);
+    }
+
+    pub fn show_new_link_success(expire_time: i32, uri: &str) {
+        Self::print_question(&*format!(
+            "Timesheet now available for {} minutes @ {} \u{1F389}",
+            expire_time, uri
+        ));
     }
 
     pub fn prompt_for_update(
@@ -184,7 +199,7 @@ impl HelpPrompt {
         &mut self,
         deserialized_config: &mut Vec<ClientRepositories>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        Self::print_question("Initialising new repository.");
+        Self::print_question("\u{1F916} Initialising new repository.");
 
         let mut clients: Vec<String> = deserialized_config
             .iter()
@@ -291,7 +306,7 @@ impl HelpPrompt {
         self.repository.borrow_mut().set_user_id(nanoid!());
         self.repository.borrow_mut().set_repository_id(nanoid!());
 
-        println!("{}", Self::dim_text("Repository details found \u{1F916}"));
+        println!("{}", Self::dim_text("\u{1F916} Repository details found."));
         Ok(self)
     }
 
@@ -323,7 +338,10 @@ impl HelpPrompt {
     ) -> Result<&Self, Box<dyn Error>> {
         let mut client_repos_borrow = client_repositories.borrow_mut();
 
-        Self::print_question("Does your timesheet need approval? (This will enable signing functionality, see https://timesheet-gen.io/docs/signing)");
+        Self::print_question("Does your timesheet need approval?");
+        println!("{}", Self::dim_text(
+            "(This will enable signing functionality, see https://timesheet-gen.io/docs/signing)",
+        ));
         if Confirm::new().default(true).interact()? {
             client_repos_borrow[0].set_requires_approval(true);
 
@@ -346,10 +364,13 @@ impl HelpPrompt {
         client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
     ) -> Result<&Self, Box<dyn Error>> {
         let mut cr_borrow = client_repositories.borrow_mut();
-        Self::print_question(&*format!(
-            "Finding project data for '{}'...",
-            cr_borrow[0].get_client_name()
-        ));
+        println!(
+            "{}",
+            Self::dim_text(&*format!(
+                "\u{1F916} Finding project data for '{}'...",
+                cr_borrow[0].get_client_name()
+            ))
+        );
 
         for i in 0..cr_borrow[0].repositories.as_ref().unwrap().len() {
             Self::print_question(&*format!(
@@ -400,7 +421,7 @@ impl HelpPrompt {
 
                         if repo_len != client_repositories[i].repositories.as_ref().unwrap().len() {
                             Self::print_question(&*format!(
-                                "Success! '{}' removed.",
+                                "'{}' removed  \u{1F389}",
                                 &options[1].as_ref().unwrap()
                             ));
                             crate::utils::exit_process();
@@ -432,7 +453,7 @@ impl HelpPrompt {
 
                 if config_len != client_repositories.len() {
                     Self::print_question(&*format!(
-                        "Success! '{}' removed.",
+                        "'{}' removed \u{1F389}",
                         &options[0].as_ref().unwrap()
                     ));
                 } else {

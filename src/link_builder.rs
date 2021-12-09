@@ -105,7 +105,7 @@ pub async fn build_unique_uri(
         .expect("You must set the MONGODB_COLLECTION environment var!");
 
     let month_year_string = get_string_month_year(&options[1], &options[2])?;
-    println!("Generating timesheet for {}...", month_year_string);
+    crate::help_prompt::HelpPrompt::show_generating_timesheet_message(&*month_year_string);
 
     let db = db::Db::new().await?;
     let collection = db
@@ -195,10 +195,9 @@ pub async fn build_unique_uri(
         &random_path
     );
 
-    println!(
-        "Timesheet now available for {} minutes @ {}",
+    crate::help_prompt::HelpPrompt::show_new_link_success(
         expire_time_seconds / 60,
-        timesheet_gen_uri
+        &*timesheet_gen_uri,
     );
 
     process::exit(exitcode::OK);
