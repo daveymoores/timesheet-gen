@@ -67,7 +67,6 @@ impl Default for ClientRepositories {
 
 impl ClientRepositories {
     pub fn set_values(&mut self, repository: Ref<Repository>) -> &mut Self {
-        println!(">>> {:#?}", repository);
         self.client = Option::from(Client {
             id: repository.client_id.clone().unwrap_or("None".to_string()),
             client_name: repository.client_name.clone().unwrap_or("None".to_string()),
@@ -236,7 +235,7 @@ impl ClientRepositories {
                     .filter(|(index, _)| index != &i)
                     .map(|(_, repo)| repo.git_log_dates.as_ref().unwrap().clone())
                     .collect();
-
+                println!("{:#?}", adjacent_git_log_dates);
                 let timesheet = match &repositories[i].git_log_dates {
                     Some(git_log_dates) => crate::date_parser::get_timesheet_map_from_date_hashmap(
                         git_log_dates.clone(),
