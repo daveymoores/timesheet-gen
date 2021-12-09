@@ -12,7 +12,14 @@ use std::process::Command;
 /// against all the repos under the same client, and hence generate the correct working hours.
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Approver {
+    pub approvers_name: Option<String>,
+    pub approvers_email: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Client {
+    pub id: String,
     pub client_name: String,
     pub client_address: String,
     pub client_contact_person: String,
@@ -20,6 +27,7 @@ pub struct Client {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct User {
+    pub id: String,
     pub name: String,
     pub email: String,
 }
@@ -29,6 +37,10 @@ pub struct ClientRepositories {
     pub client: Option<Client>,
     pub user: Option<User>,
     pub repositories: Option<Vec<Repository>>,
+    pub requires_approval: bool,
+    pub user_signature: Option<String>,
+    pub approver_signature: Option<String>,
+    pub approver: Option<Approver>,
 }
 
 impl New for ClientRepositories {
@@ -44,6 +56,10 @@ impl Default for ClientRepositories {
         Self {
             client: None,
             user: None,
+            approver: None,
+            requires_approval: false,
+            user_signature: None,
+            approver_signature: None,
             repositories: None,
         }
     }
@@ -52,6 +68,7 @@ impl Default for ClientRepositories {
 impl ClientRepositories {
     pub fn set_values(&mut self, repository: Ref<Repository>) -> &mut Self {
         self.client = Option::from(Client {
+            id: repository.client_id.clone().unwrap_or("None".to_string()),
             client_name: repository.client_name.clone().unwrap_or("None".to_string()),
             client_address: repository
                 .client_address
@@ -63,10 +80,67 @@ impl ClientRepositories {
                 .unwrap_or("None".to_string()),
         });
         self.user = Option::from(User {
+            id: repository.user_id.clone().unwrap_or("None".to_string()),
             name: repository.name.clone().unwrap_or("None".to_string()),
             email: repository.email.clone().unwrap_or("None".to_string()),
         });
         self.repositories = Option::from(vec![repository.deref().clone()]);
+        self
+    }
+
+    pub fn get_client_name(&self) -> String {
+        self.client.as_ref().unwrap().clone().client_name
+    }
+
+    pub fn get_client_id(&self) -> String {
+        self.client.as_ref().unwrap().clone().id
+    }
+
+    pub fn update_client_name(&mut self, value: String) -> &mut Self {
+        self.client
+            .as_mut()
+            .map(|mut client| client.client_name = value.clone());
+        self.repositories.as_mut().map(|repos| {
+            repos
+                .iter_mut()
+                .map(|repo| {
+                    repo.client_name = Some(value.clone());
+                    repo
+                })
+                .collect::<Vec<&mut Repository>>()
+        });
+        self
+    }
+
+    pub fn update_client_address(&mut self, value: String) -> &mut Self {
+        self.client
+            .as_mut()
+            .map(|mut client| client.client_address = value.clone());
+        self.repositories.as_mut().map(|repos| {
+            repos
+                .iter_mut()
+                .map(|repo| {
+                    repo.client_address = Some(value.clone());
+                    repo
+                })
+                .collect::<Vec<&mut Repository>>()
+        });
+        self
+    }
+
+    pub fn update_client_contact_person(&mut self, value: String) -> &mut Self {
+        self.client
+            .as_mut()
+            .map(|mut client| client.client_contact_person = value.clone());
+        self.repositories.as_mut().map(|repos| {
+            repos
+                .iter_mut()
+                .map(|repo| {
+                    repo.client_contact_person = Some(value.clone());
+                    repo
+                })
+                .collect::<Vec<&mut Repository>>()
+        });
         self
     }
 
@@ -85,6 +159,41 @@ impl ClientRepositories {
             })
         });
 
+        self
+    }
+
+    pub fn set_approvers_name(&mut self, value: String) -> &mut Self {
+        if let Some(_) = self.approver {
+            self.approver
+                .as_mut()
+                .map(|approver| approver.approvers_name = Option::from(value));
+        } else {
+            self.approver = Option::Some(Approver {
+                approvers_name: Option::from(value),
+                approvers_email: Option::None,
+            });
+        }
+
+        self
+    }
+
+    pub fn set_approvers_email(&mut self, value: String) -> &mut Self {
+        if let Some(_) = self.approver {
+            self.approver
+                .as_mut()
+                .map(|approver| approver.approvers_email = Option::from(value));
+        } else {
+            self.approver = Option::Some(Approver {
+                approvers_name: Option::None,
+                approvers_email: Option::from(value),
+            });
+        }
+
+        self
+    }
+
+    pub fn set_requires_approval(&mut self, value: bool) -> &mut Self {
+        self.requires_approval = value;
         self
     }
 
@@ -151,6 +260,7 @@ impl ClientRepositories {
 mod tests {
     use crate::client_repositories::{Client, ClientRepositories, User};
     use crate::repository::{GitLogDates, Repository};
+    use nanoid::nanoid;
     use serde_json::json;
     use std::cell::RefCell;
     use std::collections::{HashMap, HashSet};
@@ -173,18 +283,159 @@ mod tests {
         ])
     }
 
+    fn create_mock_client_repository(client_repository: &mut ClientRepositories) {
+        let repo = RefCell::new(Repository {
+            client_name: Option::from("alphabet".to_string()),
+            client_address: Option::from("Spaghetti Way, USA".to_string()),
+            client_contact_person: Option::from("John Smith".to_string()),
+            name: Option::from("Jim Jones".to_string()),
+            email: Option::from("jim@jones.com".to_string()),
+            namespace: Option::from("timesheet-gen".to_string()),
+            ..Default::default()
+        });
+
+        client_repository.set_values(repo.borrow());
+    }
+
+    #[test]
+    fn it_gets_clients_name() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        let name = client_repo.get_client_name();
+        assert_eq!(name, "alphabet");
+    }
+
+    #[test]
+    fn it_updates_client_name() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.update_client_name("James".to_string());
+        assert_eq!(
+            client_repo.client.as_ref().unwrap().client_name,
+            "James".to_string()
+        );
+        assert_eq!(
+            client_repo.repositories.as_ref().unwrap()[0]
+                .client_name
+                .as_ref()
+                .unwrap(),
+            &"James".to_string()
+        );
+    }
+
+    #[test]
+    fn it_updates_client_address() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.update_client_address("Something, Somewhere, USA".to_string());
+        assert_eq!(
+            client_repo.client.as_ref().unwrap().client_address,
+            "Something, Somewhere, USA".to_string()
+        );
+        assert_eq!(
+            client_repo.repositories.as_ref().unwrap()[0]
+                .client_address
+                .as_ref()
+                .unwrap(),
+            &"Something, Somewhere, USA".to_string()
+        );
+    }
+
+    #[test]
+    fn it_updates_client_contact_person() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.update_client_contact_person("Jimmy Bones".to_string());
+        assert_eq!(
+            client_repo.client.as_ref().unwrap().client_contact_person,
+            "Jimmy Bones".to_string()
+        );
+        assert_eq!(
+            client_repo.repositories.as_ref().unwrap()[0]
+                .client_contact_person
+                .as_ref()
+                .unwrap(),
+            &"Jimmy Bones".to_string()
+        );
+    }
+
+    #[test]
+    fn it_updates_approvers_name() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.set_approvers_name("Jimmy Bones".to_string());
+        assert_eq!(
+            client_repo
+                .approver
+                .as_ref()
+                .unwrap()
+                .approvers_name
+                .as_ref()
+                .unwrap(),
+            &"Jimmy Bones".to_string()
+        );
+    }
+
+    #[test]
+    fn it_updates_approvers_email() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.set_approvers_email("jimmy@bones.com".to_string());
+        assert_eq!(
+            client_repo
+                .approver
+                .as_ref()
+                .unwrap()
+                .approvers_email
+                .as_ref()
+                .unwrap(),
+            &"jimmy@bones.com".to_string()
+        );
+    }
+
     #[test]
     fn it_sets_values() {
+        let repo_id: String = nanoid!();
+        let client_id: String = nanoid!();
+        let user_id: String = nanoid!();
+
         let mut client_repositories = ClientRepositories {
             ..Default::default()
         };
 
         let repository = RefCell::new(Repository {
+            client_id: Option::from(client_id.clone()),
             client_name: Option::from("Alphabet".to_string()),
             client_address: Option::from("Alphabet way".to_string()),
             client_contact_person: Option::from("John Jones".to_string()),
+            user_id: Option::from(user_id.clone()),
             name: Option::from("Jim Jones".to_string()),
             email: Option::from("jim@jones.com".to_string()),
+            id: Option::from(repo_id.clone()),
             ..Default::default()
         });
 
@@ -193,9 +444,34 @@ mod tests {
         assert_eq!(
             json!(client_repositories.client),
             json!(Client {
+                id: client_id.clone(),
                 client_name: "Alphabet".to_string(),
                 client_address: "Alphabet way".to_string(),
                 client_contact_person: "John Jones".to_string(),
+            })
+        );
+
+        assert_eq!(
+            json!(client_repositories.user),
+            json!(User {
+                id: user_id.clone(),
+                name: "Jim Jones".to_string(),
+                email: "jim@jones.com".to_string()
+            })
+        );
+
+        assert_eq!(
+            json!(client_repositories.repositories.as_ref().unwrap()[0]),
+            json!(Repository {
+                client_id: Option::from(client_id.clone()),
+                client_name: Option::from("Alphabet".to_string()),
+                client_address: Option::from("Alphabet way".to_string()),
+                client_contact_person: Option::from("John Jones".to_string()),
+                user_id: Option::from(user_id.clone()),
+                name: Option::from("Jim Jones".to_string()),
+                email: Option::from("jim@jones.com".to_string()),
+                id: Option::from(repo_id.clone()),
+                ..Default::default()
             })
         );
     }
@@ -204,11 +480,13 @@ mod tests {
     fn it_compares_git_logs_and_sets_timesheets() {
         let mut client_repositories: ClientRepositories = ClientRepositories {
             client: Option::Some(Client {
+                id: nanoid!(),
                 client_name: "Alphabet".to_string(),
                 client_address: "Alphabet way".to_string(),
                 client_contact_person: "John Jones".to_string(),
             }),
             user: Option::Some(User {
+                id: nanoid!(),
                 name: "Jim Jones".to_string(),
                 email: "jim@jones.com".to_string(),
             }),
@@ -232,6 +510,7 @@ mod tests {
                     ..Default::default()
                 },
             ]),
+            ..Default::default()
         };
 
         client_repositories.compare_logs_and_set_timesheets();

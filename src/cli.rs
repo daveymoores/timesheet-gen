@@ -186,8 +186,9 @@ impl Cli<'_> {
         let month = date_time.month().to_string();
         let day = date_time.day().to_string();
 
+        let current_repo_path = crate::utils::get_canonical_path(".");
         let mut temp_repository = Repository {
-            repo_path: Option::from(".".to_string()),
+            repo_path: Option::from(current_repo_path.clone()),
             ..Default::default()
         };
 
@@ -208,7 +209,11 @@ impl Cli<'_> {
 
         if let Some(init) = matches.subcommand_matches("init") {
             // This will onboard so no need to pass the path here
-            options.push(Some(init.value_of("path").unwrap_or(".").to_string()));
+            options.push(Some(
+                init.value_of("path")
+                    .unwrap_or(&current_repo_path)
+                    .to_string(),
+            ));
             command = Some(Commands::Init);
         } else if let Some(make) = matches.subcommand_matches("make") {
             // set default value of current month
