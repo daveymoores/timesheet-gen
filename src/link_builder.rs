@@ -105,7 +105,7 @@ pub async fn build_unique_uri(
         .expect("You must set the MONGODB_COLLECTION environment var!");
 
     let month_year_string = get_string_month_year(&options[1], &options[2])?;
-    println!("Generating timesheet for {}...", month_year_string);
+    crate::help_prompt::HelpPrompt::show_generating_timesheet_message(&*month_year_string);
 
     let db = db::Db::new().await?;
     let collection = db
@@ -195,10 +195,9 @@ pub async fn build_unique_uri(
         &random_path
     );
 
-    println!(
-        "Timesheet now available for {} minutes @ {}",
+    crate::help_prompt::HelpPrompt::show_new_link_success(
         expire_time_seconds / 60,
-        timesheet_gen_uri
+        &*timesheet_gen_uri,
     );
 
     process::exit(exitcode::OK);
@@ -214,6 +213,7 @@ mod test {
     };
     use crate::repository::{GitLogDates, Repository};
     use chrono::{TimeZone, Utc};
+    use nanoid::nanoid;
     use serde_json::{json, Map, Number, Value};
     use std::cell::RefCell;
     use std::collections::{HashMap, HashSet};
@@ -271,12 +271,14 @@ mod test {
         let timesheet_for_month = create_mock_timesheet_hours_for_month();
 
         let client = Option::from(Client {
+            id: nanoid!(),
             client_name: "alphabet".to_string(),
             client_address: "Spaghetti Way, USA".to_string(),
             client_contact_person: "John Smith".to_string(),
         });
 
         let user = Option::from(User {
+            id: nanoid!(),
             name: "Jim Jones".to_string(),
             email: "jim@jones.com".to_string(),
         });
@@ -308,6 +310,7 @@ mod test {
                 repositories: Option::from(vec![Repository {
                     ..Default::default()
                 }]),
+                ..Default::default()
             }))
             .borrow_mut(),
         );

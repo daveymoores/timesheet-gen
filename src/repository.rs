@@ -14,43 +14,39 @@ pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Repository {
+    pub id: Option<String>,
     pub namespace: Option<String>,
     pub repo_path: Option<String>,
     pub git_path: Option<String>,
     pub git_log_dates: Option<GitLogDates>,
+    pub user_id: Option<String>,
     pub name: Option<String>,
     pub email: Option<String>,
+    pub client_id: Option<String>,
     pub client_name: Option<String>,
     pub client_contact_person: Option<String>,
     pub client_address: Option<String>,
     pub project_number: Option<String>,
     pub timesheet: Option<TimesheetYears>,
-    pub requires_approval: Option<bool>,
-    pub approvers_name: Option<String>,
-    pub approvers_email: Option<String>,
-    pub user_signature: Option<String>,
-    pub approver_signature: Option<String>,
 }
 
 impl Default for Repository {
     fn default() -> Self {
         Self {
+            id: None,
             namespace: None,
             repo_path: None,
             git_path: None,
             git_log_dates: None,
+            user_id: None,
             name: None,
             email: None,
+            client_id: None,
             client_name: None,
             client_contact_person: None,
             client_address: None,
             project_number: None,
             timesheet: None,
-            requires_approval: None,
-            approvers_name: None,
-            approvers_email: None,
-            user_signature: None,
-            approver_signature: None,
         }
     }
 }
@@ -89,24 +85,24 @@ impl Repository {
         }
     }
 
+    pub fn set_repository_id(&mut self, id: String) -> &mut Self {
+        self.id = Option::from(id);
+        self
+    }
+
+    pub fn set_user_id(&mut self, id: String) -> &mut Self {
+        self.user_id = Option::from(id);
+        self
+    }
+
+    pub fn set_client_id(&mut self, id: String) -> &mut Self {
+        self.client_id = Option::from(id);
+        self
+    }
+
     /// Get values from buffer and set these to the Repository struct fields
     pub fn set_values_from_buffer(&mut self, repository: &Repository) -> &mut Repository {
         *self = repository.clone();
-        self
-    }
-
-    pub fn set_approvers_name(&mut self, value: String) -> &mut Self {
-        self.approvers_name = Option::from(value);
-        self
-    }
-
-    pub fn set_approvers_email(&mut self, value: String) -> &mut Self {
-        self.approvers_email = Option::from(value);
-        self
-    }
-
-    pub fn set_requires_approval(&mut self, value: bool) -> &mut Self {
-        self.requires_approval = Option::from(value);
         self
     }
 
@@ -614,39 +610,6 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
             timesheet.git_path.unwrap(),
             "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/".to_string()
         );
-    }
-
-    #[test]
-    fn it_sets_requires_approval() {
-        let mut timesheet = Repository {
-            ..Default::default()
-        };
-
-        timesheet.set_requires_approval(true);
-        assert_eq!(timesheet.requires_approval.unwrap(), true);
-    }
-
-    #[test]
-    fn it_sets_approvers_email() {
-        let mut timesheet = Repository {
-            ..Default::default()
-        };
-
-        timesheet.set_approvers_email("approver@gmail.com".to_string());
-        assert_eq!(
-            timesheet.approvers_email.unwrap(),
-            "approver@gmail.com".to_string()
-        );
-    }
-
-    #[test]
-    fn it_sets_approvers_name() {
-        let mut timesheet = Repository {
-            ..Default::default()
-        };
-
-        timesheet.set_approvers_name("Mr Approver".to_string());
-        assert_eq!(timesheet.approvers_name.unwrap(), "Mr Approver".to_string());
     }
 
     #[test]

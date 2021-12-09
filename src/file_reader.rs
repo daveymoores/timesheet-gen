@@ -1,14 +1,13 @@
 use crate::client_repositories::ClientRepositories;
 use crate::help_prompt::Onboarding;
-use dotenv::dotenv;
 use serde_json::json;
 use std::cell::RefCell;
-use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::rc::Rc;
+use tempfile::tempfile;
 
 const CONFIG_FILE_NAME: &str = ".timesheet-gen.txt";
 
@@ -21,15 +20,13 @@ pub fn get_home_path() -> PathBuf {
 }
 
 /// Create filepath to config file
-pub fn get_filepath(path: PathBuf) -> String {
-    dotenv().ok();
-    //TODO - use https://doc.rust-lang.org/nightly/std/fs/fn.canonicalize.html instead of rel path
-    let test_mode = env::var("TEST_MODE").expect("TEST MODE not set");
-    return if test_mode.parse().unwrap() {
-        "./testing-utils".to_owned() + "/" + CONFIG_FILE_NAME
+pub fn get_filepath(path: PathBuf) -> Result<String, Box<dyn std::error::Error>> {
+    return if crate::utils::is_test_mode() {
+        let path_string = &*format!("./testing-utils/{}", CONFIG_FILE_NAME);
+        Ok(path_string.to_owned())
     } else {
         let home_path = path.to_str();
-        home_path.unwrap().to_owned() + "/" + CONFIG_FILE_NAME
+        Ok(home_path.unwrap().to_owned() + "/" + CONFIG_FILE_NAME)
     };
 }
 
@@ -61,8 +58,19 @@ pub fn read_data_from_config_file<T>(
 where
     T: Onboarding,
 {
-    let config_path = get_filepath(get_home_path());
+    let config_path = get_filepath(get_home_path())?;
     read_file(buffer, config_path, prompt)?;
+
+    Ok(())
+}
+
+pub fn delete_config_file() -> Result<(), Box<dyn std::error::Error>> {
+    if crate::utils::is_test_mode() {
+        return Ok(());
+    }
+
+    let config_path = get_filepath(get_home_path())?;
+    std::fs::remove_file(config_path)?;
 
     Ok(())
 }
@@ -71,6 +79,12 @@ pub fn write_json_to_config_file(
     json: String,
     config_path: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    if crate::utils::is_test_mode() {
+        let mut file = tempfile()?;
+        file.write_all(json.as_bytes())?;
+        return Ok(());
+    }
+
     let mut file = File::create(config_path)?;
 
     file.write_all(json.as_bytes())?;
@@ -95,18 +109,20 @@ pub fn serialize_config(
             let client_repo_borrow = client_repository.borrow_mut();
             let client = client_repo_borrow[0].client.clone();
             let user = client_repo_borrow[0].user.clone();
+            let approver = client_repo_borrow[0].approver.clone();
             let repository = client_repo_borrow[0].repositories.as_ref().unwrap()[0].clone();
             let client_name = &client.as_ref().unwrap().client_name;
 
             let config_data: Vec<ClientRepositories> = if config
                 .into_iter()
-                .any(|x| &x.client.as_ref().unwrap().client_name == client_name)
+                .any(|x| &x.get_client_name() == client_name)
             {
                 let x: Vec<ClientRepositories> = config
                     .iter_mut()
                     .map(|c| {
-                        if &c.client.as_ref().unwrap().client_name == client_name {
+                        if &c.get_client_name() == client_name {
                             return ClientRepositories {
+                                approver: approver.clone(),
                                 client: client.clone(),
                                 user: user.clone(),
                                 repositories: Some(
@@ -116,6 +132,7 @@ pub fn serialize_config(
                                     ]
                                     .concat(),
                                 ),
+                                ..Default::default()
                             };
                         }
                         c.clone()
@@ -142,8 +159,12 @@ mod tests {
     use super::*;
     use crate::client_repositories::Client;
     use crate::repository::Repository;
+    use envtestkit::lock::lock_test;
+    use envtestkit::set_env;
+    use nanoid::nanoid;
     use std::cell::RefCell;
     use std::error::Error;
+    use std::ffi::OsString;
     use std::path::Path;
 
     fn create_mock_client_repository(client_repository: Rc<RefCell<Vec<ClientRepositories>>>) {
@@ -208,12 +229,14 @@ mod tests {
 
         let mut deserialized_config = vec![ClientRepositories {
             client: Some(Client {
+                id: nanoid!(),
                 client_name: "New client".to_string(),
                 client_address: "Somewhere".to_string(),
                 client_contact_person: "Jim Jones".to_string(),
             }),
             user: None,
             repositories: None,
+            ..Default::default()
         }];
 
         let length_before = &deserialized_config.len();
@@ -232,9 +255,14 @@ mod tests {
 
     #[test]
     fn get_filepath_returns_path_with_file_name() {
-        env::set_var("TEST_MODE", "false");
+        let _lock = lock_test();
+        let _test = set_env(OsString::from("TEST_MODE"), "false");
+
         let path_buf = PathBuf::from("/path/to/usr");
-        assert_eq!(get_filepath(path_buf), "/path/to/usr/.timesheet-gen.txt");
+        assert_eq!(
+            get_filepath(path_buf).unwrap(),
+            "/path/to/usr/.timesheet-gen.txt"
+        );
     }
 
     #[test]
@@ -297,6 +325,9 @@ mod tests {
 
     #[test]
     fn it_writes_a_config_file_when_file_exists() {
+        let _lock = lock_test();
+        let _test = set_env(OsString::from("TEST_MODE"), "true");
+
         let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories {
             ..Default::default()
         }]));
@@ -320,6 +351,9 @@ mod tests {
 
     #[test]
     fn it_throws_an_error_when_writing_config_if_file_doesnt_exist() {
+        let _lock = lock_test();
+        let _test = set_env(OsString::from("TEST_MODE"), "false");
+
         let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories {
             ..Default::default()
         }]));
