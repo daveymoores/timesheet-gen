@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::ops::Deref;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::rc::Rc;
 use tempfile::tempfile;
 
@@ -23,9 +23,7 @@ pub fn get_home_path() -> PathBuf {
 pub fn get_filepath(path: PathBuf) -> Result<String, Box<dyn std::error::Error>> {
     return if crate::utils::is_test_mode() {
         let path_string = &*format!("./testing-utils/{}", CONFIG_FILE_NAME);
-        let path = Path::new(path_string);
-        let full_path = std::fs::canonicalize(path)?;
-        Ok(full_path.to_str().unwrap().to_owned())
+        Ok(path_string.to_owned())
     } else {
         let home_path = path.to_str();
         Ok(home_path.unwrap().to_owned() + "/" + CONFIG_FILE_NAME)
@@ -258,7 +256,7 @@ mod tests {
     #[test]
     fn get_filepath_returns_path_with_file_name() {
         let _lock = lock_test();
-        let _test = set_env(OsString::from("TEST_MODE"), "true");
+        let _test = set_env(OsString::from("TEST_MODE"), "false");
 
         let path_buf = PathBuf::from("/path/to/usr");
         assert_eq!(
@@ -350,6 +348,9 @@ mod tests {
 
     #[test]
     fn it_throws_an_error_when_writing_config_if_file_doesnt_exist() {
+        let _lock = lock_test();
+        let _test = set_env(OsString::from("TEST_MODE"), "false");
+
         let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories {
             ..Default::default()
         }]));

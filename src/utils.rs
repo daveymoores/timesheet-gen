@@ -35,6 +35,8 @@ pub fn exit_process() {
     if !is_test_mode() {
         std::process::exit(exitcode::OK);
     }
+
+    return;
 }
 
 pub fn trim_output_from_utf8(output: Output) -> Result<String, Box<dyn std::error::Error>> {

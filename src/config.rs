@@ -2,6 +2,7 @@ use crate::cli::RcHelpPrompt;
 use crate::client_repositories::ClientRepositories;
 use crate::link_builder;
 use crate::repository::Repository;
+use crate::utils::exit_process;
 use std::cell::{Ref, RefCell, RefMut};
 use std::ops::Deref;
 use std::process;
@@ -501,7 +502,8 @@ impl Remove for Config {
                     crate::file_reader::delete_config_file().expect(
                         "Config file was empty so timesheet-gen tried to remove it. That failed.",
                     );
-                    std::process::exit(exitcode::OK);
+                    exit_process();
+                    return;
                 }
 
                 // pass modified config as new client_repository and thus write it straight to file

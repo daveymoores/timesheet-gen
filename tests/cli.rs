@@ -1,10 +1,6 @@
 use assert_cmd::Command;
 
-//TODO - why does this need a timeout
-const TIMEOUT_MILLISECONDS: u64 = 500;
-
 #[test]
-#[ignore]
 fn runs_binary_with_a_command_that_doesnt_exist() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("timesheet-gen")?;
     cmd.arg("foo");
@@ -14,7 +10,6 @@ fn runs_binary_with_a_command_that_doesnt_exist() -> Result<(), Box<dyn std::err
 }
 
 #[test]
-#[ignore]
 fn runs_binary_with_a_command_that_does_exist() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("timesheet-gen")?;
     cmd.arg("--help");
@@ -31,7 +26,6 @@ fn runs_init_for_repo_outside_of_current_directory() {
         .env("TEST_MODE", "true")
         .arg("init")
         .arg("--path=./tests")
-        .timeout(std::time::Duration::from_millis(TIMEOUT_MILLISECONDS))
         .assert();
 
     assert
@@ -40,7 +34,6 @@ fn runs_init_for_repo_outside_of_current_directory() {
 }
 
 #[test]
-#[ignore]
 fn runs_init_for_path_that_doesnt_exist() {
     let mut cmd = Command::cargo_bin("timesheet-gen").unwrap();
     let assert = cmd
@@ -55,15 +48,14 @@ fn runs_init_for_path_that_doesnt_exist() {
 }
 
 #[test]
-#[ignore]
 fn runs_init_with_args() {
     let mut cmd = Command::cargo_bin("timesheet-gen").unwrap();
     let assert = cmd.env("TEST_MODE", "true").arg("init").assert();
 
     assert.success().stdout(
-        "timesheet-gen has already been initialised for this repository! \
-        \nTry \'timesheet-gen make\' to create your first timesheet \
-        \nor \'timesheet-gen help\' for more options.\n",
+        "\u{1F916} timesheet-gen has already been initialised for this repository.\n\
+        Try \'timesheet-gen make\' to create your first timesheet \n\
+        or \'timesheet-gen help\' for more options.\n",
     );
 }
 
@@ -71,10 +63,7 @@ fn runs_init_with_args() {
 #[ignore]
 fn runs_make_with_success() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("timesheet-gen")?;
-    let assert = cmd
-        .arg("make")
-        .timeout(std::time::Duration::from_millis(TIMEOUT_MILLISECONDS))
-        .assert();
+    let assert = cmd.arg("make").assert();
     assert
         .failure()
         .stdout("Finding project data for \'apple\'...\nDoes \'timesheet-gen\' require a project/PO number?\n");
@@ -82,7 +71,6 @@ fn runs_make_with_success() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-#[ignore]
 fn runs_remove_with_failure() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("timesheet-gen")?;
     let assert = cmd
@@ -106,7 +94,6 @@ fn runs_remove_and_prompts_to_remove_client() -> Result<(), Box<dyn std::error::
         .env("TEST_MODE", "true")
         .arg("remove")
         .arg("--client=apple")
-        .timeout(std::time::Duration::from_millis(TIMEOUT_MILLISECONDS))
         .assert();
 
     assert.failure().stdout("Remove client \'apple\'?\n");
@@ -123,7 +110,6 @@ fn runs_remove_and_prompts_to_remove_namespace() -> Result<(), Box<dyn std::erro
         .arg("remove")
         .arg("--client=apple")
         .arg("--namespace=timesheet-gen")
-        .timeout(std::time::Duration::from_millis(TIMEOUT_MILLISECONDS))
         .assert();
 
     assert
