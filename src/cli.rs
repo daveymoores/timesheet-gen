@@ -277,7 +277,10 @@ impl Cli<'_> {
             None => {}
         }
 
-        let prompt = crate::help_prompt::HelpPrompt::new(Rc::clone(&repository));
+        let prompt = crate::help_prompt::HelpPrompt::new(
+            Rc::clone(&repository),
+            Rc::clone(&client_repositories),
+        );
         let rc_prompt: RcHelpPrompt = Rc::new(RefCell::new(prompt));
 
         Self::run_command(cli, config, &repository, &client_repositories, &rc_prompt);
@@ -365,10 +368,15 @@ mod tests {
         let cli = Cli::new_from(commands).unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
         let response = new_cli.unwrap();
-        let prompt =
-            crate::help_prompt::HelpPrompt::new(Rc::new(RefCell::new(repository::Repository {
-                ..Default::default()
-            })));
+
+        let repository = Rc::new(RefCell::new(repository::Repository {
+            ..Default::default()
+        }));
+        let client_repository = Rc::new(RefCell::new(vec![ClientRepositories {
+            ..Default::default()
+        }]));
+
+        let prompt = crate::help_prompt::HelpPrompt::new(repository, client_repository);
 
         let repository = Rc::new(RefCell::new(Repository::new()));
         let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories::new()]));
