@@ -6,7 +6,7 @@ use ascii_table::AsciiTable;
 /// It writes to the std output, and returns input data or a boolean
 use dialoguer::{Confirm, Editor, Input, Select};
 use nanoid::nanoid;
-use std::cell::{RefCell, RefMut};
+use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
 
@@ -14,6 +14,7 @@ use std::rc::Rc;
 #[derive(Debug, Clone)]
 pub struct HelpPrompt {
     repository: Rc<RefCell<Repository>>,
+    client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
 }
 
 pub trait Onboarding {
@@ -44,8 +45,14 @@ impl ExistingClientOnboarding for HelpPrompt {
 }
 
 impl HelpPrompt {
-    pub fn new(repository: Rc<RefCell<Repository>>) -> Self {
-        Self { repository }
+    pub fn new(
+        repository: Rc<RefCell<Repository>>,
+        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+    ) -> Self {
+        Self {
+            repository,
+            client_repositories,
+        }
     }
 
     pub fn repo_already_initialised() {
@@ -117,10 +124,9 @@ impl HelpPrompt {
 
     pub fn prompt_for_update(
         &mut self,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
         options: Vec<Option<String>>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let mut client_repo_borrow = client_repositories.borrow_mut();
+        let mut client_repositories = self.client_repositories.borrow_mut();
 
         if options[1].is_some() {
             Self::print_question(&*format!(
@@ -136,7 +142,7 @@ impl HelpPrompt {
             match value {
                 "Namespace" => {
                     let input: String = Input::new().interact_text()?;
-                    client_repo_borrow[0]
+                    client_repositories[0]
                         .repositories
                         .as_mut()
                         .map(|repo| repo[0].set_namespace(input));
@@ -144,7 +150,7 @@ impl HelpPrompt {
                 "Repository path" => {
                     //TODO - need to check this path exists before allowing update
                     let input: String = Input::new().interact_text()?;
-                    client_repo_borrow[0]
+                    client_repositories[0]
                         .repositories
                         .as_mut()
                         .map(|repo| repo[0].set_repo_path(input));
@@ -171,27 +177,27 @@ impl HelpPrompt {
                 "Approver name" => {
                     println!("Approver's name");
                     let input: String = Input::new().interact_text()?;
-                    client_repo_borrow[0].set_approvers_name(input);
+                    client_repositories[0].set_approvers_name(input);
                 }
                 "Approver email" => {
                     println!("Approver's email");
                     let input: String = Input::new().interact_text()?;
-                    client_repo_borrow[0].set_approvers_email(input);
+                    client_repositories[0].set_approvers_email(input);
                 }
                 "Client company name" => {
                     println!("Client company name");
                     let input: String = Input::new().interact_text()?;
-                    client_repo_borrow[0].update_client_name(input);
+                    client_repositories[0].update_client_name(input);
                 }
                 "Client contact person" => {
                     println!("Client contact person");
                     let input: String = Input::new().interact_text()?;
-                    client_repo_borrow[0].update_client_contact_person(input);
+                    client_repositories[0].update_client_contact_person(input);
                 }
                 "Client address" => {
                     println!("Client address");
                     let input: String = Input::new().interact_text()?;
-                    client_repo_borrow[0].update_client_address(input);
+                    client_repositories[0].update_client_address(input);
                 }
                 _ => {}
             };
@@ -337,50 +343,46 @@ impl HelpPrompt {
         Ok(self)
     }
 
-    pub fn prompt_for_manager_approval(
-        &self,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
-    ) -> Result<&Self, Box<dyn Error>> {
-        let mut client_repos_borrow = client_repositories.borrow_mut();
+    pub fn prompt_for_manager_approval(&self) -> Result<&Self, Box<dyn Error>> {
+        let mut client_repositories = self.client_repositories.borrow_mut();
 
         Self::print_question("Does your timesheet need approval?");
         println!("{}", Self::dim_text(
             "(This will enable signing functionality, see https://timesheet-gen.io/docs/signing)",
         ));
+
         if Confirm::new().default(true).interact()? {
-            client_repos_borrow[0].set_requires_approval(true);
+            client_repositories[0].set_requires_approval(true);
 
             Self::print_question("Approvers name");
             let input: String = Input::new().interact_text()?;
-            client_repos_borrow[0].set_approvers_name(input);
+            client_repositories[0].set_approvers_name(input);
 
             Self::print_question("Approvers email");
             let input: String = Input::new().interact_text()?;
-            client_repos_borrow[0].set_approvers_email(input);
+            client_repositories[0].set_approvers_email(input);
         } else {
-            client_repos_borrow[0].set_requires_approval(false);
+            client_repositories[0].set_requires_approval(false);
         }
 
         Ok(self)
     }
 
-    pub fn add_project_numbers(
-        &self,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
-    ) -> Result<&Self, Box<dyn Error>> {
-        let mut cr_borrow = client_repositories.borrow_mut();
+    pub fn add_project_numbers(&self) -> Result<&Self, Box<dyn Error>> {
+        let mut client_repositories = self.client_repositories.borrow_mut();
+
         println!(
             "{}",
             Self::dim_text(&*format!(
                 "\u{1F916} Finding project data for '{}'...",
-                cr_borrow[0].get_client_name()
+                client_repositories[0].get_client_name()
             ))
         );
 
-        for i in 0..cr_borrow[0].repositories.as_ref().unwrap().len() {
+        for i in 0..client_repositories[0].repositories.as_ref().unwrap().len() {
             Self::print_question(&*format!(
                 "Does '{}' require a project/PO number?",
-                cr_borrow[0].repositories.as_ref().unwrap()[i]
+                client_repositories[0].repositories.as_ref().unwrap()[i]
                     .namespace
                     .as_ref()
                     .unwrap()
@@ -388,7 +390,7 @@ impl HelpPrompt {
             if Confirm::new().default(true).interact()? {
                 Self::print_question("Project number");
                 let input: String = Input::new().interact_text()?;
-                cr_borrow[0]
+                client_repositories[0]
                     .repositories
                     .as_mut()
                     .map(|repo| repo[i].set_project_number(input));
@@ -400,9 +402,13 @@ impl HelpPrompt {
 
     pub fn prompt_for_client_repo_removal(
         &self,
-        mut client_repositories: RefMut<Vec<ClientRepositories>>,
         options: Vec<Option<String>>,
+        deserialized_config: &mut Vec<ClientRepositories>,
     ) -> Result<&Self, Box<dyn Error>> {
+        let mut client_repositories = self.client_repositories.borrow_mut();
+
+        client_repositories.append(deserialized_config);
+
         if options[1].is_some() {
             Self::print_question(&*format!(
                 "Remove '{}' from client '{}'?",

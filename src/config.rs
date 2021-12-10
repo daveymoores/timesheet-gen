@@ -327,12 +327,12 @@ impl Make for Config {
 
                 prompt
                     .borrow_mut()
-                    .add_project_numbers(Rc::clone(&client_repositories))
+                    .add_project_numbers()
                     .unwrap_or_else(|err| {
                         eprintln!("Error parsing project number: {}", err);
                         std::process::exit(exitcode::CANTCREAT);
                     })
-                    .prompt_for_manager_approval(Rc::clone(&client_repositories))
+                    .prompt_for_manager_approval()
                     .unwrap_or_else(|err| {
                         eprintln!("Error setting manager approval: {}", err);
                         std::process::exit(exitcode::CANTCREAT);
@@ -487,13 +487,9 @@ impl Remove for Config {
                     found_client_repo.clone(),
                 );
 
-                let mut client_repo_borrow = client_repositories.borrow_mut();
-
-                client_repo_borrow.append(&mut deserialized_config);
-
                 prompt
                     .borrow_mut()
-                    .prompt_for_client_repo_removal(client_repo_borrow, options)
+                    .prompt_for_client_repo_removal(options, &mut deserialized_config)
                     .expect("Remove failed");
 
                 // if there are no clients, lets remove the file and next time will be onboarding
@@ -569,7 +565,7 @@ impl Update for Config {
 
                 prompt
                     .borrow_mut()
-                    .prompt_for_update(Rc::clone(&client_repositories), options)
+                    .prompt_for_update(options)
                     .expect("Update failed");
 
                 let client_borrow = client_repositories.borrow();
@@ -640,6 +636,7 @@ mod tests {
 
         let prompt = Rc::new(RefCell::new(crate::help_prompt::HelpPrompt::new(
             Rc::clone(&repo),
+            Rc::clone(&client_repos),
         )));
 
         config.edit(
@@ -707,6 +704,7 @@ mod tests {
 
         let prompt = Rc::new(RefCell::new(crate::help_prompt::HelpPrompt::new(
             Rc::clone(&repo),
+            Rc::clone(&client_repos),
         )));
 
         crate::file_reader::read_data_from_config_file(&mut buffer, Rc::clone(&prompt))
@@ -753,6 +751,7 @@ mod tests {
 
         let prompt = Rc::new(RefCell::new(crate::help_prompt::HelpPrompt::new(
             Rc::clone(&repo),
+            Rc::clone(&client_repos),
         )));
 
         crate::file_reader::read_data_from_config_file(&mut buffer, Rc::clone(&prompt))
