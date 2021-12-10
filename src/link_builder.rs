@@ -281,6 +281,7 @@ mod test {
             id: nanoid!(),
             name: "Jim Jones".to_string(),
             email: "jim@jones.com".to_string(),
+            is_alias: false,
         });
 
         let timesheets = vec![Timesheet {

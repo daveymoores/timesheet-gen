@@ -233,7 +233,7 @@ impl HelpPrompt {
         if client_name == &no_client_value {
             self.onboarding(false)?;
         } else {
-            // otherwise pre-populate the client details
+            // otherwise pre-populate the client and user details
             let client = deserialized_config
                 .iter()
                 .find(|client| &client.get_client_name() == client_name)
@@ -309,6 +309,58 @@ impl HelpPrompt {
         Ok(self)
     }
 
+    pub fn prompt_for_setting_user_alias(&self) -> Result<&Self, Box<dyn std::error::Error>> {
+        let mut client_borrow = self.client_repositories.borrow_mut();
+        let repo_borrow = self.repository.borrow_mut();
+
+        println!("\nThe git config name or email found for this repository differs from the one being used for your user details.");
+        println!(
+            "{}",
+            Self::dim_text(
+                "Your user details will be used on any timesheets generated for this client."
+            )
+        );
+        println!("\nCurrent settings:");
+        let ascii_table = AsciiTable::default();
+        ascii_table.print(vec![
+            vec![
+                Self::dim_text("Name"),
+                repo_borrow.name.as_ref().unwrap().to_string(),
+            ],
+            vec![
+                Self::dim_text("Email"),
+                repo_borrow.email.as_ref().unwrap().to_string(),
+            ],
+        ]);
+
+        println!(
+            "\nYour new settings will overwrite these.\n\
+            Alternatively you can set an user/email alias that will be consistent across repositories under this client.",
+        );
+        Self::print_question("Set an alias for this client?");
+        println!(
+            "{}",
+            Self::dim_text("Note: These can be updated by running timesheet-gen update.")
+        );
+
+        if Confirm::new().default(true).interact()? {
+            Self::print_question("Name alias");
+            let name: String = Input::new().interact_text()?;
+            client_borrow[0].set_user_name(name);
+
+            Self::print_question("Email alias");
+            let email: String = Input::new().interact_text()?;
+            client_borrow[0].set_user_email(email);
+
+            client_borrow[0].set_is_user_alias(true);
+            client_borrow[0].set_user_id(nanoid!());
+
+            println!("{}", Self::dim_text("User alias created"));
+        }
+
+        Ok(self)
+    }
+
     pub fn search_for_repository_details(&self) -> Result<&Self, Box<dyn std::error::Error>> {
         self.repository
             .borrow_mut()
@@ -318,6 +370,26 @@ impl HelpPrompt {
         self.repository.borrow_mut().set_repository_id(nanoid!());
 
         println!("{}", Self::dim_text("\u{1F916} Repository details found."));
+
+        let borrow = self.client_repositories.borrow();
+        let user = &borrow[0].user;
+
+        // check whether an alias should be created if there isn't one already
+        if let Some(user) = &user {
+            let name = &user.name;
+            let email = &user.email;
+            let is_alias = &user.is_alias;
+
+            if self
+                .repository
+                .borrow()
+                .has_different_user_details(&name, &email)
+                & !is_alias
+            {
+                self.prompt_for_setting_user_alias()?;
+            }
+        }
+
         Ok(self)
     }
 
@@ -407,8 +479,6 @@ impl HelpPrompt {
     ) -> Result<&Self, Box<dyn Error>> {
         let mut client_repositories = self.client_repositories.borrow_mut();
 
-        client_repositories.append(deserialized_config);
-
         if options[1].is_some() {
             Self::print_question(&*format!(
                 "Remove '{}' from client '{}'?",
@@ -435,11 +505,13 @@ impl HelpPrompt {
                                 "'{}' removed  \u{1F389}",
                                 &options[1].as_ref().unwrap()
                             ));
-                            crate::utils::exit_process();
+
+                            return Ok(&self);
                         } else {
                             Self::print_question(
                                 "Client or repository not found. Nothing removed.",
                             );
+                            crate::utils::exit_process();
                         }
                     }
                 }
@@ -467,8 +539,10 @@ impl HelpPrompt {
                         "'{}' removed \u{1F389}",
                         &options[0].as_ref().unwrap()
                     ));
+                    return Ok(&self);
                 } else {
                     Self::print_question("Client not found. Nothing removed.");
+                    crate::utils::exit_process();
                 }
             }
         }

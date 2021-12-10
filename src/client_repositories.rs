@@ -30,6 +30,7 @@ pub struct User {
     pub id: String,
     pub name: String,
     pub email: String,
+    pub is_alias: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -79,11 +80,22 @@ impl ClientRepositories {
                 .clone()
                 .unwrap_or("None".to_string()),
         });
-        self.user = Option::from(User {
-            id: repository.user_id.clone().unwrap_or("None".to_string()),
-            name: repository.name.clone().unwrap_or("None".to_string()),
-            email: repository.email.clone().unwrap_or("None".to_string()),
-        });
+
+        let should_set_user = match self.user.as_ref() {
+            None => true,
+            Some(user) => user.is_alias,
+        };
+
+        // if an alias hasn't been, or there isn't a user yet, set the user from repo
+        if should_set_user {
+            self.user = Option::from(User {
+                id: repository.user_id.clone().unwrap_or("None".to_string()),
+                name: repository.name.clone().unwrap_or("None".to_string()),
+                email: repository.email.clone().unwrap_or("None".to_string()),
+                is_alias: false,
+            });
+        }
+
         self.repositories = Option::from(vec![repository.deref().clone()]);
         self
     }
@@ -194,6 +206,26 @@ impl ClientRepositories {
 
     pub fn set_requires_approval(&mut self, value: bool) -> &mut Self {
         self.requires_approval = value;
+        self
+    }
+
+    pub fn set_user_name(&mut self, value: String) -> &mut Self {
+        self.user.as_mut().map(|user| user.name = value);
+        self
+    }
+
+    pub fn set_user_email(&mut self, value: String) -> &mut Self {
+        self.user.as_mut().map(|user| user.email = value);
+        self
+    }
+
+    pub fn set_is_user_alias(&mut self, value: bool) -> &mut Self {
+        self.user.as_mut().map(|user| user.is_alias = value);
+        self
+    }
+
+    pub fn set_user_id(&mut self, value: String) -> &mut Self {
+        self.user.as_mut().map(|user| user.id = value);
         self
     }
 
@@ -456,7 +488,8 @@ mod tests {
             json!(User {
                 id: user_id.clone(),
                 name: "Jim Jones".to_string(),
-                email: "jim@jones.com".to_string()
+                email: "jim@jones.com".to_string(),
+                is_alias: false,
             })
         );
 
@@ -489,6 +522,7 @@ mod tests {
                 id: nanoid!(),
                 name: "Jim Jones".to_string(),
                 email: "jim@jones.com".to_string(),
+                is_alias: false,
             }),
             repositories: Option::Some(vec![
                 Repository {
