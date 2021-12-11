@@ -2,7 +2,7 @@ extern crate clap;
 use crate::client_repositories::ClientRepositories;
 use crate::config;
 use crate::config::{Edit, Init, Make, New, Remove, Update};
-use crate::help_prompt::HelpPrompt;
+use crate::help_prompt::{HelpPrompt, RCClientRepositories};
 use crate::repository;
 use crate::repository::Repository;
 use chrono::prelude::*;
@@ -292,7 +292,7 @@ impl Cli<'_> {
         cli: Cli,
         config: T,
         repository: &Rc<RefCell<repository::Repository>>,
-        client_repositories: &Rc<RefCell<Vec<ClientRepositories>>>,
+        client_repositories: &RCClientRepositories,
         prompt: &RcHelpPrompt,
     ) where
         T: Init + Make + Edit + Update + Remove,
@@ -369,17 +369,13 @@ mod tests {
         let new_cli = cli.parse_commands(&cli.matches);
         let response = new_cli.unwrap();
 
-        let repository = Rc::new(RefCell::new(repository::Repository {
-            ..Default::default()
-        }));
-        let client_repository = Rc::new(RefCell::new(vec![ClientRepositories {
-            ..Default::default()
-        }]));
-
-        let prompt = crate::help_prompt::HelpPrompt::new(repository, client_repository);
-
         let repository = Rc::new(RefCell::new(Repository::new()));
         let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories::new()]));
+
+        let prompt = crate::help_prompt::HelpPrompt::new(
+            Rc::clone(&repository),
+            Rc::clone(&client_repositories),
+        );
 
         let rc_prompt = Rc::new(RefCell::new(prompt));
 
@@ -403,7 +399,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+            _client_repositories: RCClientRepositories,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -415,7 +411,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+            _client_repositories: RCClientRepositories,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -427,7 +423,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+            _client_repositories: RCClientRepositories,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -439,7 +435,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+            _client_repositories: RCClientRepositories,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -451,7 +447,7 @@ mod tests {
             &self,
             _options: Vec<Option<String>>,
             _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+            _client_repositories: RCClientRepositories,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);

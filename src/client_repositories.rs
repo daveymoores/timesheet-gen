@@ -330,6 +330,72 @@ mod tests {
     }
 
     #[test]
+    fn it_set_requires_approval() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.set_requires_approval(true);
+        assert_eq!(client_repo.requires_approval, true);
+    }
+
+    #[test]
+    fn it_set_user_name() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.set_user_name("potato".to_string());
+        assert_eq!(
+            client_repo.user.as_ref().unwrap().name,
+            "potato".to_string()
+        );
+    }
+
+    #[test]
+    fn it_set_user_email() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.set_user_email("potato@tomato.com".to_string());
+        assert_eq!(
+            client_repo.user.as_ref().unwrap().email,
+            "potato@tomato.com".to_string()
+        );
+    }
+
+    #[test]
+    fn it_set_is_user_alias() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.set_is_user_alias(true);
+        assert_eq!(client_repo.user.as_ref().unwrap().is_alias, true);
+    }
+
+    #[test]
+    fn it_set_user_id() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.set_user_id("123456".to_string());
+        assert_eq!(client_repo.user.as_ref().unwrap().id, "123456".to_string());
+    }
+
+    #[test]
     fn it_gets_clients_name() {
         let mut client_repo = ClientRepositories {
             ..Default::default()

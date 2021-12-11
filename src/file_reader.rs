@@ -1,5 +1,5 @@
 use crate::client_repositories::ClientRepositories;
-use crate::help_prompt::Onboarding;
+use crate::help_prompt::{ConfigurationDoc, Onboarding, RCClientRepositories};
 use serde_json::json;
 use std::cell::RefCell;
 use std::fs::File;
@@ -93,8 +93,8 @@ pub fn write_json_to_config_file(
 }
 
 pub fn serialize_config(
-    client_repository: Rc<RefCell<Vec<ClientRepositories>>>,
-    deserialized_config: Option<&mut Vec<ClientRepositories>>,
+    client_repository: RCClientRepositories,
+    deserialized_config: Option<&mut ConfigurationDoc>,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let config_data = match deserialized_config {
         // if deserialized_config doesn't exist, then create fresh json for file
@@ -112,12 +112,12 @@ pub fn serialize_config(
             let approver = client_repo_borrow[0].approver.clone();
             let repository = client_repo_borrow[0].repositories.as_ref().unwrap()[0].clone();
             let client_name = &client.as_ref().unwrap().client_name;
-
-            let config_data: Vec<ClientRepositories> = if config
+            println!("{:#?}", user);
+            let config_data: ConfigurationDoc = if config
                 .into_iter()
                 .any(|x| &x.get_client_name() == client_name)
             {
-                let x: Vec<ClientRepositories> = config
+                let x: ConfigurationDoc = config
                     .iter_mut()
                     .map(|c| {
                         if &c.get_client_name() == client_name {
@@ -167,7 +167,7 @@ mod tests {
     use std::ffi::OsString;
     use std::path::Path;
 
-    fn create_mock_client_repository(client_repository: Rc<RefCell<Vec<ClientRepositories>>>) {
+    fn create_mock_client_repository(client_repository: RCClientRepositories) {
         let repo = RefCell::new(Repository {
             client_name: Option::from("alphabet".to_string()),
             client_address: Option::from("Spaghetti Way, USA".to_string()),
@@ -194,7 +194,7 @@ mod tests {
         let json_string =
             serialize_config(client_repositories, Option::from(&mut deserialized_config)).unwrap();
 
-        let constructed_client_repos: Vec<ClientRepositories> =
+        let constructed_client_repos: ConfigurationDoc =
             serde_json::from_str(&json_string).unwrap();
 
         //before
@@ -244,7 +244,7 @@ mod tests {
         let json_string =
             serialize_config(client_repositories, Option::from(&mut deserialized_config)).unwrap();
 
-        let constructed_client_repos: Vec<ClientRepositories> =
+        let constructed_client_repos: ConfigurationDoc =
             serde_json::from_str(&json_string).unwrap();
 
         //before
@@ -377,7 +377,7 @@ mod tests {
 
         let json =
             serialize_config(client_repositories, Option::from(&mut deserialized_config)).unwrap();
-        let value: Vec<ClientRepositories> = serde_json::from_str(&*json).unwrap();
+        let value: ConfigurationDoc = serde_json::from_str(&*json).unwrap();
 
         assert_eq!(
             value[0].repositories.as_ref().unwrap()[0]

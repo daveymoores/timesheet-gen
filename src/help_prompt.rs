@@ -10,11 +10,15 @@ use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
 
+pub type ConfigurationDoc = Vec<ClientRepositories>;
+pub type RCRepository = Rc<RefCell<Repository>>;
+pub type RCClientRepositories = Rc<RefCell<Vec<ClientRepositories>>>;
+
 //TODO - consider using termion https://docs.rs/termion/1.5.6/termion/
 #[derive(Debug, Clone)]
 pub struct HelpPrompt {
-    repository: Rc<RefCell<Repository>>,
-    client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+    repository: RCRepository,
+    client_repositories: RCClientRepositories,
 }
 
 pub trait Onboarding {
@@ -22,13 +26,16 @@ pub trait Onboarding {
 }
 
 pub trait ExistingClientOnboarding {
-    fn existing_client_onboarding(&self) -> Result<(), Box<dyn std::error::Error>>;
+    fn existing_client_onboarding(
+        &self,
+        deserialized_config: &ConfigurationDoc,
+    ) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 impl Onboarding for HelpPrompt {
     fn onboarding(&self, new_user: bool) -> Result<(), Box<dyn Error>> {
         self.confirm_repository_path(new_user)?
-            .search_for_repository_details()?
+            .search_for_repository_details(Option::None)?
             .add_client_details()?
             .show_details();
         Ok(())
@@ -36,19 +43,19 @@ impl Onboarding for HelpPrompt {
 }
 
 impl ExistingClientOnboarding for HelpPrompt {
-    fn existing_client_onboarding(&self) -> Result<(), Box<dyn std::error::Error>> {
+    fn existing_client_onboarding(
+        &self,
+        deserialized_config: &ConfigurationDoc,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         self.confirm_repository_path(false)?
-            .search_for_repository_details()?
+            .search_for_repository_details(Option::Some(deserialized_config))?
             .show_details();
         Ok(())
     }
 }
 
 impl HelpPrompt {
-    pub fn new(
-        repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
-    ) -> Self {
+    pub fn new(repository: RCRepository, client_repositories: RCClientRepositories) -> Self {
         Self {
             repository,
             client_repositories,
@@ -208,7 +215,7 @@ impl HelpPrompt {
 
     pub fn prompt_for_client_then_onboard(
         &mut self,
-        deserialized_config: &mut Vec<ClientRepositories>,
+        deserialized_config: &mut ConfigurationDoc,
     ) -> Result<(), Box<dyn std::error::Error>> {
         Self::print_question("\u{1F916} Initialising new repository.");
 
@@ -248,7 +255,7 @@ impl HelpPrompt {
                 .set_client_address(unwrapped_client.client_address.clone())
                 .set_client_contact_person(unwrapped_client.client_contact_person.clone());
 
-            self.existing_client_onboarding()?;
+            self.existing_client_onboarding(deserialized_config)?;
         }
 
         Ok(())
@@ -309,9 +316,12 @@ impl HelpPrompt {
         Ok(self)
     }
 
-    pub fn prompt_for_setting_user_alias(&self) -> Result<&Self, Box<dyn std::error::Error>> {
+    pub fn prompt_for_setting_user_alias(
+        &self,
+        name: String,
+        email: String,
+    ) -> Result<&Self, Box<dyn std::error::Error>> {
         let mut client_borrow = self.client_repositories.borrow_mut();
-        let repo_borrow = self.repository.borrow_mut();
 
         println!("\nThe git config name or email found for this repository differs from the one being used for your user details.");
         println!(
@@ -323,19 +333,13 @@ impl HelpPrompt {
         println!("\nCurrent settings:");
         let ascii_table = AsciiTable::default();
         ascii_table.print(vec![
-            vec![
-                Self::dim_text("Name"),
-                repo_borrow.name.as_ref().unwrap().to_string(),
-            ],
-            vec![
-                Self::dim_text("Email"),
-                repo_borrow.email.as_ref().unwrap().to_string(),
-            ],
+            vec![Self::dim_text("Name"), name],
+            vec![Self::dim_text("Email"), email],
         ]);
 
         println!(
             "\nYour new settings will overwrite these.\n\
-            Alternatively you can set an user/email alias that will be consistent across repositories under this client.",
+            \nAlternatively you can set a user/email alias that will be consistent across repositories under this client.",
         );
         Self::print_question("Set an alias for this client?");
         println!(
@@ -355,38 +359,41 @@ impl HelpPrompt {
             client_borrow[0].set_is_user_alias(true);
             client_borrow[0].set_user_id(nanoid!());
 
-            println!("{}", Self::dim_text("User alias created"));
+            println!("\nUser alias created \u{1F389}");
         }
-
+        println!("{:#?}", client_borrow);
         Ok(self)
     }
 
-    pub fn search_for_repository_details(&self) -> Result<&Self, Box<dyn std::error::Error>> {
-        self.repository
-            .borrow_mut()
-            .find_repository_details_from()?;
+    pub fn search_for_repository_details(
+        &self,
+        deserialized_config: Option<&ConfigurationDoc>,
+    ) -> Result<&Self, Box<dyn std::error::Error>> {
+        let mut repository_borrow = self.repository.borrow_mut();
+        repository_borrow.find_repository_details_from()?;
 
-        self.repository.borrow_mut().set_user_id(nanoid!());
-        self.repository.borrow_mut().set_repository_id(nanoid!());
+        repository_borrow.set_user_id(nanoid!());
+        repository_borrow.set_repository_id(nanoid!());
 
         println!("{}", Self::dim_text("\u{1F916} Repository details found."));
 
-        let borrow = self.client_repositories.borrow();
-        let user = &borrow[0].user;
-
         // check whether an alias should be created if there isn't one already
-        if let Some(user) = &user {
-            let name = &user.name;
-            let email = &user.email;
-            let is_alias = &user.is_alias;
+        if let Some(config) = deserialized_config {
+            // get the client that has been set to the repository
+            let client = config.iter().find(|client| {
+                &client.get_client_name() == repository_borrow.client_name.as_ref().unwrap()
+            });
 
-            if self
-                .repository
-                .borrow()
-                .has_different_user_details(&name, &email)
-                & !is_alias
-            {
-                self.prompt_for_setting_user_alias()?;
+            // if the user details differ, prompt for alias
+            if let Some(client) = client {
+                let user = client.user.as_ref().unwrap();
+                let name = &user.name;
+                let email = &user.email;
+                let is_alias = &user.is_alias;
+
+                if repository_borrow.has_different_user_details(&name, &email) & !is_alias {
+                    self.prompt_for_setting_user_alias(name.to_string(), email.to_string())?;
+                }
             }
         }
 
@@ -475,7 +482,6 @@ impl HelpPrompt {
     pub fn prompt_for_client_repo_removal(
         &self,
         options: Vec<Option<String>>,
-        deserialized_config: &mut Vec<ClientRepositories>,
     ) -> Result<&Self, Box<dyn Error>> {
         let mut client_repositories = self.client_repositories.borrow_mut();
 
@@ -508,9 +514,7 @@ impl HelpPrompt {
 
                             return Ok(&self);
                         } else {
-                            Self::print_question(
-                                "Client or repository not found. Nothing removed.",
-                            );
+                            Self::print_question("Repository not found. Nothing removed.");
                             crate::utils::exit_process();
                         }
                     }
@@ -608,4 +612,28 @@ impl HelpPrompt {
 
         self
     }
+
+    pub fn set_value_on_client_repo(&mut self, x: bool) {
+        let mut y = self.client_repositories.borrow_mut();
+        y.iter_mut().map(|k| k.requires_approval = true);
+    }
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::config::New;
+//     use crate::repository;
+//
+//     #[test]
+//     fn it_sets_a_value() {
+//         let repository = Rc::new(RefCell::new(repository::Repository::new()));
+//         let client_repositories = Rc::new(RefCell::new(ClientRepositories::new()));
+//
+//         let mut y = HelpPrompt::new(Rc::clone(&repository), Rc::clone(&client_repositories));
+//
+//         y.set_value_on_client_repo(true);
+//         println!("{:#?}", client_repositories);
+//         assert!(client_repositories.borrow()[0].requires_approval);
+//     }
+// }
