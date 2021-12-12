@@ -134,6 +134,7 @@ impl HelpPrompt {
         options: Vec<Option<String>>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut client_repositories = self.client_repositories.borrow_mut();
+        let mut repository = self.repository.borrow_mut();
 
         if options[1].is_some() {
             Self::print_question(&*format!(
@@ -146,21 +147,18 @@ impl HelpPrompt {
             let selection: usize = Select::new().items(&opt).interact()?;
             let value = opt[selection];
 
+            // changing the repo path will automatically update the repo username/email and namespace
+            // but the namespace alias can be updated separately here
             match value {
                 "Namespace" => {
                     let input: String = Input::new().interact_text()?;
-                    client_repositories
-                        .repositories
-                        .as_mut()
-                        .map(|repo| repo[0].set_namespace(input));
+                    repository.set_namespace_alias(input);
                 }
                 "Repository path" => {
-                    //TODO - need to check this path exists before allowing update
                     let input: String = Input::new().interact_text()?;
-                    client_repositories
-                        .repositories
-                        .as_mut()
-                        .map(|repo| repo[0].set_repo_path(input));
+                    repository
+                        .set_repo_path(input)
+                        .find_repository_details_from()?;
                 }
                 _ => {}
             };
@@ -176,6 +174,8 @@ impl HelpPrompt {
                 "Client company name",
                 "Client contact person",
                 "Client address",
+                "User name alias",
+                "User email alias",
             ];
             let selection: usize = Select::new().items(&opt).interact()?;
             let value = opt[selection];
@@ -205,6 +205,18 @@ impl HelpPrompt {
                     println!("Client address");
                     let input: String = Input::new().interact_text()?;
                     client_repositories.update_client_address(input);
+                }
+                "User name" => {
+                    println!("User name");
+                    let input: String = Input::new().interact_text()?;
+                    client_repositories.set_user_name(input);
+                    client_repositories.set_is_user_alias(true);
+                }
+                "User email" => {
+                    println!("User email");
+                    let input: String = Input::new().interact_text()?;
+                    client_repositories.set_user_email(input);
+                    client_repositories.set_is_user_alias(true);
                 }
                 _ => {}
             };
@@ -352,11 +364,11 @@ impl HelpPrompt {
         );
 
         if Confirm::new().default(true).interact()? {
-            Self::print_question("Name alias");
+            Self::print_question("User name");
             let name: String = Input::new().interact_text()?;
             client_borrow.set_user_name(name);
 
-            Self::print_question("Email alias");
+            Self::print_question("User email");
             let email: String = Input::new().interact_text()?;
             client_borrow.set_user_email(email);
 
