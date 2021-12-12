@@ -112,7 +112,7 @@ pub fn serialize_config(
         Some(config) => {
             match client_repositories {
                 None => json!(config),
-                Some(client_repos) => {
+                Some(ref client_repos) => {
                     // get the values from the current repo so that it can be merged back into the config
                     // if deserialized_config is none, there is only one value in the vec so we can safely pull it out
                     let client_repo_borrow = client_repos.borrow_mut();
@@ -121,7 +121,7 @@ pub fn serialize_config(
                     let approver = client_repo_borrow.approver.clone();
                     let repository = client_repo_borrow.repositories.as_ref().unwrap()[0].clone();
                     let client_name = &client.as_ref().unwrap().client_name;
-                    println!("{:#?}", user);
+
                     let config_data: ConfigurationDoc = if config
                         .into_iter()
                         .any(|x| &x.get_client_name() == client_name)

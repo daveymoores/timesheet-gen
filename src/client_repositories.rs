@@ -83,7 +83,7 @@ impl ClientRepositories {
 
         let should_set_user = match self.user.as_ref() {
             None => true,
-            Some(user) => user.is_alias,
+            Some(user) => !user.is_alias,
         };
 
         // if an alias hasn't been, or there isn't a user yet, set the user from repo
