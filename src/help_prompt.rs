@@ -6,7 +6,7 @@ use ascii_table::AsciiTable;
 /// It writes to the std output, and returns input data or a boolean
 use dialoguer::{Confirm, Editor, Input, Select};
 use nanoid::nanoid;
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use std::error::Error;
 use std::rc::Rc;
 
@@ -28,7 +28,7 @@ pub trait Onboarding {
 pub trait ExistingClientOnboarding {
     fn existing_client_onboarding(
         &self,
-        deserialized_config: &ConfigurationDoc,
+        deserialized_config: &mut ConfigurationDoc,
     ) -> Result<(), Box<dyn std::error::Error>>;
 }
 
@@ -45,7 +45,7 @@ impl Onboarding for HelpPrompt {
 impl ExistingClientOnboarding for HelpPrompt {
     fn existing_client_onboarding(
         &self,
-        deserialized_config: &ConfigurationDoc,
+        deserialized_config: &mut ConfigurationDoc,
     ) -> Result<(), Box<dyn std::error::Error>> {
         self.confirm_repository_path(false)?
             .search_for_repository_details(Option::Some(deserialized_config))?
@@ -246,6 +246,10 @@ impl HelpPrompt {
                 .find(|client| &client.get_client_name() == client_name)
                 .unwrap();
 
+            self.client_repositories
+                .borrow_mut()
+                .set_values_from_buffer(&client);
+
             let unwrapped_client = client.client.as_ref().unwrap();
 
             self.repository
@@ -361,7 +365,7 @@ impl HelpPrompt {
 
             println!("\nUser alias created \u{1F389}");
         }
-        println!("{:#?}", client_borrow);
+
         Ok(self)
     }
 
@@ -384,13 +388,13 @@ impl HelpPrompt {
                 &client.get_client_name() == repository_borrow.client_name.as_ref().unwrap()
             });
 
-            // if the user details differ, prompt for alias
             if let Some(client) = client {
                 let user = client.user.as_ref().unwrap();
                 let name = &user.name;
                 let email = &user.email;
                 let is_alias = &user.is_alias;
 
+                // if the user details differ, prompt for alias
                 if repository_borrow.has_different_user_details(&name, &email) & !is_alias {
                     self.prompt_for_setting_user_alias(name.to_string(), email.to_string())?;
                 }

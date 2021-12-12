@@ -66,14 +66,6 @@ impl Config {
         }
     }
 
-    // fn check_buffer_and_set_values(
-    //     repository: RCRepository,
-    //     client_repositories: RCClientRepositories,
-    //     deserialized_config: ConfigurationDoc,
-    //     options
-    // ) {
-    // }
-
     fn fetch_interaction_data(
         mut client_repositories: RefMut<ClientRepositories>,
         repository: Ref<Repository>,
@@ -259,7 +251,6 @@ impl Init for Config {
                         std::process::exit(exitcode::CANTCREAT);
                     });
 
-                println!("{:?}", client_repositories);
                 // ...and fetch a new batch of interaction data
                 Config::fetch_interaction_data(
                     client_repositories.borrow_mut(),
