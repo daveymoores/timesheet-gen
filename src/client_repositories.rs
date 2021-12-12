@@ -38,7 +38,7 @@ pub struct ClientRepositories {
     pub client: Option<Client>,
     pub user: Option<User>,
     pub repositories: Option<Vec<Repository>>,
-    pub requires_approval: bool,
+    pub requires_approval: Option<bool>,
     pub user_signature: Option<String>,
     pub approver_signature: Option<String>,
     pub approver: Option<Approver>,
@@ -58,7 +58,7 @@ impl Default for ClientRepositories {
             client: None,
             user: None,
             approver: None,
-            requires_approval: false,
+            requires_approval: None,
             user_signature: None,
             approver_signature: None,
             repositories: None,
@@ -205,7 +205,7 @@ impl ClientRepositories {
     }
 
     pub fn set_requires_approval(&mut self, value: bool) -> &mut Self {
-        self.requires_approval = value;
+        self.requires_approval = Option::Some(value);
         self
     }
 
@@ -338,7 +338,7 @@ mod tests {
         create_mock_client_repository(&mut client_repo);
 
         client_repo.set_requires_approval(true);
-        assert_eq!(client_repo.requires_approval, true);
+        assert_eq!(client_repo.requires_approval.unwrap(), true);
     }
 
     #[test]

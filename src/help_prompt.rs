@@ -441,23 +441,31 @@ impl HelpPrompt {
     pub fn prompt_for_manager_approval(&self) -> Result<&Self, Box<dyn Error>> {
         let mut client_repositories = self.client_repositories.borrow_mut();
 
-        Self::print_question("Does your timesheet need approval?");
-        println!("{}", Self::dim_text(
+        let prompt_for_approver = match client_repositories.requires_approval {
+            None => true,
+            Some(requires_approval) => !requires_approval,
+        };
+
+        if prompt_for_approver {
+            Self::print_question("Do timesheets under this client require approval?");
+            println!("{}", Self::dim_text(
             "(This will enable signing functionality, see https://timesheet-gen.io/docs/signing)",
-        ));
+            ));
 
-        if Confirm::new().default(true).interact()? {
-            client_repositories.set_requires_approval(true);
+            if Confirm::new().default(true).interact()? {
+                Self::print_question("Approvers name");
+                let input: String = Input::new().interact_text()?;
+                client_repositories.set_approvers_name(input);
 
-            Self::print_question("Approvers name");
-            let input: String = Input::new().interact_text()?;
-            client_repositories.set_approvers_name(input);
+                Self::print_question("Approvers email");
+                let input: String = Input::new().interact_text()?;
+                client_repositories.set_approvers_email(input);
 
-            Self::print_question("Approvers email");
-            let input: String = Input::new().interact_text()?;
-            client_repositories.set_approvers_email(input);
-        } else {
-            client_repositories.set_requires_approval(false);
+                // TODO - check the above are set before setting this
+                client_repositories.set_requires_approval(true);
+            } else {
+                client_repositories.set_requires_approval(false);
+            }
         }
 
         Ok(self)

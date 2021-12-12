@@ -121,6 +121,7 @@ pub fn serialize_config(
                     let approver = client_repo_borrow.approver.clone();
                     let repository = client_repo_borrow.repositories.as_ref().unwrap()[0].clone();
                     let client_name = &client.as_ref().unwrap().client_name;
+                    let requires_approval = client_repo_borrow.requires_approval;
 
                     let config_data: ConfigurationDoc = if config
                         .into_iter()
@@ -131,6 +132,7 @@ pub fn serialize_config(
                             .map(|c| {
                                 if &c.get_client_name() == client_name {
                                     return ClientRepositories {
+                                        requires_approval,
                                         approver: approver.clone(),
                                         client: client.clone(),
                                         user: user.clone(),

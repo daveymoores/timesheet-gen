@@ -336,12 +336,17 @@ impl Make for Config {
                     });
 
                 // generate timesheet-gen.io link using existing config
-                link_builder::build_unique_uri(client_repositories, options)
+                link_builder::build_unique_uri(Rc::clone(&client_repositories), options)
                     .await
                     .unwrap_or_else(|err| {
                         eprintln!("Error building unique link: {}", err);
                         std::process::exit(exitcode::CANTCREAT);
                     });
+
+                Config::write_to_config_file(
+                    Option::Some(client_repositories),
+                    Option::Some(&mut deserialized_config),
+                );
             } else {
                 crate::help_prompt::HelpPrompt::client_or_repository_not_found();
             }
