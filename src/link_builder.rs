@@ -115,7 +115,7 @@ pub async fn build_unique_uri(
     let mut timesheets: Vec<Timesheet> = vec![];
 
     let client_repos = client_repositories.borrow_mut();
-    let repos_option = &client_repos[0].repositories;
+    let repos_option = &client_repos.repositories;
     let repos = repos_option.as_ref().unwrap();
 
     for i in 0..repos.len() {
@@ -154,7 +154,7 @@ pub async fn build_unique_uri(
         &random_path,
         &month_year_string,
         &timesheets,
-        &client_repos[0],
+        &client_repos,
     );
 
     // Check for existing index for TTL on the collection
