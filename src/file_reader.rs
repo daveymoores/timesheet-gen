@@ -1,5 +1,5 @@
 use crate::client_repositories::ClientRepositories;
-use crate::help_prompt::Onboarding;
+use crate::help_prompt::{ConfigurationDoc, Onboarding, RCClientRepositories};
 use serde_json::json;
 use std::cell::RefCell;
 use std::fs::File;
@@ -93,59 +93,70 @@ pub fn write_json_to_config_file(
 }
 
 pub fn serialize_config(
-    client_repository: Rc<RefCell<Vec<ClientRepositories>>>,
-    deserialized_config: Option<&mut Vec<ClientRepositories>>,
+    client_repositories: Option<RCClientRepositories>,
+    deserialized_config: Option<&mut ConfigurationDoc>,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let config_data = match deserialized_config {
         // if deserialized_config doesn't exist, then create fresh json for file
-        None => {
-            json!(client_repository.deref())
-        }
+        None => match client_repositories {
+            None => {
+                eprintln!("Tried to create a JSON literal but nothing was passed");
+                std::process::exit(exitcode::DATAERR);
+            }
+            Some(rc_client_repo) => {
+                json!(vec![rc_client_repo.deref()])
+            }
+        },
         // if it does exist, lets add it to the existing client repositories, or
         // push it into the vec to add a new client
         Some(config) => {
-            // get the values from the current repo so that it can be merged back into the config
-            // if deserialized_config is none, there is only one value in the vec so we can safely pull it out
-            let client_repo_borrow = client_repository.borrow_mut();
-            let client = client_repo_borrow[0].client.clone();
-            let user = client_repo_borrow[0].user.clone();
-            let approver = client_repo_borrow[0].approver.clone();
-            let repository = client_repo_borrow[0].repositories.as_ref().unwrap()[0].clone();
-            let client_name = &client.as_ref().unwrap().client_name;
+            match client_repositories {
+                None => json!(config),
+                Some(ref client_repos) => {
+                    // get the values from the current repo so that it can be merged back into the config
+                    // if deserialized_config is none, there is only one value in the vec so we can safely pull it out
+                    let client_repo_borrow = client_repos.borrow_mut();
+                    let client = client_repo_borrow.client.clone();
+                    let user = client_repo_borrow.user.clone();
+                    let approver = client_repo_borrow.approver.clone();
+                    let repository = client_repo_borrow.repositories.as_ref().unwrap()[0].clone();
+                    let client_name = &client.as_ref().unwrap().client_name;
 
-            let config_data: Vec<ClientRepositories> = if config
-                .into_iter()
-                .any(|x| &x.get_client_name() == client_name)
-            {
-                let x: Vec<ClientRepositories> = config
-                    .iter_mut()
-                    .map(|c| {
-                        if &c.get_client_name() == client_name {
-                            return ClientRepositories {
-                                approver: approver.clone(),
-                                client: client.clone(),
-                                user: user.clone(),
-                                repositories: Some(
-                                    vec![
-                                        c.clone().repositories.unwrap(),
-                                        vec![repository.to_owned()],
-                                    ]
-                                    .concat(),
-                                ),
-                                ..Default::default()
-                            };
-                        }
-                        c.clone()
-                    })
-                    .collect();
+                    let config_data: ConfigurationDoc = if config
+                        .into_iter()
+                        .any(|x| &x.get_client_name() == client_name)
+                    {
+                        let x: ConfigurationDoc = config
+                            .iter_mut()
+                            .map(|c| {
+                                if &c.get_client_name() == client_name {
+                                    return ClientRepositories {
+                                        approver: approver.clone(),
+                                        client: client.clone(),
+                                        user: user.clone(),
+                                        repositories: Some(
+                                            vec![
+                                                c.clone().repositories.unwrap(),
+                                                vec![repository.to_owned()],
+                                            ]
+                                            .concat(),
+                                        ),
+                                        ..Default::default()
+                                    };
+                                }
+                                c.clone()
+                            })
+                            .collect();
 
-                x
-            } else {
-                config.push(client_repo_borrow[0].clone());
-                config.to_vec()
-            };
+                        x
+                    } else {
+                        config.push(client_repo_borrow.clone());
+                        config.to_vec()
+                    };
 
-            json!(config_data)
+                    json!(config_data)
+                }
+            }
         }
     };
 
@@ -167,7 +178,7 @@ mod tests {
     use std::ffi::OsString;
     use std::path::Path;
 
-    fn create_mock_client_repository(client_repository: Rc<RefCell<Vec<ClientRepositories>>>) {
+    fn create_mock_client_repository(client_repository: &mut ClientRepositories) {
         let repo = RefCell::new(Repository {
             client_name: Option::from("alphabet".to_string()),
             client_address: Option::from("Spaghetti Way, USA".to_string()),
@@ -178,28 +189,29 @@ mod tests {
             ..Default::default()
         });
 
-        client_repository.borrow_mut()[0].set_values(repo.borrow());
+        client_repository.set_values(repo.borrow());
     }
 
     #[test]
     fn it_serializes_a_config_and_adds_to_an_existing_client() {
-        let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories {
+        let mut client_repositories = ClientRepositories {
             ..Default::default()
-        }]));
+        };
 
-        create_mock_client_repository(client_repositories.clone());
+        create_mock_client_repository(&mut client_repositories);
 
-        let mut deserialized_config = client_repositories.borrow_mut().deref().clone();
+        let json_string = serialize_config(
+            Option::from(Rc::new(RefCell::new(client_repositories.clone()))),
+            Option::from(&mut vec![client_repositories.clone()]),
+        )
+        .unwrap();
 
-        let json_string =
-            serialize_config(client_repositories, Option::from(&mut deserialized_config)).unwrap();
-
-        let constructed_client_repos: Vec<ClientRepositories> =
+        let constructed_client_repos: ConfigurationDoc =
             serde_json::from_str(&json_string).unwrap();
 
         //before
         assert_eq!(
-            &deserialized_config[0]
+            &client_repositories
                 .repositories
                 .as_ref()
                 .unwrap()
@@ -221,11 +233,11 @@ mod tests {
 
     #[test]
     fn it_serializes_a_config_and_adds_a_new_client() {
-        let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories {
+        let mut client_repositories = ClientRepositories {
             ..Default::default()
-        }]));
+        };
 
-        create_mock_client_repository(client_repositories.clone());
+        create_mock_client_repository(&mut client_repositories);
 
         let mut deserialized_config = vec![ClientRepositories {
             client: Some(Client {
@@ -241,10 +253,13 @@ mod tests {
 
         let length_before = &deserialized_config.len();
 
-        let json_string =
-            serialize_config(client_repositories, Option::from(&mut deserialized_config)).unwrap();
+        let json_string = serialize_config(
+            Option::from(Rc::new(RefCell::new(client_repositories))),
+            Option::Some(&mut deserialized_config),
+        )
+        .unwrap();
 
-        let constructed_client_repos: Vec<ClientRepositories> =
+        let constructed_client_repos: ConfigurationDoc =
             serde_json::from_str(&json_string).unwrap();
 
         //before
@@ -328,11 +343,11 @@ mod tests {
         let _lock = lock_test();
         let _test = set_env(OsString::from("TEST_MODE"), "true");
 
-        let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories {
+        let mut client_repositories = ClientRepositories {
             ..Default::default()
-        }]));
+        };
 
-        create_mock_client_repository(client_repositories.clone());
+        create_mock_client_repository(&mut client_repositories);
 
         // creates mock directory that is destroyed when it goes out of scope
         let dir = tempfile::tempdir().unwrap();
@@ -341,7 +356,11 @@ mod tests {
         let file = File::create(&mock_config_path).unwrap();
         let string_path_from_temp_dir = mock_config_path.to_str().unwrap().to_owned();
 
-        let json = serialize_config(client_repositories, None).unwrap();
+        let json = serialize_config(
+            Option::from(Rc::new(RefCell::new(client_repositories))),
+            None,
+        )
+        .unwrap();
 
         assert!(write_json_to_config_file(json, string_path_from_temp_dir).is_ok());
 
@@ -354,30 +373,35 @@ mod tests {
         let _lock = lock_test();
         let _test = set_env(OsString::from("TEST_MODE"), "false");
 
-        let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories {
+        let mut client_repositories = ClientRepositories {
             ..Default::default()
-        }]));
+        };
 
-        create_mock_client_repository(client_repositories.clone());
+        create_mock_client_repository(&mut client_repositories);
 
-        let json = serialize_config(client_repositories, None).unwrap();
+        let json = serialize_config(
+            Option::from(Rc::new(RefCell::new(client_repositories))),
+            None,
+        )
+        .unwrap();
 
         assert!(write_json_to_config_file(json, "./a/fake/path".to_string()).is_err());
     }
 
     #[test]
     fn it_finds_and_updates_a_client() {
-        let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories {
+        let mut client_repositories = ClientRepositories {
             ..Default::default()
-        }]));
+        };
 
-        create_mock_client_repository(client_repositories.clone());
+        create_mock_client_repository(&mut client_repositories);
 
-        let mut deserialized_config = client_repositories.borrow().clone();
-
-        let json =
-            serialize_config(client_repositories, Option::from(&mut deserialized_config)).unwrap();
-        let value: Vec<ClientRepositories> = serde_json::from_str(&*json).unwrap();
+        let json = serialize_config(
+            Option::from(Rc::new(RefCell::new(client_repositories.clone()))),
+            None,
+        )
+        .unwrap();
+        let value: ConfigurationDoc = serde_json::from_str(&*json).unwrap();
 
         assert_eq!(
             value[0].repositories.as_ref().unwrap()[0]

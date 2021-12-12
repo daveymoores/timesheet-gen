@@ -1,5 +1,6 @@
 use crate::client_repositories::{Client, ClientRepositories, User};
 use crate::db;
+use crate::help_prompt::RCClientRepositories;
 use crate::repository::Repository;
 use crate::utils::{check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Month, Utc};
@@ -8,9 +9,7 @@ use mongodb::bson::doc;
 use num_traits::cast::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::cell::RefCell;
 use std::error::Error;
-use std::rc::Rc;
 use std::{env, process};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -95,7 +94,7 @@ fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> f64 {
 }
 
 pub async fn build_unique_uri(
-    client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+    client_repositories: RCClientRepositories,
     options: Vec<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
     dotenv::dotenv().ok();
@@ -116,7 +115,7 @@ pub async fn build_unique_uri(
     let mut timesheets: Vec<Timesheet> = vec![];
 
     let client_repos = client_repositories.borrow_mut();
-    let repos_option = &client_repos[0].repositories;
+    let repos_option = &client_repos.repositories;
     let repos = repos_option.as_ref().unwrap();
 
     for i in 0..repos.len() {
@@ -155,7 +154,7 @@ pub async fn build_unique_uri(
         &random_path,
         &month_year_string,
         &timesheets,
-        &client_repos[0],
+        &client_repos,
     );
 
     // Check for existing index for TTL on the collection
@@ -281,6 +280,7 @@ mod test {
             id: nanoid!(),
             name: "Jim Jones".to_string(),
             email: "jim@jones.com".to_string(),
+            is_alias: false,
         });
 
         let timesheets = vec![Timesheet {

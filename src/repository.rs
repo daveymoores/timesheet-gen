@@ -237,13 +237,30 @@ impl Repository {
         Ok(self)
     }
 
+    pub fn has_different_user_details(&self, name: &String, email: &String) -> bool {
+        let name_is_same = match &self.name {
+            Some(x) => name == x,
+            None => false,
+        };
+
+        let email_is_same = match &self.email {
+            Some(x) => email == x,
+            None => false,
+        };
+
+        !name_is_same | !email_is_same
+    }
+
     pub fn find_repository_details(
         &mut self,
         output_name: Output,
         output_email: Output,
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
-        self.set_name(crate::utils::trim_output_from_utf8(output_name)?);
-        self.set_email(crate::utils::trim_output_from_utf8(output_email)?);
+        let name = crate::utils::trim_output_from_utf8(output_name)?;
+        let email = crate::utils::trim_output_from_utf8(output_email)?;
+
+        self.set_name(name);
+        self.set_email(email);
 
         self.find_git_path_from_directory_from()?
             .find_namespace_from_git_path()?;
@@ -392,6 +409,20 @@ mod tests {
         );
 
         year_map
+    }
+
+    #[test]
+    fn it_checks_for_different_user_details() {
+        let repository = Repository {
+            name: Option::Some("Jim Jones".to_string()),
+            email: Option::Some("jim@jones.com".to_string()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            repository.has_different_user_details(&"not".to_string(), &"found".to_string()),
+            true
+        );
     }
 
     #[test]

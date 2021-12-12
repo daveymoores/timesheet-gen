@@ -9,7 +9,8 @@
     "user": {
       "id": "yqtX0fepx2VRGoWcRvUON",
       "name": "Davey Moores",
-      "email": "daveymoores@gmail.com"
+      "email": "daveymoores@gmail.com",
+      "is_alias": false
     },
     "repositories": [
       {
