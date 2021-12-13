@@ -1,4 +1,4 @@
-use crate::client_repositories::{Client, ClientRepositories, User};
+use crate::client_repositories::{Approver, Client, ClientRepositories, User};
 use crate::db;
 use crate::help_prompt::RCClientRepositories;
 use crate::repository::Repository;
@@ -27,6 +27,7 @@ struct TimesheetDocument {
     month_year: String,
     client: Option<Client>,
     user: Option<User>,
+    approver: Option<Approver>,
     timesheets: Vec<Timesheet>,
 }
 
@@ -79,6 +80,7 @@ fn build_document<'a>(
         month_year: month_year_string.clone(),
         user: repos.user.clone(),
         client: repos.client.clone(),
+        approver: repos.approver.clone(),
         timesheets: timesheets.clone(),
     }
 }
