@@ -6,6 +6,7 @@ use ascii_table::AsciiTable;
 /// It writes to the std output, and returns input data or a boolean
 use dialoguer::{Confirm, Editor, Input, Select};
 use nanoid::nanoid;
+use regex::Regex;
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
@@ -129,11 +130,34 @@ impl HelpPrompt {
         ));
     }
 
+    fn take_and_validate_email<'a>(initial_text: Option<&str>) -> futures::io::Result<String> {
+        let text = match initial_text {
+            None => "",
+            Some(t) => t,
+        };
+
+        Input::new()
+            .with_initial_text(text)
+            .validate_with(|input: &String| -> Result<(), &str> {
+                let re = Regex::new(r"^([a-zA-Z0-9_\-.]+)@([a-zA-Z0-9_\-.]+)\.([a-zA-Z]{2,5})$")
+                    .unwrap();
+                if re.is_match(input) {
+                    Ok(())
+                } else {
+                    Err("This is not a mail address")
+                }
+            })
+            .interact_text()
+    }
+
     pub fn prompt_for_update(
         &mut self,
         options: Vec<Option<String>>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut client_repositories = self.client_repositories.borrow_mut();
+        let mut repository = self.repository.borrow_mut();
+        let client = client_repositories.client.as_ref().unwrap();
+        let user = client_repositories.user.as_ref().unwrap();
 
         if options[1].is_some() {
             Self::print_question(&*format!(
@@ -146,21 +170,22 @@ impl HelpPrompt {
             let selection: usize = Select::new().items(&opt).interact()?;
             let value = opt[selection];
 
+            // changing the repo path will automatically update the repo username/email and namespace
+            // but the namespace alias can be updated separately here
             match value {
                 "Namespace" => {
-                    let input: String = Input::new().interact_text()?;
-                    client_repositories
-                        .repositories
-                        .as_mut()
-                        .map(|repo| repo[0].set_namespace(input));
+                    let input: String = Input::new()
+                        .with_initial_text(repository.namespace.as_ref().unwrap())
+                        .interact_text()?;
+                    repository.set_namespace_alias(input);
                 }
                 "Repository path" => {
-                    //TODO - need to check this path exists before allowing update
-                    let input: String = Input::new().interact_text()?;
-                    client_repositories
-                        .repositories
-                        .as_mut()
-                        .map(|repo| repo[0].set_repo_path(input));
+                    let input: String = Input::new()
+                        .with_initial_text(repository.repo_path.as_ref().unwrap())
+                        .interact_text()?;
+                    repository
+                        .set_repo_path(input)
+                        .find_repository_details_from()?;
                 }
                 _ => {}
             };
@@ -176,6 +201,8 @@ impl HelpPrompt {
                 "Client company name",
                 "Client contact person",
                 "Client address",
+                "User name",
+                "User email",
             ];
             let selection: usize = Select::new().items(&opt).interact()?;
             let value = opt[selection];
@@ -183,28 +210,67 @@ impl HelpPrompt {
             match value {
                 "Approver name" => {
                     println!("Approver's name");
-                    let input: String = Input::new().interact_text()?;
+                    let approvers_name = match &client_repositories.approver {
+                        None => String::new(),
+                        Some(approver) => match &approver.approvers_name {
+                            None => String::new(),
+                            Some(approvers_name) => approvers_name.to_string(),
+                        },
+                    };
+
+                    let input: String = Input::new()
+                        .with_initial_text(approvers_name)
+                        .interact_text()?;
                     client_repositories.set_approvers_name(input);
+                    client_repositories.set_requires_approval(true);
                 }
                 "Approver email" => {
                     println!("Approver's email");
-                    let input: String = Input::new().interact_text()?;
+                    let approvers_email = match &client_repositories.approver {
+                        None => String::new(),
+                        Some(approver) => match &approver.approvers_email {
+                            None => String::new(),
+                            Some(approvers_name) => approvers_name.to_string(),
+                        },
+                    };
+
+                    let input: String =
+                        Self::take_and_validate_email(Option::Some(&*approvers_email))?;
                     client_repositories.set_approvers_email(input);
+                    client_repositories.set_requires_approval(true);
                 }
                 "Client company name" => {
                     println!("Client company name");
-                    let input: String = Input::new().interact_text()?;
+                    let input: String = Input::new()
+                        .with_initial_text(&client.client_name)
+                        .interact_text()?;
                     client_repositories.update_client_name(input);
                 }
                 "Client contact person" => {
                     println!("Client contact person");
-                    let input: String = Input::new().interact_text()?;
+                    let input: String = Input::new()
+                        .with_initial_text(&client.client_contact_person)
+                        .interact_text()?;
                     client_repositories.update_client_contact_person(input);
                 }
                 "Client address" => {
                     println!("Client address");
-                    let input: String = Input::new().interact_text()?;
-                    client_repositories.update_client_address(input);
+                    if let Some(input) = Editor::new().edit(&client.client_address)? {
+                        client_repositories.update_client_address(input);
+                    }
+                }
+                "User name" => {
+                    println!("User name");
+                    let input: String =
+                        Input::new().with_initial_text(&user.name).interact_text()?;
+                    client_repositories.set_user_name(input);
+                    client_repositories.set_is_user_alias(true);
+                }
+                "User email" => {
+                    println!("User email");
+                    let input: String = Self::take_and_validate_email(Option::Some(&user.email))?;
+                    client_repositories.set_user_email(input);
+                    client_repositories.set_is_user_alias(true);
                 }
                 _ => {}
             };
@@ -352,11 +418,11 @@ impl HelpPrompt {
         );
 
         if Confirm::new().default(true).interact()? {
-            Self::print_question("Name alias");
+            Self::print_question("User name");
             let name: String = Input::new().interact_text()?;
             client_borrow.set_user_name(name);
 
-            Self::print_question("Email alias");
+            Self::print_question("User email");
             let email: String = Input::new().interact_text()?;
             client_borrow.set_user_email(email);
 
@@ -429,23 +495,31 @@ impl HelpPrompt {
     pub fn prompt_for_manager_approval(&self) -> Result<&Self, Box<dyn Error>> {
         let mut client_repositories = self.client_repositories.borrow_mut();
 
-        Self::print_question("Does your timesheet need approval?");
-        println!("{}", Self::dim_text(
+        let prompt_for_approver = match client_repositories.requires_approval {
+            None => true,
+            Some(requires_approval) => !requires_approval,
+        };
+
+        if prompt_for_approver {
+            Self::print_question("Do timesheets under this client require approval?");
+            println!("{}", Self::dim_text(
             "(This will enable signing functionality, see https://timesheet-gen.io/docs/signing)",
-        ));
+            ));
 
-        if Confirm::new().default(true).interact()? {
-            client_repositories.set_requires_approval(true);
+            if Confirm::new().default(true).interact()? {
+                Self::print_question("Approvers name");
+                let input: String = Input::new().interact_text()?;
+                client_repositories.set_approvers_name(input);
 
-            Self::print_question("Approvers name");
-            let input: String = Input::new().interact_text()?;
-            client_repositories.set_approvers_name(input);
+                Self::print_question("Approvers email");
+                let input: String = Input::new().interact_text()?;
+                client_repositories.set_approvers_email(input);
 
-            Self::print_question("Approvers email");
-            let input: String = Input::new().interact_text()?;
-            client_repositories.set_approvers_email(input);
-        } else {
-            client_repositories.set_requires_approval(false);
+                // TODO - check the above are set before setting this
+                client_repositories.set_requires_approval(true);
+            } else {
+                client_repositories.set_requires_approval(false);
+            }
         }
 
         Ok(self)

@@ -16,6 +16,7 @@ pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 pub struct Repository {
     pub id: Option<String>,
     pub namespace: Option<String>,
+    pub namespace_alias: Option<String>,
     pub repo_path: Option<String>,
     pub git_path: Option<String>,
     pub git_log_dates: Option<GitLogDates>,
@@ -35,6 +36,7 @@ impl Default for Repository {
         Self {
             id: None,
             namespace: None,
+            namespace_alias: None,
             repo_path: None,
             git_path: None,
             git_log_dates: None,
@@ -113,6 +115,11 @@ impl Repository {
 
     pub fn set_namespace(&mut self, value: String) -> &mut Self {
         self.namespace = Option::from(value);
+        self
+    }
+
+    pub fn set_namespace_alias(&mut self, value: String) -> &mut Self {
+        self.namespace_alias = Option::from(value);
         self
     }
 
@@ -664,6 +671,19 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
         timesheet.set_namespace("namespace".to_string());
         assert_eq!(timesheet.namespace.unwrap(), "namespace".to_string());
+    }
+
+    #[test]
+    fn it_sets_namespace_alias() {
+        let mut timesheet = Repository {
+            ..Default::default()
+        };
+
+        timesheet.set_namespace_alias("namespace_alias".to_string());
+        assert_eq!(
+            timesheet.namespace_alias.unwrap(),
+            "namespace_alias".to_string()
+        );
     }
 
     #[test]
