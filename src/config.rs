@@ -1,9 +1,10 @@
 use crate::cli::RcHelpPrompt;
 use crate::client_repositories::ClientRepositories;
+use crate::help_prompt::{ConfigurationDoc, RCClientRepositories, RCRepository};
 use crate::link_builder;
 use crate::repository::Repository;
 use crate::utils::exit_process;
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::{Ref, RefMut};
 use std::ops::Deref;
 use std::process;
 use std::rc::Rc;
@@ -27,15 +28,15 @@ impl New for Config {
 
 impl Config {
     fn update_client_repositories(
-        new_client_repos: &mut Vec<ClientRepositories>,
-        deserialized_config: Vec<ClientRepositories>,
-        old_client_repos: Ref<Vec<ClientRepositories>>,
+        new_client_repos: &mut ConfigurationDoc,
+        deserialized_config: ConfigurationDoc,
+        old_client_repos: Ref<ClientRepositories>,
     ) {
-        let client_id = old_client_repos[0].get_client_id();
+        let client_id = old_client_repos.get_client_id();
 
         for i in 0..deserialized_config.len() {
             if deserialized_config[i].get_client_id() == client_id {
-                new_client_repos.push(old_client_repos.deref()[0].clone())
+                new_client_repos.push(old_client_repos.deref().clone())
             } else {
                 new_client_repos.push(deserialized_config[i].clone())
             }
@@ -43,16 +44,19 @@ impl Config {
     }
 
     fn push_found_values_into_rcs(
-        repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
         found_repo: Option<&Repository>,
         found_client_repo: Option<&ClientRepositories>,
     ) {
         // ...and fetch a new batch of interaction data
-        client_repositories.borrow_mut()[0]
-            .set_values_from_buffer(&found_client_repo.unwrap())
-            .exec_generate_timesheets_from_git_history()
-            .compare_logs_and_set_timesheets();
+        if found_client_repo.is_some() {
+            client_repositories
+                .borrow_mut()
+                .set_values_from_buffer(&found_client_repo.unwrap())
+                .exec_generate_timesheets_from_git_history()
+                .compare_logs_and_set_timesheets();
+        }
 
         // if it's been found, set the working repo to the timesheet struct as it may be operated on
         if found_repo.is_some() {
@@ -63,10 +67,10 @@ impl Config {
     }
 
     fn fetch_interaction_data(
-        mut client_repositories: RefMut<Vec<ClientRepositories>>,
+        mut client_repositories: RefMut<ClientRepositories>,
         repository: Ref<Repository>,
     ) {
-        client_repositories[0]
+        client_repositories
             .set_values(repository)
             .exec_generate_timesheets_from_git_history()
             .compare_logs_and_set_timesheets();
@@ -74,8 +78,8 @@ impl Config {
 
     /// Find and update client if sheet exists, otherwise write a new one
     fn write_to_config_file(
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
-        deserialized_config: Option<&mut Vec<ClientRepositories>>,
+        client_repositories: Option<RCClientRepositories>,
+        deserialized_config: Option<&mut ConfigurationDoc>,
     ) {
         // get path for where to write the config file
         let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path())
@@ -84,14 +88,11 @@ impl Config {
                 std::process::exit(exitcode::CANTCREAT);
             });
 
-        let json = crate::file_reader::serialize_config(
-            Rc::clone(&client_repositories),
-            deserialized_config,
-        )
-        .unwrap_or_else(|err| {
-            eprintln!("Error serializing json: {}", err);
-            std::process::exit(exitcode::CANTCREAT);
-        });
+        let json = crate::file_reader::serialize_config(client_repositories, deserialized_config)
+            .unwrap_or_else(|err| {
+                eprintln!("Error serializing json: {}", err);
+                std::process::exit(exitcode::CANTCREAT);
+            });
 
         crate::file_reader::write_json_to_config_file(json, config_path).unwrap_or_else(|err| {
             eprintln!("Error writing data to file: {}", err);
@@ -102,7 +103,7 @@ impl Config {
     // Check for repo by path or by namespace
     fn check_for_client_or_repo_in_buffer<'a>(
         self,
-        deserialized_config: &'a mut Vec<ClientRepositories>,
+        deserialized_config: &'a mut ConfigurationDoc,
         repo_path: Option<&String>,
         repo_namespace: Option<&String>,
         client_name: Option<&String>,
@@ -168,8 +169,8 @@ impl Config {
     fn check_for_config_file(
         self,
         buffer: &mut String,
-        repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
         prompt: RcHelpPrompt,
     ) {
         // pass a prompt for if the config file doesn't exist
@@ -184,7 +185,7 @@ impl Config {
         // and Repository state holds the data. Write this data to file.
         if buffer.is_empty() {
             Config::fetch_interaction_data(client_repositories.borrow_mut(), repository.borrow());
-            Config::write_to_config_file(client_repositories, None);
+            Config::write_to_config_file(Option::Some(client_repositories), None);
             crate::help_prompt::HelpPrompt::show_write_new_config_success();
             return;
         }
@@ -196,8 +197,8 @@ pub trait Init {
     fn init(
         &self,
         options: Vec<Option<String>>,
-        repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
         prompt: RcHelpPrompt,
     );
 }
@@ -206,8 +207,8 @@ impl Init for Config {
     fn init(
         &self,
         options: Vec<Option<String>>,
-        repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
         prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
@@ -222,7 +223,7 @@ impl Init for Config {
         // ..if the there is an existing config file, check whether the (passed path or namespace) repository exists under any clients
         // if it does pass Repository values to Repository
         if crate::utils::config_file_found(&mut buffer) {
-            let mut deserialized_config: Vec<ClientRepositories> = serde_json::from_str(&buffer)
+            let mut deserialized_config: ConfigurationDoc = serde_json::from_str(&buffer)
                 .expect("Initialisation of ClientRepository struct from buffer failed");
 
             let (found_repo, found_client_repo) = self
@@ -242,10 +243,6 @@ impl Init for Config {
             } else {
                 // Otherwise onboard them and check whether (passed path or namespace) repo
                 // should exist under an existing client
-                let mut deserialized_config: Vec<ClientRepositories> =
-                    serde_json::from_str(&mut buffer)
-                        .expect("Initialisation of ClientRepository struct from buffer failed");
-
                 prompt
                     .borrow_mut()
                     .prompt_for_client_then_onboard(&mut deserialized_config)
@@ -260,7 +257,7 @@ impl Init for Config {
                     repository.borrow(),
                 );
                 Config::write_to_config_file(
-                    client_repositories,
+                    Option::Some(client_repositories),
                     Option::from(&mut deserialized_config),
                 );
 
@@ -275,8 +272,8 @@ pub trait Make {
     fn make(
         &self,
         options: Vec<Option<String>>,
-        repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
         prompt: RcHelpPrompt,
     );
 }
@@ -286,8 +283,8 @@ impl Make for Config {
     async fn make(
         &self,
         options: Vec<Option<String>>,
-        repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
         prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
@@ -302,7 +299,7 @@ impl Make for Config {
         );
 
         if crate::utils::config_file_found(&mut buffer) {
-            let mut deserialized_config: Vec<ClientRepositories> = serde_json::from_str(&buffer)
+            let mut deserialized_config: ConfigurationDoc = serde_json::from_str(&buffer)
                 .expect("Initialisation of ClientRepository struct from buffer failed");
 
             let (found_repo, found_client_repo) = self
@@ -317,22 +314,22 @@ impl Make for Config {
                     std::process::exit(exitcode::DATAERR);
                 });
 
-            if found_client_repo.is_some() {
-                Self::push_found_values_into_rcs(
-                    Rc::clone(&repository),
-                    Rc::clone(&client_repositories),
-                    found_repo.clone(),
-                    found_client_repo.clone(),
-                );
+            Self::push_found_values_into_rcs(
+                Rc::clone(&repository),
+                Rc::clone(&client_repositories),
+                found_repo.clone(),
+                found_client_repo.clone(),
+            );
 
+            if found_client_repo.is_some() {
                 prompt
                     .borrow_mut()
-                    .add_project_numbers(Rc::clone(&client_repositories))
+                    .add_project_numbers()
                     .unwrap_or_else(|err| {
                         eprintln!("Error parsing project number: {}", err);
                         std::process::exit(exitcode::CANTCREAT);
                     })
-                    .prompt_for_manager_approval(Rc::clone(&client_repositories))
+                    .prompt_for_manager_approval()
                     .unwrap_or_else(|err| {
                         eprintln!("Error setting manager approval: {}", err);
                         std::process::exit(exitcode::CANTCREAT);
@@ -345,6 +342,11 @@ impl Make for Config {
                         eprintln!("Error building unique link: {}", err);
                         std::process::exit(exitcode::CANTCREAT);
                     });
+
+                Config::write_to_config_file(
+                    Option::Some(client_repositories),
+                    Option::Some(&mut deserialized_config),
+                );
             } else {
                 crate::help_prompt::HelpPrompt::client_or_repository_not_found();
             }
@@ -357,8 +359,8 @@ pub trait Edit {
     fn edit(
         &self,
         options: Vec<Option<String>>,
-        repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
         prompt: RcHelpPrompt,
     );
 }
@@ -367,8 +369,8 @@ impl Edit for Config {
     fn edit(
         &self,
         options: Vec<Option<String>>,
-        repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
         prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
@@ -381,7 +383,7 @@ impl Edit for Config {
         );
 
         if crate::utils::config_file_found(&mut buffer) {
-            let mut deserialized_config: Vec<ClientRepositories> = serde_json::from_str(&buffer)
+            let mut deserialized_config: ConfigurationDoc = serde_json::from_str(&buffer)
                 .expect("Initialisation of ClientRepository struct from buffer failed");
 
             let (found_repo, found_client_repo) = self
@@ -396,14 +398,14 @@ impl Edit for Config {
                     std::process::exit(exitcode::DATAERR);
                 });
 
-            if found_client_repo.is_some() {
-                Self::push_found_values_into_rcs(
-                    Rc::clone(&repository),
-                    Rc::clone(&client_repositories),
-                    found_repo.clone(),
-                    found_client_repo.clone(),
-                );
+            Self::push_found_values_into_rcs(
+                Rc::clone(&repository),
+                Rc::clone(&client_repositories),
+                found_repo.clone(),
+                found_client_repo.clone(),
+            );
 
+            if found_client_repo.is_some() {
                 repository
                     .borrow_mut()
                     .update_hours_on_month_day_entry(&options)
@@ -412,20 +414,21 @@ impl Edit for Config {
                         process::exit(exitcode::DATAERR);
                     });
 
-                client_repositories.borrow_mut()[0]
+                client_repositories
+                    .borrow_mut()
                     .set_values(repository.borrow())
                     .exec_generate_timesheets_from_git_history()
                     .compare_logs_and_set_timesheets();
 
                 let client_borrow = client_repositories.borrow();
-                let mut new_client_repos = vec![];
+                let mut new_client_repos: ConfigurationDoc = vec![];
                 Self::update_client_repositories(
                     &mut new_client_repos,
                     deserialized_config,
                     client_borrow,
                 );
 
-                Config::write_to_config_file(Rc::new(RefCell::new(new_client_repos)), None);
+                Config::write_to_config_file(None, Option::Some(&mut new_client_repos));
                 crate::help_prompt::HelpPrompt::show_edited_config_success();
             } else {
                 crate::help_prompt::HelpPrompt::client_or_repository_not_found();
@@ -439,9 +442,10 @@ pub trait Remove {
     fn remove(
         &self,
         options: Vec<Option<String>>,
-        repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
         prompt: RcHelpPrompt,
+        deserialized_config: &mut ConfigurationDoc,
     );
 }
 
@@ -449,9 +453,10 @@ impl Remove for Config {
     fn remove(
         &self,
         options: Vec<Option<String>>,
-        repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
         prompt: RcHelpPrompt,
+        deserialized_config: &mut ConfigurationDoc,
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
@@ -464,12 +469,16 @@ impl Remove for Config {
 
         // Find repo or client and remove them from config file
         if crate::utils::config_file_found(&mut buffer) {
-            let mut deserialized_config: Vec<ClientRepositories> = serde_json::from_str(&buffer)
+            let config: ConfigurationDoc = serde_json::from_str(&buffer)
                 .expect("Initialisation of ClientRepository struct from buffer failed");
 
-            let (found_repo, found_client_repo) = self
+            for i in 0..config.len() {
+                deserialized_config.push(config[i].clone());
+            }
+
+            let (_found_repo, found_client_repo) = self
                 .check_for_client_or_repo_in_buffer(
-                    &mut deserialized_config,
+                    deserialized_config,
                     Option::None,
                     Option::from(&options[1]),
                     Option::from(&options[0]),
@@ -480,25 +489,14 @@ impl Remove for Config {
                 });
 
             if found_client_repo.is_some() {
-                Self::push_found_values_into_rcs(
-                    Rc::clone(&repository),
-                    Rc::clone(&client_repositories),
-                    found_repo.clone(),
-                    found_client_repo.clone(),
-                );
-
-                let mut client_repo_borrow = client_repositories.borrow_mut();
-
-                client_repo_borrow.append(&mut deserialized_config);
-
                 prompt
                     .borrow_mut()
-                    .prompt_for_client_repo_removal(client_repo_borrow, options)
+                    .prompt_for_client_repo_removal(options, deserialized_config)
                     .expect("Remove failed");
 
                 // if there are no clients, lets remove the file and next time will be onboarding
                 //TODO - would be nice to improve this
-                if client_repositories.borrow().len() == 0 {
+                if deserialized_config.len() == 0 {
                     crate::file_reader::delete_config_file().expect(
                         "Config file was empty so timesheet-gen tried to remove it. That failed.",
                     );
@@ -507,7 +505,7 @@ impl Remove for Config {
                 }
 
                 // pass modified config as new client_repository and thus write it straight to file
-                Config::write_to_config_file(Rc::clone(&client_repositories), None);
+                Config::write_to_config_file(None, Option::Some(deserialized_config));
             } else {
                 crate::help_prompt::HelpPrompt::client_or_repository_not_found();
             }
@@ -520,8 +518,8 @@ pub trait Update {
     fn update(
         &self,
         options: Vec<Option<String>>,
-        repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
         prompt: RcHelpPrompt,
     );
 }
@@ -530,8 +528,8 @@ impl Update for Config {
     fn update(
         &self,
         options: Vec<Option<String>>,
-        repository: Rc<RefCell<Repository>>,
-        client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
         prompt: RcHelpPrompt,
     ) {
         // try to read config file. Write a new one if it doesn't exist
@@ -544,7 +542,7 @@ impl Update for Config {
         );
 
         if crate::utils::config_file_found(&mut buffer) {
-            let mut deserialized_config: Vec<ClientRepositories> = serde_json::from_str(&buffer)
+            let mut deserialized_config: ConfigurationDoc = serde_json::from_str(&buffer)
                 .expect("Initialisation of ClientRepository struct from buffer failed");
 
             let (found_repo, found_client_repo) = self
@@ -559,17 +557,17 @@ impl Update for Config {
                     std::process::exit(exitcode::DATAERR);
                 });
 
-            if found_client_repo.is_some() {
-                Self::push_found_values_into_rcs(
-                    Rc::clone(&repository),
-                    Rc::clone(&client_repositories),
-                    found_repo.clone(),
-                    found_client_repo.clone(),
-                );
+            Self::push_found_values_into_rcs(
+                Rc::clone(&repository),
+                Rc::clone(&client_repositories),
+                found_repo.clone(),
+                found_client_repo.clone(),
+            );
 
+            if found_client_repo.is_some() {
                 prompt
                     .borrow_mut()
-                    .prompt_for_update(Rc::clone(&client_repositories), options)
+                    .prompt_for_update(options)
                     .expect("Update failed");
 
                 let client_borrow = client_repositories.borrow();
@@ -581,7 +579,7 @@ impl Update for Config {
                 );
 
                 // pass modified config as new client_repository and thus write it straight to file
-                Config::write_to_config_file(Rc::new(RefCell::new(new_client_repos)), None);
+                Config::write_to_config_file(None, Option::Some(&mut new_client_repos));
                 crate::help_prompt::HelpPrompt::show_updated_config_success();
             } else {
                 crate::help_prompt::HelpPrompt::client_or_repository_not_found();
@@ -594,6 +592,7 @@ impl Update for Config {
 mod tests {
     use crate::client_repositories::ClientRepositories;
     use crate::config::{Config, Edit, New, Remove};
+    use crate::help_prompt::ConfigurationDoc;
     use crate::repository::Repository;
     use envtestkit::lock::lock_test;
     use envtestkit::set_env;
@@ -630,9 +629,9 @@ mod tests {
             Option::from("2021".to_string()),
         ];
 
-        let client_repos = Rc::new(RefCell::new(vec![ClientRepositories {
+        let client_repos = Rc::new(RefCell::new(ClientRepositories {
             ..Default::default()
-        }]));
+        }));
 
         let repo = Rc::new(RefCell::new(Repository {
             ..Default::default()
@@ -640,6 +639,7 @@ mod tests {
 
         let prompt = Rc::new(RefCell::new(crate::help_prompt::HelpPrompt::new(
             Rc::clone(&repo),
+            Rc::clone(&client_repos),
         )));
 
         config.edit(
@@ -670,7 +670,7 @@ mod tests {
         assert_eq!(edited_value, &Value::Bool(true));
     }
 
-    fn is_repo_in_client_repos(config: &Vec<ClientRepositories>, namespace: &String) -> bool {
+    fn is_repo_in_deserialized_config(config: &ConfigurationDoc, namespace: &String) -> bool {
         config.iter().any(|client| {
             client.repositories.as_ref().unwrap().iter().any(|repo| {
                 repo.namespace.as_ref().unwrap().to_lowercase() == namespace.to_lowercase()
@@ -678,7 +678,7 @@ mod tests {
         })
     }
 
-    fn is_client_in_client_repos(config: &Vec<ClientRepositories>, client_name: &String) -> bool {
+    fn is_client_in_deserialized_config(config: &ConfigurationDoc, client_name: &String) -> bool {
         config.iter().any(|client| {
             client.client.as_ref().unwrap().client_name.to_lowercase() == client_name.to_lowercase()
         })
@@ -697,9 +697,9 @@ mod tests {
             Option::from(namespace.clone()),
         ];
 
-        let client_repos = Rc::new(RefCell::new(vec![ClientRepositories {
+        let client_repos = Rc::new(RefCell::new(ClientRepositories {
             ..Default::default()
-        }]));
+        }));
 
         let repo = Rc::new(RefCell::new(Repository {
             ..Default::default()
@@ -707,28 +707,33 @@ mod tests {
 
         let prompt = Rc::new(RefCell::new(crate::help_prompt::HelpPrompt::new(
             Rc::clone(&repo),
+            Rc::clone(&client_repos),
         )));
 
         crate::file_reader::read_data_from_config_file(&mut buffer, Rc::clone(&prompt))
             .expect("Read of test data failed");
 
-        let deserialized_config: Vec<ClientRepositories> = serde_json::from_str(&mut buffer)
+        let before_deserialized_config: ConfigurationDoc = serde_json::from_str(&mut buffer)
             .expect("Initialisation of ClientRepository struct from buffer failed");
 
         assert_eq!(
-            is_repo_in_client_repos(&deserialized_config, &namespace),
+            is_repo_in_deserialized_config(&before_deserialized_config, &namespace),
             true
         );
+
+        // internally this will find the same test config file as above
+        let mut after_deserialized_config: ConfigurationDoc = vec![];
 
         config.remove(
             options,
             Rc::clone(&repo),
             Rc::clone(&client_repos),
             Rc::clone(&prompt),
+            &mut after_deserialized_config,
         );
 
         assert_eq!(
-            is_repo_in_client_repos(&client_repos.borrow_mut(), &namespace),
+            is_repo_in_deserialized_config(&after_deserialized_config, &namespace),
             false
         );
     }
@@ -743,9 +748,9 @@ mod tests {
         let config = Config::new();
         let options = vec![Option::from(client.clone()), Option::None];
 
-        let client_repos = Rc::new(RefCell::new(vec![ClientRepositories {
+        let client_repos = Rc::new(RefCell::new(ClientRepositories {
             ..Default::default()
-        }]));
+        }));
 
         let repo = Rc::new(RefCell::new(Repository {
             ..Default::default()
@@ -753,28 +758,33 @@ mod tests {
 
         let prompt = Rc::new(RefCell::new(crate::help_prompt::HelpPrompt::new(
             Rc::clone(&repo),
+            Rc::clone(&client_repos),
         )));
 
         crate::file_reader::read_data_from_config_file(&mut buffer, Rc::clone(&prompt))
             .expect("Read of test data failed");
 
-        let deserialized_config: Vec<ClientRepositories> = serde_json::from_str(&mut buffer)
+        let before_deserialized_config: ConfigurationDoc = serde_json::from_str(&mut buffer)
             .expect("Initialisation of ClientRepository struct from buffer failed");
 
         assert_eq!(
-            is_client_in_client_repos(&deserialized_config, &client),
+            is_client_in_deserialized_config(&before_deserialized_config, &client),
             true
         );
+
+        // internally this will find the same test config file as above
+        let mut after_deserialized_config: ConfigurationDoc = vec![];
 
         config.remove(
             options,
             Rc::clone(&repo),
             Rc::clone(&client_repos),
             Rc::clone(&prompt),
+            &mut after_deserialized_config,
         );
 
         assert_eq!(
-            is_client_in_client_repos(&client_repos.borrow_mut(), &client),
+            is_client_in_deserialized_config(&after_deserialized_config, &client),
             false
         );
     }

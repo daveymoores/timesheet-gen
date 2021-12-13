@@ -16,6 +16,7 @@ pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 pub struct Repository {
     pub id: Option<String>,
     pub namespace: Option<String>,
+    pub namespace_alias: Option<String>,
     pub repo_path: Option<String>,
     pub git_path: Option<String>,
     pub git_log_dates: Option<GitLogDates>,
@@ -35,6 +36,7 @@ impl Default for Repository {
         Self {
             id: None,
             namespace: None,
+            namespace_alias: None,
             repo_path: None,
             git_path: None,
             git_log_dates: None,
@@ -113,6 +115,11 @@ impl Repository {
 
     pub fn set_namespace(&mut self, value: String) -> &mut Self {
         self.namespace = Option::from(value);
+        self
+    }
+
+    pub fn set_namespace_alias(&mut self, value: String) -> &mut Self {
+        self.namespace_alias = Option::from(value);
         self
     }
 
@@ -237,13 +244,30 @@ impl Repository {
         Ok(self)
     }
 
+    pub fn has_different_user_details(&self, name: &String, email: &String) -> bool {
+        let name_is_same = match &self.name {
+            Some(x) => name == x,
+            None => false,
+        };
+
+        let email_is_same = match &self.email {
+            Some(x) => email == x,
+            None => false,
+        };
+
+        !name_is_same | !email_is_same
+    }
+
     pub fn find_repository_details(
         &mut self,
         output_name: Output,
         output_email: Output,
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
-        self.set_name(crate::utils::trim_output_from_utf8(output_name)?);
-        self.set_email(crate::utils::trim_output_from_utf8(output_email)?);
+        let name = crate::utils::trim_output_from_utf8(output_name)?;
+        let email = crate::utils::trim_output_from_utf8(output_email)?;
+
+        self.set_name(name);
+        self.set_email(email);
 
         self.find_git_path_from_directory_from()?
             .find_namespace_from_git_path()?;
@@ -392,6 +416,20 @@ mod tests {
         );
 
         year_map
+    }
+
+    #[test]
+    fn it_checks_for_different_user_details() {
+        let repository = Repository {
+            name: Option::Some("Jim Jones".to_string()),
+            email: Option::Some("jim@jones.com".to_string()),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            repository.has_different_user_details(&"not".to_string(), &"found".to_string()),
+            true
+        );
     }
 
     #[test]
@@ -633,6 +671,19 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
         timesheet.set_namespace("namespace".to_string());
         assert_eq!(timesheet.namespace.unwrap(), "namespace".to_string());
+    }
+
+    #[test]
+    fn it_sets_namespace_alias() {
+        let mut timesheet = Repository {
+            ..Default::default()
+        };
+
+        timesheet.set_namespace_alias("namespace_alias".to_string());
+        assert_eq!(
+            timesheet.namespace_alias.unwrap(),
+            "namespace_alias".to_string()
+        );
     }
 
     #[test]

@@ -2,7 +2,7 @@ extern crate clap;
 use crate::client_repositories::ClientRepositories;
 use crate::config;
 use crate::config::{Edit, Init, Make, New, Remove, Update};
-use crate::help_prompt::HelpPrompt;
+use crate::help_prompt::{ConfigurationDoc, HelpPrompt, RCClientRepositories};
 use crate::repository;
 use crate::repository::Repository;
 use chrono::prelude::*;
@@ -261,7 +261,7 @@ impl Cli<'_> {
         //TODO - curry these into check_for_config_file
         let config: config::Config = config::Config::new();
         let repository = Rc::new(RefCell::new(repository::Repository::new()));
-        let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories::new()]));
+        let client_repositories = Rc::new(RefCell::new(ClientRepositories::new()));
         let matches = &self.matches;
         let cli: Cli = self.parse_commands(&matches)?;
 
@@ -277,10 +277,22 @@ impl Cli<'_> {
             None => {}
         }
 
-        let prompt = crate::help_prompt::HelpPrompt::new(Rc::clone(&repository));
+        let prompt = crate::help_prompt::HelpPrompt::new(
+            Rc::clone(&repository),
+            Rc::clone(&client_repositories),
+        );
         let rc_prompt: RcHelpPrompt = Rc::new(RefCell::new(prompt));
 
-        Self::run_command(cli, config, &repository, &client_repositories, &rc_prompt);
+        let deserialized_config: ConfigurationDoc = vec![];
+
+        Self::run_command(
+            cli,
+            config,
+            &repository,
+            &client_repositories,
+            &rc_prompt,
+            deserialized_config,
+        );
 
         Ok(())
     }
@@ -289,8 +301,9 @@ impl Cli<'_> {
         cli: Cli,
         config: T,
         repository: &Rc<RefCell<repository::Repository>>,
-        client_repositories: &Rc<RefCell<Vec<ClientRepositories>>>,
+        client_repositories: &RCClientRepositories,
         prompt: &RcHelpPrompt,
+        mut deserialized_config: ConfigurationDoc,
     ) where
         T: Init + Make + Edit + Update + Remove,
     {
@@ -322,6 +335,7 @@ impl Cli<'_> {
                     Rc::clone(&repository),
                     Rc::clone(client_repositories),
                     Rc::clone(prompt),
+                    &mut deserialized_config,
                 ),
                 Commands::Update => config.update(
                     cli.options,
@@ -338,6 +352,7 @@ impl Cli<'_> {
 mod tests {
     use super::*;
     use crate::config::{New, Remove};
+    use crate::help_prompt::RCRepository;
     use crate::repository::Repository;
     use std::fmt::Debug;
     use std::str::FromStr;
@@ -365,15 +380,18 @@ mod tests {
         let cli = Cli::new_from(commands).unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
         let response = new_cli.unwrap();
-        let prompt =
-            crate::help_prompt::HelpPrompt::new(Rc::new(RefCell::new(repository::Repository {
-                ..Default::default()
-            })));
 
         let repository = Rc::new(RefCell::new(Repository::new()));
-        let client_repositories = Rc::new(RefCell::new(vec![ClientRepositories::new()]));
+        let client_repositories = Rc::new(RefCell::new(ClientRepositories::new()));
+
+        let prompt = crate::help_prompt::HelpPrompt::new(
+            Rc::clone(&repository),
+            Rc::clone(&client_repositories),
+        );
 
         let rc_prompt = Rc::new(RefCell::new(prompt));
+
+        let deserialized_config: ConfigurationDoc = vec![];
 
         Cli::run_command(
             response,
@@ -381,6 +399,7 @@ mod tests {
             &repository,
             &client_repositories,
             &rc_prompt,
+            deserialized_config,
         );
     }
 
@@ -394,8 +413,8 @@ mod tests {
         fn init(
             &self,
             _options: Vec<Option<String>>,
-            _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+            _repository: RCRepository,
+            _client_repositories: RCClientRepositories,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -406,8 +425,8 @@ mod tests {
         fn edit(
             &self,
             _options: Vec<Option<String>>,
-            _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+            _repository: Rc<RefCell<Repository>>,
+            _client_repositories: RCClientRepositories,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -418,8 +437,8 @@ mod tests {
         fn make(
             &self,
             _options: Vec<Option<String>>,
-            _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+            _repository: Rc<RefCell<Repository>>,
+            _client_repositories: RCClientRepositories,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -430,8 +449,8 @@ mod tests {
         fn update(
             &self,
             _options: Vec<Option<String>>,
-            _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+            _repository: Rc<RefCell<Repository>>,
+            _client_repositories: RCClientRepositories,
             _prompt: RcHelpPrompt,
         ) {
             assert!(true);
@@ -442,9 +461,10 @@ mod tests {
         fn remove(
             &self,
             _options: Vec<Option<String>>,
-            _repository: Rc<RefCell<repository::Repository>>,
-            _client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+            _repository: Rc<RefCell<Repository>>,
+            _client_repositories: RCClientRepositories,
             _prompt: RcHelpPrompt,
+            _deserialized_config: &mut ConfigurationDoc,
         ) {
             assert!(true);
         }

@@ -30,6 +30,7 @@ pub struct User {
     pub id: String,
     pub name: String,
     pub email: String,
+    pub is_alias: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -37,7 +38,7 @@ pub struct ClientRepositories {
     pub client: Option<Client>,
     pub user: Option<User>,
     pub repositories: Option<Vec<Repository>>,
-    pub requires_approval: bool,
+    pub requires_approval: Option<bool>,
     pub user_signature: Option<String>,
     pub approver_signature: Option<String>,
     pub approver: Option<Approver>,
@@ -57,7 +58,7 @@ impl Default for ClientRepositories {
             client: None,
             user: None,
             approver: None,
-            requires_approval: false,
+            requires_approval: None,
             user_signature: None,
             approver_signature: None,
             repositories: None,
@@ -79,11 +80,22 @@ impl ClientRepositories {
                 .clone()
                 .unwrap_or("None".to_string()),
         });
-        self.user = Option::from(User {
-            id: repository.user_id.clone().unwrap_or("None".to_string()),
-            name: repository.name.clone().unwrap_or("None".to_string()),
-            email: repository.email.clone().unwrap_or("None".to_string()),
-        });
+
+        let should_set_user = match self.user.as_ref() {
+            None => true,
+            Some(user) => !user.is_alias,
+        };
+
+        // if an alias hasn't been, or there isn't a user yet, set the user from repo
+        if should_set_user {
+            self.user = Option::from(User {
+                id: repository.user_id.clone().unwrap_or("None".to_string()),
+                name: repository.name.clone().unwrap_or("None".to_string()),
+                email: repository.email.clone().unwrap_or("None".to_string()),
+                is_alias: false,
+            });
+        }
+
         self.repositories = Option::from(vec![repository.deref().clone()]);
         self
     }
@@ -193,7 +205,27 @@ impl ClientRepositories {
     }
 
     pub fn set_requires_approval(&mut self, value: bool) -> &mut Self {
-        self.requires_approval = value;
+        self.requires_approval = Option::Some(value);
+        self
+    }
+
+    pub fn set_user_name(&mut self, value: String) -> &mut Self {
+        self.user.as_mut().map(|user| user.name = value);
+        self
+    }
+
+    pub fn set_user_email(&mut self, value: String) -> &mut Self {
+        self.user.as_mut().map(|user| user.email = value);
+        self
+    }
+
+    pub fn set_is_user_alias(&mut self, value: bool) -> &mut Self {
+        self.user.as_mut().map(|user| user.is_alias = value);
+        self
+    }
+
+    pub fn set_user_id(&mut self, value: String) -> &mut Self {
+        self.user.as_mut().map(|user| user.id = value);
         self
     }
 
@@ -295,6 +327,72 @@ mod tests {
         });
 
         client_repository.set_values(repo.borrow());
+    }
+
+    #[test]
+    fn it_set_requires_approval() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.set_requires_approval(true);
+        assert_eq!(client_repo.requires_approval.unwrap(), true);
+    }
+
+    #[test]
+    fn it_set_user_name() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.set_user_name("potato".to_string());
+        assert_eq!(
+            client_repo.user.as_ref().unwrap().name,
+            "potato".to_string()
+        );
+    }
+
+    #[test]
+    fn it_set_user_email() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.set_user_email("potato@tomato.com".to_string());
+        assert_eq!(
+            client_repo.user.as_ref().unwrap().email,
+            "potato@tomato.com".to_string()
+        );
+    }
+
+    #[test]
+    fn it_set_is_user_alias() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.set_is_user_alias(true);
+        assert_eq!(client_repo.user.as_ref().unwrap().is_alias, true);
+    }
+
+    #[test]
+    fn it_set_user_id() {
+        let mut client_repo = ClientRepositories {
+            ..Default::default()
+        };
+
+        create_mock_client_repository(&mut client_repo);
+
+        client_repo.set_user_id("123456".to_string());
+        assert_eq!(client_repo.user.as_ref().unwrap().id, "123456".to_string());
     }
 
     #[test]
@@ -456,7 +554,8 @@ mod tests {
             json!(User {
                 id: user_id.clone(),
                 name: "Jim Jones".to_string(),
-                email: "jim@jones.com".to_string()
+                email: "jim@jones.com".to_string(),
+                is_alias: false,
             })
         );
 
@@ -489,6 +588,7 @@ mod tests {
                 id: nanoid!(),
                 name: "Jim Jones".to_string(),
                 email: "jim@jones.com".to_string(),
+                is_alias: false,
             }),
             repositories: Option::Some(vec![
                 Repository {

@@ -1,5 +1,6 @@
-use crate::client_repositories::{Client, ClientRepositories, User};
+use crate::client_repositories::{Approver, Client, ClientRepositories, User};
 use crate::db;
+use crate::help_prompt::RCClientRepositories;
 use crate::repository::Repository;
 use crate::utils::{check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Month, Utc};
@@ -8,9 +9,7 @@ use mongodb::bson::doc;
 use num_traits::cast::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::cell::RefCell;
 use std::error::Error;
-use std::rc::Rc;
 use std::{env, process};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -28,6 +27,7 @@ struct TimesheetDocument {
     month_year: String,
     client: Option<Client>,
     user: Option<User>,
+    approver: Option<Approver>,
     timesheets: Vec<Timesheet>,
 }
 
@@ -80,6 +80,7 @@ fn build_document<'a>(
         month_year: month_year_string.clone(),
         user: repos.user.clone(),
         client: repos.client.clone(),
+        approver: repos.approver.clone(),
         timesheets: timesheets.clone(),
     }
 }
@@ -95,7 +96,7 @@ fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> f64 {
 }
 
 pub async fn build_unique_uri(
-    client_repositories: Rc<RefCell<Vec<ClientRepositories>>>,
+    client_repositories: RCClientRepositories,
     options: Vec<Option<String>>,
 ) -> Result<(), Box<dyn Error>> {
     dotenv::dotenv().ok();
@@ -116,7 +117,7 @@ pub async fn build_unique_uri(
     let mut timesheets: Vec<Timesheet> = vec![];
 
     let client_repos = client_repositories.borrow_mut();
-    let repos_option = &client_repos[0].repositories;
+    let repos_option = &client_repos.repositories;
     let repos = repos_option.as_ref().unwrap();
 
     for i in 0..repos.len() {
@@ -155,7 +156,7 @@ pub async fn build_unique_uri(
         &random_path,
         &month_year_string,
         &timesheets,
-        &client_repos[0],
+        &client_repos,
     );
 
     // Check for existing index for TTL on the collection
@@ -205,7 +206,7 @@ pub async fn build_unique_uri(
 
 #[cfg(test)]
 mod test {
-    use crate::client_repositories::{Client, ClientRepositories, User};
+    use crate::client_repositories::{Approver, Client, ClientRepositories, User};
     use crate::date_parser::get_timesheet_map_from_date_hashmap;
     use crate::link_builder::{
         build_document, calculate_total_hours, find_month_from_timesheet, get_string_month_year,
@@ -281,6 +282,12 @@ mod test {
             id: nanoid!(),
             name: "Jim Jones".to_string(),
             email: "jim@jones.com".to_string(),
+            is_alias: false,
+        });
+
+        let approver = Option::from(Approver {
+            approvers_name: Option::Some("Bob Brown".to_string()),
+            approvers_email: Option::Some("bob@brown.com".to_string()),
         });
 
         let timesheets = vec![Timesheet {
@@ -296,6 +303,7 @@ mod test {
             month_year: "November, 2021".to_string(),
             client: client.clone(),
             user: user.clone(),
+            approver: approver.clone(),
             timesheets: timesheets.clone(),
         };
 
@@ -307,6 +315,7 @@ mod test {
             &Rc::new(RefCell::new(ClientRepositories {
                 client,
                 user,
+                approver,
                 repositories: Option::from(vec![Repository {
                     ..Default::default()
                 }]),
