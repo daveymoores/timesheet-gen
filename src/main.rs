@@ -1,5 +1,4 @@
 use std::process;
-
 mod interface;
 mod helpers;
 mod config;

@@ -690,23 +690,22 @@ impl HelpPrompt {
 
         self
     }
-}
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::config::New;
-//     use crate::data::repository;
-//
-//     #[test]
-//     fn it_sets_a_value() {
-//         let repository = Rc::new(RefCell::new(repository::Repository::new()));
-//         let client_repositories = Rc::new(RefCell::new(ClientRepositories::new()));
-//
-//         let mut y = HelpPrompt::new(Rc::clone(&repository), Rc::clone(&client_repositories));
-//
-//         y.set_value_on_client_repo(true);
-//         println!("{:#?}", client_repositories);
-//         assert!(client_repositories.borrow()[0].requires_approval);
-//     }
-// }
+    pub fn list_clients_and_repos(&self, config: ConfigurationDoc) -> &Self {
+        for client in config {
+            println!("\n {}", Style::new().bold().paint(client.get_client_name()));
+            let ascii_table = AsciiTable::default();
+            let mut rows = vec![];
+
+            if let Some(repositories) = client.repositories {
+                for repo in repositories {
+                    rows.push(vec![repo.namespace.unwrap()]);
+                }
+
+                ascii_table.print(rows);
+            }
+        }
+
+        self
+    }
+}

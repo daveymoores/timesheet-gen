@@ -590,6 +590,41 @@ impl Update for Config {
     }
 }
 
+pub trait List {
+    /// Update client or repository details
+    fn list(
+        &self,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
+        prompt: RcHelpPrompt,
+    );
+}
+
+impl List for Config {
+    fn list(
+        &self,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
+        prompt: RcHelpPrompt,
+    ) {
+        // try to read config file. Write a new one if it doesn't exist
+        let mut buffer = String::new();
+        self.check_for_config_file(
+            &mut buffer,
+            Rc::clone(&repository),
+            Rc::clone(&client_repositories),
+            Rc::clone(&prompt),
+        );
+
+        if crate::utils::config_file_found(&mut buffer) {
+            let deserialized_config: ConfigurationDoc = serde_json::from_str(&buffer)
+                .expect("Initialisation of ClientRepository struct from buffer failed");
+
+            prompt.borrow().list_clients_and_repos(deserialized_config);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::data::client_repositories::ClientRepositories;

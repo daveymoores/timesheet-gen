@@ -89,6 +89,35 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
+name = "autolog"
+version = "0.1.0"
+dependencies = [
+ "ansi_term 0.12.1",
+ "ascii_table",
+ "assert_cmd",
+ "bson",
+ "chrono",
+ "clap",
+ "dialoguer",
+ "dirs",
+ "dotenv",
+ "envtestkit",
+ "exitcode",
+ "futures",
+ "mongodb",
+ "nanoid",
+ "num-traits",
+ "predicates",
+ "random-string",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "vec-collections",
+]
+
+[[package]]
 name = "base64"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1427,35 +1456,6 @@ dependencies = [
  "libc",
  "wasi",
  "winapi",
-]
-
-[[package]]
-name = "timesheet-gen"
-version = "0.1.0"
-dependencies = [
- "ansi_term 0.12.1",
- "ascii_table",
- "assert_cmd",
- "bson",
- "chrono",
- "clap",
- "dialoguer",
- "dirs",
- "dotenv",
- "envtestkit",
- "exitcode",
- "futures",
- "mongodb",
- "nanoid",
- "num-traits",
- "predicates",
- "random-string",
- "regex",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "vec-collections",
 ]
 
 [[package]]
