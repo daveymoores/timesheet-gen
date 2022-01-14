@@ -612,7 +612,7 @@ mod tests {
         let new_cli = cli.parse_commands(&cli.matches);
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<String>(result.options);
-        assert_eq!(values, vec!["timesheet-gen", "5", "15", "12", "2021"]);
+        assert_eq!(values, vec!["autolog", "5", "15", "12", "2021"]);
     }
 
     #[test]

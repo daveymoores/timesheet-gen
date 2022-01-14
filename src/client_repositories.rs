@@ -291,43 +291,11 @@ impl ClientRepositories {
 #[cfg(test)]
 mod tests {
     use crate::client_repositories::{Client, ClientRepositories, User};
-    use crate::repository::{GitLogDates, Repository};
+    use crate::repository::Repository;
     use nanoid::nanoid;
     use serde_json::json;
     use std::cell::RefCell;
-    use std::collections::{HashMap, HashSet};
-
-    // Generate git log dates that overlap by one day each month to test hours being split equally
-    fn generate_project_git_log_dates(days: [u32; 3]) -> GitLogDates {
-        HashMap::from([
-            (
-                2019,
-                HashMap::from([(1, HashSet::from(days)), (2, HashSet::from(days))]),
-            ),
-            (
-                2020,
-                HashMap::from([(5, HashSet::from(days)), (2, HashSet::from(days))]),
-            ),
-            (
-                2021,
-                HashMap::from([(9, HashSet::from(days)), (2, HashSet::from(days))]),
-            ),
-        ])
-    }
-
-    fn create_mock_client_repository(client_repository: &mut ClientRepositories) {
-        let repo = RefCell::new(Repository {
-            client_name: Option::from("alphabet".to_string()),
-            client_address: Option::from("Spaghetti Way, USA".to_string()),
-            client_contact_person: Option::from("John Smith".to_string()),
-            name: Option::from("Jim Jones".to_string()),
-            email: Option::from("jim@jones.com".to_string()),
-            namespace: Option::from("timesheet-gen".to_string()),
-            ..Default::default()
-        });
-
-        client_repository.set_values(repo.borrow());
-    }
+    use crate::helpers::mocks;
 
     #[test]
     fn it_set_requires_approval() {
@@ -335,7 +303,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repo);
+        mocks::create_mock_client_repository(&mut client_repo);
 
         client_repo.set_requires_approval(true);
         assert_eq!(client_repo.requires_approval.unwrap(), true);
@@ -347,7 +315,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repo);
+        mocks::create_mock_client_repository(&mut client_repo);
 
         client_repo.set_user_name("potato".to_string());
         assert_eq!(
@@ -362,7 +330,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repo);
+        mocks::create_mock_client_repository(&mut client_repo);
 
         client_repo.set_user_email("potato@tomato.com".to_string());
         assert_eq!(
@@ -377,7 +345,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repo);
+        mocks::create_mock_client_repository(&mut client_repo);
 
         client_repo.set_is_user_alias(true);
         assert_eq!(client_repo.user.as_ref().unwrap().is_alias, true);
@@ -389,7 +357,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repo);
+        mocks::create_mock_client_repository(&mut client_repo);
 
         client_repo.set_user_id("123456".to_string());
         assert_eq!(client_repo.user.as_ref().unwrap().id, "123456".to_string());
@@ -401,7 +369,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repo);
+        mocks::create_mock_client_repository(&mut client_repo);
 
         let name = client_repo.get_client_name();
         assert_eq!(name, "alphabet");
@@ -413,7 +381,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repo);
+        mocks::create_mock_client_repository(&mut client_repo);
 
         client_repo.update_client_name("James".to_string());
         assert_eq!(
@@ -435,7 +403,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repo);
+        mocks::create_mock_client_repository(&mut client_repo);
 
         client_repo.update_client_address("Something, Somewhere, USA".to_string());
         assert_eq!(
@@ -457,7 +425,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repo);
+        mocks::create_mock_client_repository(&mut client_repo);
 
         client_repo.update_client_contact_person("Jimmy Bones".to_string());
         assert_eq!(
@@ -479,7 +447,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repo);
+        mocks::create_mock_client_repository(&mut client_repo);
 
         client_repo.set_approvers_name("Jimmy Bones".to_string());
         assert_eq!(
@@ -500,7 +468,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repo);
+        mocks::create_mock_client_repository(&mut client_repo);
 
         client_repo.set_approvers_email("jimmy@bones.com".to_string());
         assert_eq!(
@@ -594,19 +562,19 @@ mod tests {
                 Repository {
                     client_name: Option::Some("Alphabet".to_string()),
                     namespace: Option::Some("Project_1".to_string()),
-                    git_log_dates: Option::Some(generate_project_git_log_dates([1, 2, 3])),
+                    git_log_dates: Option::Some(mocks::generate_project_git_log_dates([1, 2, 3])),
                     ..Default::default()
                 },
                 Repository {
                     client_name: Option::Some("Alphabet".to_string()),
                     namespace: Option::Some("Project_2".to_string()),
-                    git_log_dates: Option::Some(generate_project_git_log_dates([2, 3, 4])),
+                    git_log_dates: Option::Some(mocks::generate_project_git_log_dates([2, 3, 4])),
                     ..Default::default()
                 },
                 Repository {
                     client_name: Option::Some("Alphabet".to_string()),
                     namespace: Option::Some("Project_3".to_string()),
-                    git_log_dates: Option::Some(generate_project_git_log_dates([3, 4, 5])),
+                    git_log_dates: Option::Some(mocks::generate_project_git_log_dates([3, 4, 5])),
                     ..Default::default()
                 },
             ]),

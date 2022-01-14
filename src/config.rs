@@ -600,20 +600,7 @@ mod tests {
     use std::cell::RefCell;
     use std::ffi::OsString;
     use std::rc::Rc;
-
-    fn create_mock_client_repository(client_repository: &mut ClientRepositories) {
-        let repo = RefCell::new(Repository {
-            client_name: Option::from("alphabet".to_string()),
-            client_address: Option::from("Spaghetti Way, USA".to_string()),
-            client_contact_person: Option::from("John Smith".to_string()),
-            name: Option::from("Jim Jones".to_string()),
-            email: Option::from("jim@jones.com".to_string()),
-            namespace: Option::from("timesheet-gen".to_string()),
-            ..Default::default()
-        });
-
-        client_repository.set_values(repo.borrow());
-    }
+    use crate::helpers::mocks;
 
     #[test]
     fn it_modifies_the_hour_entry_in_a_client_repository_day_entry() {
@@ -795,7 +782,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut deserialized_config);
+        mocks::create_mock_client_repository(&mut deserialized_config);
 
         let config: Config = Config::new();
 
@@ -822,7 +809,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut deserialized_config);
+        mocks::create_mock_client_repository(&mut deserialized_config);
 
         let config: Config = Config::new();
 
@@ -849,7 +836,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut deserialized_config);
+        mocks::create_mock_client_repository(&mut deserialized_config);
 
         let config: Config = Config::new();
 

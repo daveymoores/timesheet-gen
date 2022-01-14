@@ -171,7 +171,6 @@ pub fn serialize_config(
 mod tests {
     use super::*;
     use crate::client_repositories::Client;
-    use crate::repository::Repository;
     use envtestkit::lock::lock_test;
     use envtestkit::set_env;
     use nanoid::nanoid;
@@ -179,20 +178,7 @@ mod tests {
     use std::error::Error;
     use std::ffi::OsString;
     use std::path::Path;
-
-    fn create_mock_client_repository(client_repository: &mut ClientRepositories) {
-        let repo = RefCell::new(Repository {
-            client_name: Option::from("alphabet".to_string()),
-            client_address: Option::from("Spaghetti Way, USA".to_string()),
-            client_contact_person: Option::from("John Smith".to_string()),
-            name: Option::from("Jim Jones".to_string()),
-            email: Option::from("jim@jones.com".to_string()),
-            namespace: Option::from("timesheet-gen".to_string()),
-            ..Default::default()
-        });
-
-        client_repository.set_values(repo.borrow());
-    }
+    use crate::helpers::mocks;
 
     #[test]
     fn it_serializes_a_config_and_adds_to_an_existing_client() {
@@ -200,7 +186,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repositories);
+        mocks::create_mock_client_repository(&mut client_repositories);
 
         let json_string = serialize_config(
             Option::from(Rc::new(RefCell::new(client_repositories.clone()))),
@@ -239,7 +225,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repositories);
+        mocks::create_mock_client_repository(&mut client_repositories);
 
         let mut deserialized_config = vec![ClientRepositories {
             client: Some(Client {
@@ -349,7 +335,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repositories);
+        mocks::create_mock_client_repository(&mut client_repositories);
 
         // creates mock directory that is destroyed when it goes out of scope
         let dir = tempfile::tempdir().unwrap();
@@ -379,7 +365,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repositories);
+        mocks::create_mock_client_repository(&mut client_repositories);
 
         let json = serialize_config(
             Option::from(Rc::new(RefCell::new(client_repositories))),
@@ -396,7 +382,7 @@ mod tests {
             ..Default::default()
         };
 
-        create_mock_client_repository(&mut client_repositories);
+        mocks::create_mock_client_repository(&mut client_repositories);
 
         let json = serialize_config(
             Option::from(Rc::new(RefCell::new(client_repositories.clone()))),

@@ -10,6 +10,7 @@ mod help_prompt;
 mod link_builder;
 mod repository;
 mod utils;
+mod helpers;
 
 fn main() {
     let cli = cli::Cli::new();

@@ -48,6 +48,7 @@ fn runs_init_for_path_that_doesnt_exist() {
 }
 
 #[test]
+#[ignore]
 fn runs_init_with_args() {
     let mut cmd = Command::cargo_bin("timesheet-gen").unwrap();
     let assert = cmd.env("TEST_MODE", "true").arg("init").assert();

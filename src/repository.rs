@@ -80,6 +80,7 @@ impl Repository {
         }
     }
 
+    #[allow(dead_code)]
     fn iter(&self) -> Iter<'_> {
         Iter {
             inner: self,
@@ -394,29 +395,7 @@ mod tests {
     use serde_json::{json, Map, Number};
     use std::os::unix::process::ExitStatusExt;
     use std::process::ExitStatus;
-
-    fn get_mock_year_map() -> TimesheetYears {
-        let mut year_map: TimesheetYears = HashMap::new();
-
-        let mut map = Map::new();
-        map.extend([
-            ("weekend".to_string(), Value::Bool(false)),
-            (
-                "hours".to_string(),
-                Value::Number(Number::from_f64(0 as f64).unwrap()),
-            ),
-            ("user_edited".to_string(), Value::Bool(true)),
-        ]);
-
-        year_map.insert(
-            "2021".to_string(),
-            vec![("11".to_string(), vec![map.clone(), map.clone()])]
-                .into_iter()
-                .collect::<HashMap<String, Vec<Map<String, Value>>>>(),
-        );
-
-        year_map
-    }
+    use crate::helpers::mocks;
 
     #[test]
     fn it_checks_for_different_user_details() {
@@ -438,7 +417,7 @@ mod tests {
             ..Default::default()
         };
 
-        let year_map = get_mock_year_map();
+        let year_map = mocks::get_mock_year_map();
         ts.set_timesheet(year_map);
         ts.update_hours_on_month_day_entry(&vec![
             None,
@@ -490,7 +469,7 @@ mod tests {
             ..Default::default()
         };
 
-        let year_map = get_mock_year_map();
+        let year_map = mocks::get_mock_year_map();
         ts.set_timesheet(year_map);
 
         ts.mutate_timesheet_entry(
@@ -515,7 +494,7 @@ mod tests {
             ..Default::default()
         };
 
-        let year_map = get_mock_year_map();
+        let year_map = mocks::get_mock_year_map();
         ts.set_timesheet(year_map);
 
         assert_eq!(
@@ -531,7 +510,7 @@ mod tests {
             ..Default::default()
         };
 
-        let year_map = get_mock_year_map();
+        let year_map = mocks::get_mock_year_map();
         ts.set_timesheet(year_map);
 
         assert_eq!(
