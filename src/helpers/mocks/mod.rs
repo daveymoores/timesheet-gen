@@ -1,11 +1,11 @@
 #![allow(unused_imports)]
-use crate::repository::{Repository, GitLogDates};
+use crate::data::repository::{Repository, GitLogDates};
 use std::cell::RefCell;
-use crate::client_repositories::ClientRepositories;
-use crate::date_parser::{TimesheetYears, get_timesheet_map_from_date_hashmap};
+use crate::data::client_repositories::ClientRepositories;
+use crate::utils::date::date_parser::{TimesheetYears, get_timesheet_map_from_date_hashmap};
 use std::collections::{HashMap, HashSet};
 use serde_json::{Value, Map, Number};
-use crate::link_builder::TimesheetHoursForMonth;
+use crate::utils::link::link_builder::TimesheetHoursForMonth;
 
 #[cfg(test)]
 pub fn create_mock_client_repository(client_repository: &mut ClientRepositories) {

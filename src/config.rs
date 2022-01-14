@@ -1,13 +1,15 @@
-use crate::cli::RcHelpPrompt;
-use crate::client_repositories::ClientRepositories;
-use crate::help_prompt::{ConfigurationDoc, RCClientRepositories, RCRepository};
-use crate::link_builder;
-use crate::repository::Repository;
-use crate::utils::exit_process;
+use crate::interface::cli::RcHelpPrompt;
+use crate::data::client_repositories::ClientRepositories;
+use crate::interface::help_prompt::{ConfigurationDoc, RCClientRepositories, RCRepository};
+use crate::utils;
+use crate::data::repository::Repository;
 use std::cell::{Ref, RefMut};
 use std::ops::Deref;
 use std::process;
 use std::rc::Rc;
+use crate::utils::exit_process;
+use crate::utils::file::file_reader;
+use crate::utils::link::link_builder;
 
 /// Creates and modifies the config file. Config does not directly hold the information
 /// contained in the config file, but provides the various operations that can be
@@ -82,19 +84,19 @@ impl Config {
         deserialized_config: Option<&mut ConfigurationDoc>,
     ) {
         // get path for where to write the config file
-        let config_path = crate::file_reader::get_filepath(crate::file_reader::get_home_path())
+        let config_path = utils::file::file_reader::get_filepath(utils::file::file_reader::get_home_path())
             .unwrap_or_else(|err| {
                 eprintln!("Error constructing filepath: {}", err);
                 std::process::exit(exitcode::CANTCREAT);
             });
 
-        let json = crate::file_reader::serialize_config(client_repositories, deserialized_config)
+        let json = utils::file::file_reader::serialize_config(client_repositories, deserialized_config)
             .unwrap_or_else(|err| {
                 eprintln!("Error serializing json: {}", err);
                 std::process::exit(exitcode::CANTCREAT);
             });
 
-        crate::file_reader::write_json_to_config_file(json, config_path).unwrap_or_else(|err| {
+        utils::file::file_reader::write_json_to_config_file(json, config_path).unwrap_or_else(|err| {
             eprintln!("Error writing data to file: {}", err);
             std::process::exit(exitcode::CANTCREAT);
         });
@@ -174,7 +176,7 @@ impl Config {
         prompt: RcHelpPrompt,
     ) {
         // pass a prompt for if the config file doesn't exist
-        crate::file_reader::read_data_from_config_file(buffer, prompt.clone()).unwrap_or_else(
+        crate::utils::file::file_reader::read_data_from_config_file(buffer, prompt.clone()).unwrap_or_else(
             |err| {
                 eprintln!("Error initialising timesheet-gen: {}", err);
                 std::process::exit(exitcode::CANTCREAT);
@@ -186,7 +188,7 @@ impl Config {
         if buffer.is_empty() {
             Config::fetch_interaction_data(client_repositories.borrow_mut(), repository.borrow());
             Config::write_to_config_file(Option::Some(client_repositories), None);
-            crate::help_prompt::HelpPrompt::show_write_new_config_success();
+            crate::interface::help_prompt::HelpPrompt::show_write_new_config_success();
             return;
         }
     }
@@ -239,7 +241,7 @@ impl Init for Config {
                 });
 
             if found_repo.is_some() & found_client_repo.is_some() {
-                crate::help_prompt::HelpPrompt::repo_already_initialised();
+                crate::interface::help_prompt::HelpPrompt::repo_already_initialised();
             } else {
                 // Otherwise onboard them and check whether (passed path or namespace) repo
                 // should exist under an existing client
@@ -261,7 +263,7 @@ impl Init for Config {
                     Option::from(&mut deserialized_config),
                 );
 
-                crate::help_prompt::HelpPrompt::show_write_new_repo_success();
+                crate::interface::help_prompt::HelpPrompt::show_write_new_repo_success();
             }
         }
     }
@@ -289,7 +291,7 @@ impl Make for Config {
     ) {
         // try to read config file. Write a new one if it doesn't exist
         let mut buffer = String::new();
-        let current_repo_path = crate::utils::get_canonical_path(".");
+        let current_repo_path = file_reader::get_canonical_path(".");
 
         self.check_for_config_file(
             &mut buffer,
@@ -348,7 +350,7 @@ impl Make for Config {
                     Option::Some(&mut deserialized_config),
                 );
             } else {
-                crate::help_prompt::HelpPrompt::client_or_repository_not_found();
+                crate::interface::help_prompt::HelpPrompt::client_or_repository_not_found();
             }
         }
     }
@@ -429,9 +431,9 @@ impl Edit for Config {
                 );
 
                 Config::write_to_config_file(None, Option::Some(&mut new_client_repos));
-                crate::help_prompt::HelpPrompt::show_edited_config_success();
+                crate::interface::help_prompt::HelpPrompt::show_edited_config_success();
             } else {
-                crate::help_prompt::HelpPrompt::client_or_repository_not_found();
+                crate::interface::help_prompt::HelpPrompt::client_or_repository_not_found();
             }
         }
     }
@@ -497,7 +499,7 @@ impl Remove for Config {
                 // if there are no clients, lets remove the file and next time will be onboarding
                 //TODO - would be nice to improve this
                 if deserialized_config.len() == 0 {
-                    crate::file_reader::delete_config_file().expect(
+                    crate::utils::file::file_reader::delete_config_file().expect(
                         "Config file was empty so timesheet-gen tried to remove it. That failed.",
                     );
                     exit_process();
@@ -507,7 +509,7 @@ impl Remove for Config {
                 // pass modified config as new client_repository and thus write it straight to file
                 Config::write_to_config_file(None, Option::Some(deserialized_config));
             } else {
-                crate::help_prompt::HelpPrompt::client_or_repository_not_found();
+                crate::interface::help_prompt::HelpPrompt::client_or_repository_not_found();
             }
         }
     }
@@ -580,9 +582,9 @@ impl Update for Config {
 
                 // pass modified config as new client_repository and thus write it straight to file
                 Config::write_to_config_file(None, Option::Some(&mut new_client_repos));
-                crate::help_prompt::HelpPrompt::show_updated_config_success();
+                crate::interface::help_prompt::HelpPrompt::show_updated_config_success();
             } else {
-                crate::help_prompt::HelpPrompt::client_or_repository_not_found();
+                crate::interface::help_prompt::HelpPrompt::client_or_repository_not_found();
             }
         }
     }
@@ -590,10 +592,10 @@ impl Update for Config {
 
 #[cfg(test)]
 mod tests {
-    use crate::client_repositories::ClientRepositories;
+    use crate::data::client_repositories::ClientRepositories;
     use crate::config::{Config, Edit, New, Remove};
-    use crate::help_prompt::ConfigurationDoc;
-    use crate::repository::Repository;
+    use crate::interface::help_prompt::ConfigurationDoc;
+    use crate::data::repository::Repository;
     use envtestkit::lock::lock_test;
     use envtestkit::set_env;
     use serde_json::{Number, Value};
@@ -624,7 +626,7 @@ mod tests {
             ..Default::default()
         }));
 
-        let prompt = Rc::new(RefCell::new(crate::help_prompt::HelpPrompt::new(
+        let prompt = Rc::new(RefCell::new(crate::interface::help_prompt::HelpPrompt::new(
             Rc::clone(&repo),
             Rc::clone(&client_repos),
         )));
@@ -692,12 +694,12 @@ mod tests {
             ..Default::default()
         }));
 
-        let prompt = Rc::new(RefCell::new(crate::help_prompt::HelpPrompt::new(
+        let prompt = Rc::new(RefCell::new(crate::interface::help_prompt::HelpPrompt::new(
             Rc::clone(&repo),
             Rc::clone(&client_repos),
         )));
 
-        crate::file_reader::read_data_from_config_file(&mut buffer, Rc::clone(&prompt))
+        crate::utils::file::file_reader::read_data_from_config_file(&mut buffer, Rc::clone(&prompt))
             .expect("Read of test data failed");
 
         let before_deserialized_config: ConfigurationDoc = serde_json::from_str(&mut buffer)
@@ -743,12 +745,12 @@ mod tests {
             ..Default::default()
         }));
 
-        let prompt = Rc::new(RefCell::new(crate::help_prompt::HelpPrompt::new(
+        let prompt = Rc::new(RefCell::new(crate::interface::help_prompt::HelpPrompt::new(
             Rc::clone(&repo),
             Rc::clone(&client_repos),
         )));
 
-        crate::file_reader::read_data_from_config_file(&mut buffer, Rc::clone(&prompt))
+        crate::utils::file::file_reader::read_data_from_config_file(&mut buffer, Rc::clone(&prompt))
             .expect("Read of test data failed");
 
         let before_deserialized_config: ConfigurationDoc = serde_json::from_str(&mut buffer)

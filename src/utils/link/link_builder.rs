@@ -1,8 +1,8 @@
-use crate::client_repositories::{Approver, Client, ClientRepositories, User};
+use crate::data::client_repositories::{Approver, Client, ClientRepositories, User};
 use crate::db;
-use crate::help_prompt::RCClientRepositories;
-use crate::repository::Repository;
-use crate::utils::{check_for_valid_month, check_for_valid_year};
+use crate::interface::help_prompt::RCClientRepositories;
+use crate::data::repository::Repository;
+use crate::utils::date::date_parser::{check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Month, Utc};
 use dotenv;
 use mongodb::bson::doc;
@@ -106,7 +106,7 @@ pub async fn build_unique_uri(
         .expect("You must set the MONGODB_COLLECTION environment var!");
 
     let month_year_string = get_string_month_year(&options[1], &options[2])?;
-    crate::help_prompt::HelpPrompt::show_generating_timesheet_message(&*month_year_string);
+    crate::interface::help_prompt::HelpPrompt::show_generating_timesheet_message(&*month_year_string);
 
     let db = db::Db::new().await?;
     let collection = db
@@ -196,7 +196,7 @@ pub async fn build_unique_uri(
         &random_path
     );
 
-    crate::help_prompt::HelpPrompt::show_new_link_success(
+    crate::interface::help_prompt::HelpPrompt::show_new_link_success(
         expire_time_seconds / 60,
         &*timesheet_gen_uri,
     );
@@ -206,12 +206,12 @@ pub async fn build_unique_uri(
 
 #[cfg(test)]
 mod test {
-    use crate::client_repositories::{Approver, Client, ClientRepositories, User};
-    use crate::link_builder::{
+    use crate::data::client_repositories::{Approver, Client, ClientRepositories, User};
+    use crate::utils::link::link_builder::{
         build_document, calculate_total_hours, find_month_from_timesheet, get_string_month_year,
         Timesheet, TimesheetDocument,
     };
-    use crate::repository::Repository;
+    use crate::data::repository::Repository;
     use chrono::{TimeZone, Utc};
     use nanoid::nanoid;
     use serde_json::json;

@@ -1,5 +1,5 @@
-use crate::client_repositories::ClientRepositories;
-use crate::help_prompt::{ConfigurationDoc, Onboarding, RCClientRepositories};
+use crate::data::client_repositories::ClientRepositories;
+use crate::interface::help_prompt::{ConfigurationDoc, Onboarding, RCClientRepositories};
 use serde_json::json;
 use std::cell::RefCell;
 use std::fs::File;
@@ -8,6 +8,8 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::rc::Rc;
 use tempfile::tempfile;
+use crate::utils::is_test_mode;
+
 
 const CONFIG_FILE_NAME: &str = ".timesheet-gen.txt";
 
@@ -21,7 +23,7 @@ pub fn get_home_path() -> PathBuf {
 
 /// Create filepath to config file
 pub fn get_filepath(path: PathBuf) -> Result<String, Box<dyn std::error::Error>> {
-    return if crate::utils::is_test_mode() {
+    return if is_test_mode() {
         let path_string = &*format!("./testing-utils/{}", CONFIG_FILE_NAME);
         Ok(path_string.to_owned())
     } else {
@@ -65,7 +67,7 @@ where
 }
 
 pub fn delete_config_file() -> Result<(), Box<dyn std::error::Error>> {
-    if crate::utils::is_test_mode() {
+    if is_test_mode() {
         return Ok(());
     }
 
@@ -79,7 +81,7 @@ pub fn write_json_to_config_file(
     json: String,
     config_path: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if crate::utils::is_test_mode() {
+    if is_test_mode() {
         let mut file = tempfile()?;
         file.write_all(json.as_bytes())?;
         return Ok(());
@@ -167,10 +169,18 @@ pub fn serialize_config(
     Ok(json)
 }
 
+pub fn get_canonical_path(path: &str) -> String {
+    let path = std::fs::canonicalize(path).unwrap_or_else(|err| {
+        println!("Canonicalization of repo path failed: {}", err);
+        std::process::exit(exitcode::CANTCREAT);
+    });
+    path.to_str().map(|x| x.to_string()).unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::client_repositories::Client;
+    use crate::data::client_repositories::Client;
     use envtestkit::lock::lock_test;
     use envtestkit::set_env;
     use nanoid::nanoid;

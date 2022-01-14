@@ -1,15 +1,16 @@
 extern crate clap;
-use crate::client_repositories::ClientRepositories;
+use crate::data::client_repositories::ClientRepositories;
 use crate::config;
 use crate::config::{Edit, Init, Make, New, Remove, Update};
-use crate::help_prompt::{ConfigurationDoc, HelpPrompt, RCClientRepositories};
-use crate::repository;
-use crate::repository::Repository;
+use crate::interface::help_prompt::{ConfigurationDoc, HelpPrompt, RCClientRepositories};
+use crate::data::repository;
+use crate::data::repository::Repository;
 use chrono::prelude::*;
 use clap::{App, Arg, ArgMatches, Error};
 use std::cell::RefCell;
 use std::ffi::OsString;
 use std::rc::Rc;
+use crate::utils::file::file_reader;
 
 pub type RcHelpPrompt = Rc<RefCell<HelpPrompt>>;
 
@@ -186,7 +187,7 @@ impl Cli<'_> {
         let month = date_time.month().to_string();
         let day = date_time.day().to_string();
 
-        let current_repo_path = crate::utils::get_canonical_path(".");
+        let current_repo_path = file_reader::get_canonical_path(".");
         let mut temp_repository = Repository {
             repo_path: Option::from(current_repo_path.clone()),
             ..Default::default()
@@ -277,7 +278,7 @@ impl Cli<'_> {
             None => {}
         }
 
-        let prompt = crate::help_prompt::HelpPrompt::new(
+        let prompt = crate::interface::help_prompt::HelpPrompt::new(
             Rc::clone(&repository),
             Rc::clone(&client_repositories),
         );
@@ -352,8 +353,8 @@ impl Cli<'_> {
 mod tests {
     use super::*;
     use crate::config::{New, Remove};
-    use crate::help_prompt::RCRepository;
-    use crate::repository::Repository;
+    use crate::interface::help_prompt::RCRepository;
+    use crate::data::repository::Repository;
     use std::fmt::Debug;
     use std::str::FromStr;
 
@@ -384,7 +385,7 @@ mod tests {
         let repository = Rc::new(RefCell::new(Repository::new()));
         let client_repositories = Rc::new(RefCell::new(ClientRepositories::new()));
 
-        let prompt = crate::help_prompt::HelpPrompt::new(
+        let prompt = crate::interface::help_prompt::HelpPrompt::new(
             Rc::clone(&repository),
             Rc::clone(&client_repositories),
         );

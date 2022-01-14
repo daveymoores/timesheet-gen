@@ -1,5 +1,5 @@
 use crate::config::New;
-use crate::repository::{GitLogDates, Repository};
+use crate::data::repository::{GitLogDates, Repository};
 use serde::{Deserialize, Serialize};
 use std::cell::Ref;
 use std::ops::Deref;
@@ -269,7 +269,7 @@ impl ClientRepositories {
                     .collect();
 
                 let timesheet = match &repositories[i].git_log_dates {
-                    Some(git_log_dates) => crate::date_parser::get_timesheet_map_from_date_hashmap(
+                    Some(git_log_dates) => crate::utils::date::date_parser::get_timesheet_map_from_date_hashmap(
                         git_log_dates.clone(),
                         &mut repositories[i],
                         adjacent_git_log_dates,
@@ -290,8 +290,8 @@ impl ClientRepositories {
 
 #[cfg(test)]
 mod tests {
-    use crate::client_repositories::{Client, ClientRepositories, User};
-    use crate::repository::Repository;
+    use crate::data::client_repositories::{Client, ClientRepositories, User};
+    use crate::data::repository::Repository;
     use nanoid::nanoid;
     use serde_json::json;
     use std::cell::RefCell;
