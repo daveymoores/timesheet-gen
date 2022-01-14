@@ -1,8 +1,8 @@
-use crate::client_repositories::{Approver, Client, ClientRepositories, User};
+use crate::data::client_repositories::{Approver, Client, ClientRepositories, User};
 use crate::db;
-use crate::help_prompt::RCClientRepositories;
-use crate::repository::Repository;
-use crate::utils::{check_for_valid_month, check_for_valid_year};
+use crate::interface::help_prompt::RCClientRepositories;
+use crate::data::repository::Repository;
+use crate::utils::date::date_parser::{check_for_valid_month, check_for_valid_year};
 use chrono::{DateTime, Month, Utc};
 use dotenv;
 use mongodb::bson::doc;
@@ -31,7 +31,7 @@ struct TimesheetDocument {
     timesheets: Vec<Timesheet>,
 }
 
-type TimesheetHoursForMonth = Vec<Map<String, Value>>;
+pub type TimesheetHoursForMonth = Vec<Map<String, Value>>;
 
 fn get_string_month_year(
     month: &Option<String>,
@@ -106,7 +106,7 @@ pub async fn build_unique_uri(
         .expect("You must set the MONGODB_COLLECTION environment var!");
 
     let month_year_string = get_string_month_year(&options[1], &options[2])?;
-    crate::help_prompt::HelpPrompt::show_generating_timesheet_message(&*month_year_string);
+    crate::interface::help_prompt::HelpPrompt::show_generating_timesheet_message(&*month_year_string);
 
     let db = db::Db::new().await?;
     let collection = db
@@ -196,7 +196,7 @@ pub async fn build_unique_uri(
         &random_path
     );
 
-    crate::help_prompt::HelpPrompt::show_new_link_success(
+    crate::interface::help_prompt::HelpPrompt::show_new_link_success(
         expire_time_seconds / 60,
         &*timesheet_gen_uri,
     );
@@ -206,70 +206,22 @@ pub async fn build_unique_uri(
 
 #[cfg(test)]
 mod test {
-    use crate::client_repositories::{Approver, Client, ClientRepositories, User};
-    use crate::date_parser::get_timesheet_map_from_date_hashmap;
-    use crate::link_builder::{
+    use crate::data::client_repositories::{Approver, Client, ClientRepositories, User};
+    use crate::utils::link::link_builder::{
         build_document, calculate_total_hours, find_month_from_timesheet, get_string_month_year,
-        Timesheet, TimesheetDocument, TimesheetHoursForMonth,
+        Timesheet, TimesheetDocument,
     };
-    use crate::repository::{GitLogDates, Repository};
+    use crate::data::repository::Repository;
     use chrono::{TimeZone, Utc};
     use nanoid::nanoid;
-    use serde_json::{json, Map, Number, Value};
+    use serde_json::json;
     use std::cell::RefCell;
-    use std::collections::{HashMap, HashSet};
     use std::rc::Rc;
-
-    pub fn get_timesheet_hashmap() -> GitLogDates {
-        let date_hashmap: GitLogDates = vec![
-            (2020, vec![(8, vec![1])]),
-            (2019, vec![(1, vec![3])]),
-            (2021, vec![(10, vec![23, 20, 21]), (9, vec![8])]),
-        ]
-        .into_iter()
-        .map(|x| {
-            let y: HashMap<u32, HashSet<u32>> =
-                x.1.into_iter()
-                    .map(|k| {
-                        let n: HashSet<u32> = k.1.into_iter().collect();
-                        (k.0, n)
-                    })
-                    .collect();
-            (x.0, y)
-        })
-        .collect();
-
-        date_hashmap
-    }
-
-    fn create_mock_repository() -> Repository {
-        // testing utility that returns
-        // {2021: {10: {20, 23, 21}, 9: {8}}, 2020: {8: {1}}, 2019: {1: {3}}}
-        let date_hashmap: GitLogDates = get_timesheet_hashmap();
-        let timesheet =
-            get_timesheet_map_from_date_hashmap(date_hashmap, &mut Default::default(), vec![]);
-
-        let repository = Repository {
-            timesheet: Option::from(timesheet),
-            ..Default::default()
-        };
-
-        repository
-    }
-
-    fn create_mock_timesheet_hours_for_month() -> TimesheetHoursForMonth {
-        let f64_value = Value::Number(Number::from_f64(8.0).unwrap());
-
-        let mut map = Map::new();
-        map.extend(vec![("hours".to_string(), f64_value)]);
-
-        let month: TimesheetHoursForMonth = vec![map.clone(), map.clone(), map.clone()];
-        month
-    }
+    use crate::helpers::mocks;
 
     #[test]
     fn it_builds_document() {
-        let timesheet_for_month = create_mock_timesheet_hours_for_month();
+        let timesheet_for_month = mocks::create_mock_timesheet_hours_for_month();
 
         let client = Option::from(Client {
             id: nanoid!(),
@@ -329,7 +281,7 @@ mod test {
 
     #[test]
     fn it_calculates_total_hours() {
-        let month = create_mock_timesheet_hours_for_month();
+        let month = mocks::create_mock_timesheet_hours_for_month();
         assert_eq!(calculate_total_hours(&month), 24.0);
     }
 
@@ -389,7 +341,7 @@ mod test {
             Option::from("2021".to_owned()),
         ];
 
-        let timesheet = create_mock_repository();
+        let timesheet = mocks::create_mock_repository();
         assert_eq!(
             find_month_from_timesheet(&timesheet, &options).unwrap(),
             Option::None
@@ -404,7 +356,7 @@ mod test {
             Option::from("2021".to_owned()),
         ];
 
-        let timesheet = create_mock_repository();
+        let timesheet = mocks::create_mock_repository();
         assert!(find_month_from_timesheet(&timesheet, &options).is_ok());
         assert_eq!(
             find_month_from_timesheet(&timesheet, &options)

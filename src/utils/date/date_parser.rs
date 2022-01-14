@@ -1,10 +1,12 @@
-use crate::repository::{GitLogDates, Repository};
-use crate::utils::get_days_from_month;
-use chrono::{TimeZone, Utc};
+use crate::data::repository::{GitLogDates, Repository};
+use chrono::{TimeZone, Utc, NaiveDate};
 use serde_json::{Map, Number, Value};
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
-use std::process;
+use std::{process, io};
+use std::io::ErrorKind;
+use regex::Regex;
+use std::error::Error;
 
 fn return_worked_hours_from_worked_days(
     worked_days: &Vec<u32>,
@@ -189,13 +191,81 @@ pub fn get_timesheet_map_from_date_hashmap(
     timesheet_years
 }
 
+pub fn get_days_from_month(year: i32, month: u32) -> u32 {
+    NaiveDate::from_ymd(
+        match month {
+            12 => year + 1,
+            _ => year,
+        },
+        match month {
+            12 => 1,
+            _ => month + 1,
+        },
+        1,
+    )
+        .signed_duration_since(NaiveDate::from_ymd(year, month, 1))
+        .num_days() as u32
+}
+
+
+pub fn check_for_valid_day(
+    day: &Option<String>,
+    month: u32,
+    year: i32,
+) -> Result<&String, Box<dyn Error>> {
+    let day_string = day
+        .as_ref()
+        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, format!("Day not found")))?;
+
+    let days_in_month = get_days_from_month(year, month);
+    let day_regex = Regex::new(r"^(3[0-1]|2[0-9]|1[0-9]|[1-9])$").unwrap();
+
+    if !day_regex.is_match(day_string) {
+        // into implements a conversion between &str and Box<dyn Error>
+        return Err("Day index in the month doesn't exist".into());
+    }
+
+    if days_in_month < day_string.parse().unwrap() {
+        return Err("The day given doesn't exist for the given month/year".into());
+    }
+
+    Ok(day_string)
+}
+
+pub fn check_for_valid_month(month: &Option<String>) -> Result<u32, Box<dyn Error>> {
+    let month_u32 = month
+        .as_ref()
+        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, format!("Month not found")))?
+        .parse::<u32>()?;
+
+    let month_regex = Regex::new(r"^(1[0-2]|[1-9])$").unwrap();
+
+    if !month_regex.is_match(&*month_u32.to_string()) {
+        return Err("Not a real month".into());
+    }
+
+    Ok(month_u32)
+}
+
+pub fn check_for_valid_year(year: &Option<String>) -> Result<&String, Box<dyn Error>> {
+    let year_string = year
+        .as_ref()
+        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, format!("Year not found")))?;
+
+    let year_regex = Regex::new(r"^((19|20)\d{2})$").unwrap();
+
+    if !year_regex.is_match(year_string) {
+        // into implements a conversion between &str and Box<dyn Error>
+        return Err("Not a real year".into());
+    }
+
+    Ok(year_string)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::date_parser::{
-        get_adjacent_git_log_days_for_month, is_weekend, parse_hours_from_date,
-        return_worked_hours_from_worked_days,
-    };
-    use crate::repository::GitLogDates;
+    use super::*;
+    use crate::data::repository::GitLogDates;
     use serde_json::{Map, Number, Value};
     use std::collections::{HashMap, HashSet};
 
@@ -300,5 +370,61 @@ mod tests {
             vec_of_days,
             vec![HashSet::from([1, 2, 3]), HashSet::from([2, 3, 4])]
         )
+    }
+
+    #[test]
+    fn it_finds_the_number_of_days_for_a_specific_month_and_year() {
+        assert_eq!(get_days_from_month(2021, 10), 31);
+        assert_eq!(get_days_from_month(1989, 2), 28);
+        assert_eq!(get_days_from_month(1945, 6), 30);
+        // leap year
+        assert_eq!(get_days_from_month(2024, 2), 29);
+    }
+
+    #[test]
+    fn it_checks_for_valid_day_and_throws() {
+        // days is a string
+        assert!(check_for_valid_day(&Option::from("foo".to_string()), 10, 2021).is_err());
+        // days don't exist for any month
+        assert!(check_for_valid_day(&Option::from("32".to_string()), 10, 2021).is_err());
+        // days don't exist for november
+        assert!(check_for_valid_day(&Option::from("31".to_string()), 11, 2021).is_err());
+    }
+
+    #[test]
+    fn it_checks_for_valid_day() {
+        assert!(check_for_valid_day(&Option::from("31".to_string()), 10, 2021).is_ok());
+    }
+
+    #[test]
+    fn it_checks_for_valid_month_and_throws() {
+        // month is a string that can't be parsed
+        assert!(check_for_valid_month(&Option::from("foo".to_string())).is_err());
+        // month doesn't exist
+        assert!(check_for_valid_month(&Option::from("99".to_string())).is_err());
+        // month doesn't exist
+        assert!(check_for_valid_month(&Option::from("0".to_string())).is_err());
+    }
+
+    #[test]
+    fn it_checks_for_valid_month() {
+        assert!(check_for_valid_month(&Option::from("12".to_string())).is_ok());
+    }
+
+    #[test]
+    fn it_checks_for_valid_year_and_throws() {
+        // year is a string that can't be parsed
+        assert!(check_for_valid_year(&Option::from("foo".to_string())).is_err());
+        // year doesn't exist
+        assert!(check_for_valid_year(&Option::from("3000".to_string())).is_err());
+        // year is unlikely
+        assert!(check_for_valid_year(&Option::from("1898".to_string())).is_err());
+    }
+
+    #[test]
+    fn it_checks_for_valid_year() {
+        assert!(check_for_valid_year(&Option::from("1998".to_string())).is_ok());
+        assert!(check_for_valid_year(&Option::from("2020".to_string())).is_ok());
+        assert!(check_for_valid_year(&Option::from("2099".to_string())).is_ok());
     }
 }

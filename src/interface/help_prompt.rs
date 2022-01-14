@@ -1,5 +1,5 @@
-use crate::client_repositories::ClientRepositories;
-use crate::repository::Repository;
+use crate::data::client_repositories::ClientRepositories;
+use crate::data::repository::Repository;
 use ansi_term::Style;
 use ascii_table::AsciiTable;
 /// Help prompt handles all of the interactions with the user.
@@ -10,6 +10,7 @@ use regex::Regex;
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
+use crate::utils::file::file_reader;
 
 pub type ConfigurationDoc = Vec<ClientRepositories>;
 pub type RCRepository = Rc<RefCell<Repository>>;
@@ -361,7 +362,7 @@ impl HelpPrompt {
             ascii_table.print(logo);
         }
 
-        let current_repo_path = crate::utils::get_canonical_path(".");
+        let current_repo_path = file_reader::get_canonical_path(".");
         if path == current_repo_path {
             Self::print_question("Initialise for current repository?");
         } else {
@@ -373,7 +374,7 @@ impl HelpPrompt {
         } else {
             Self::print_question("Give a path to the repository you would like to use");
 
-            let path = crate::file_reader::get_home_path()
+            let path = crate::utils::file::file_reader::get_home_path()
                 .to_str()
                 .unwrap()
                 .to_string();
@@ -695,7 +696,7 @@ impl HelpPrompt {
 // mod tests {
 //     use super::*;
 //     use crate::config::New;
-//     use crate::repository;
+//     use crate::data::repository;
 //
 //     #[test]
 //     fn it_sets_a_value() {
