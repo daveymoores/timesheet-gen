@@ -591,7 +591,7 @@ impl Update for Config {
 }
 
 pub trait List {
-    /// Update client or repository details
+    /// List repositories under each client
     fn list(
         &self,
         repository: RCRepository,

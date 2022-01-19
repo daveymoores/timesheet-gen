@@ -387,7 +387,7 @@ mod tests {
     where
         I: Iterator<Item = T>,
         T: Into<OsString> + Clone,
-        K: Init + Make + Edit + Update + Remove,
+        K: Init + Make + Edit + Update + Remove + List,
     {
         let cli = Cli::new_from(commands).unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
@@ -477,6 +477,17 @@ mod tests {
             _client_repositories: RCClientRepositories,
             _prompt: RcHelpPrompt,
             _deserialized_config: &mut ConfigurationDoc,
+        ) {
+            assert!(true);
+        }
+    }
+
+    impl List for MockConfig {
+        fn list(
+            &self,
+            _repository: RCRepository,
+            _client_repositories: RCClientRepositories,
+            _prompt: RcHelpPrompt,
         ) {
             assert!(true);
         }
