@@ -442,10 +442,10 @@ mod tests {
         };
 
         let mut ts = Repository {
-            namespace: Option::from("timesheet-gen".to_string()),
+            namespace: Option::from("autolog".to_string()),
             git_path: Option::from(".".to_string()),
             repo_path: Option::from(
-                "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/".to_string(),
+                "/Users/djm/WebstormProjects/rust-projects/autolog/.git/".to_string(),
             ),
             ..Default::default()
         };
@@ -455,8 +455,8 @@ mod tests {
         assert_eq!(
             x,
             [
-                &"timesheet-gen".to_string(),
-                &"/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/".to_string(),
+                &"autolog".to_string(),
+                &"/Users/djm/WebstormProjects/rust-projects/autolog/.git/".to_string(),
                 &".".to_string(),
             ]
         );
@@ -599,9 +599,9 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
             ..Default::default()
         };
 
-        timesheet.set_git_path("/rust/timesheet-gen/.git/".to_string());
+        timesheet.set_git_path("/rust/autolog/.git/".to_string());
         timesheet.find_namespace_from_git_path().unwrap();
-        assert_eq!(timesheet.namespace.unwrap(), "timesheet-gen".to_string());
+        assert_eq!(timesheet.namespace.unwrap(), "autolog".to_string());
     }
 
     #[test]
@@ -624,7 +624,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
         timesheet.find_git_path_from_directory(output_path).unwrap();
         assert_eq!(
             timesheet.git_path.unwrap(),
-            "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/".to_string()
+            "/Users/djm/WebstormProjects/rust-projects/autolog/.git/".to_string()
         );
     }
 

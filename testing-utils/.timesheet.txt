@@ -1,7 +1,7 @@
 {
-  "namespace": "timesheet-gen",
+  "namespace": "autolog",
   "repo_path": ".",
-  "git_path": "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/",
+  "git_path": "/Users/djm/WebstormProjects/rust-projects/autolog/.git/",
   "name": "Davey Moores",
   "email": "daveymoores@gmail.com",
   "client_name": "Code D'azur",

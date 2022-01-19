@@ -90,7 +90,7 @@ impl Cli<'_> {
                     isn't set, it defaults to the current day",
             );
 
-        let app: App = App::new("timesheet-gen")
+        let app: App = App::new("autolog")
             .version("0.1")
             .author("Davey Moores")
             .about(

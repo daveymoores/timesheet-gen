@@ -11,7 +11,7 @@ use tempfile::tempfile;
 use crate::utils::is_test_mode;
 
 
-const CONFIG_FILE_NAME: &str = ".timesheet-gen.txt";
+const CONFIG_FILE_NAME: &str = ".autolog.txt";
 
 /// Find the path to the users home directory
 pub fn get_home_path() -> PathBuf {
@@ -274,7 +274,7 @@ mod tests {
         let path_buf = PathBuf::from("/path/to/usr");
         assert_eq!(
             get_filepath(path_buf).unwrap(),
-            "/path/to/usr/.timesheet-gen.txt"
+            "/path/to/usr/.autolog.txt"
         );
     }
 
