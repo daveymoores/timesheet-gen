@@ -101,10 +101,8 @@ pub async fn build_unique_uri(
 ) -> Result<(), Box<dyn Error>> {
     dotenv::dotenv().ok();
 
-    let mongodb_db =
-        option_env!("MONGODB_DB").expect("You must set the MONGODB_DB environment var!");
-    let mongodb_collection = option_env!("MONGODB_COLLECTION")
-        .expect("You must set the MONGODB_COLLECTION environment var!");
+    let mongodb_db = env!("MONGODB_DB");
+    let mongodb_collection = env!("MONGODB_COLLECTION");
 
     let month_year_string = get_string_month_year(&options[1], &options[2])?;
     crate::interface::help_prompt::HelpPrompt::show_generating_timesheet_message(
@@ -165,8 +163,7 @@ pub async fn build_unique_uri(
     // Check for existing index for TTL on the collection
     let index_names = collection.list_index_names().await?;
 
-    let expire_time_seconds: i32 = option_env!("EXPIRE_TIME_SECONDS")
-        .expect("You must set the EXPIRE_TIME_SECONDS environment var!")
+    let expire_time_seconds: i32 = env!("EXPIRE_TIME_SECONDS")
         .parse()
         .expect("Expire time can't be parsed to i32");
 
@@ -193,11 +190,7 @@ pub async fn build_unique_uri(
 
     collection.insert_one(document.clone(), None).await?;
 
-    let timesheet_gen_uri: String = format!(
-        "{}/{}",
-        option_env!("AUTOLOG_URI").expect("You must set the AUTOLOG_URI environment var!"),
-        &random_path
-    );
+    let timesheet_gen_uri: String = format!("{}/{}", env!("AUTOLOG_URI"), &random_path);
 
     crate::interface::help_prompt::HelpPrompt::show_new_link_success(
         expire_time_seconds / 60,

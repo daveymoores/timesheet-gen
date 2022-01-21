@@ -18,7 +18,7 @@ pub fn confirm() -> Result<bool, Box<dyn Error>> {
 
 pub fn is_test_mode() -> bool {
     dotenv().ok();
-    let test_mode = option_env!("TEST_MODE").expect("TEST MODE not set");
+    let test_mode = env!("TEST_MODE");
     test_mode.parse::<bool>().unwrap()
 }
 
