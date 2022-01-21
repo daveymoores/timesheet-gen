@@ -21,10 +21,16 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
-          override: true
 
       - name: Run cargo check
         uses: actions-rs/cargo@v1
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          AUTOLOG_URI: ${{ secrets.AUTOLOG_URI }}
+          MONGODB_DB: ${{ secrets.MONGODB_DB }}
+          EXPIRE_TIME_SECONDS: ${{ secrets.EXPIRE_TIME_SECONDS }}
+          MONGODB_COLLECTION: ${{ secrets.MONGODB_COLLECTION }}
+          TEST_MODE: ${{ secrets.TEST_MODE }}
         with:
           command: check
 
@@ -40,10 +46,16 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
-          override: true
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          AUTOLOG_URI: ${{ secrets.AUTOLOG_URI }}
+          MONGODB_DB: ${{ secrets.MONGODB_DB }}
+          EXPIRE_TIME_SECONDS: ${{ secrets.EXPIRE_TIME_SECONDS }}
+          MONGODB_COLLECTION: ${{ secrets.MONGODB_COLLECTION }}
+          TEST_MODE: ${{ secrets.TEST_MODE }}
         with:
           command: test
 
@@ -76,7 +88,6 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
-          override: true
           components: rustfmt, clippy
 
       - name: Run cargo fmt
@@ -87,6 +98,13 @@ jobs:
 
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          AUTOLOG_URI: ${{ secrets.AUTOLOG_URI }}
+          MONGODB_DB: ${{ secrets.MONGODB_DB }}
+          EXPIRE_TIME_SECONDS: ${{ secrets.EXPIRE_TIME_SECONDS }}
+          MONGODB_COLLECTION: ${{ secrets.MONGODB_COLLECTION }}
+          TEST_MODE: ${{ secrets.TEST_MODE }}
         with:
           command: clippy
           #args: -- -D warnings
