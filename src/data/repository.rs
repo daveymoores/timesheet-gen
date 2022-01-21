@@ -1,4 +1,7 @@
-use crate::utils::date::date_parser::{check_for_valid_day, check_for_valid_month, check_for_valid_year, create_single_day_object, DayMap, TimesheetYears};
+use crate::utils::date::date_parser::{
+    check_for_valid_day, check_for_valid_month, check_for_valid_year, create_single_day_object,
+    DayMap, TimesheetYears,
+};
 use chrono::{DateTime, Datelike};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -390,10 +393,10 @@ impl Repository {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::helpers::mocks;
     use serde_json::{json, Map, Number};
     use std::os::unix::process::ExitStatusExt;
     use std::process::ExitStatus;
-    use crate::helpers::mocks;
 
     #[test]
     fn it_checks_for_different_user_details() {

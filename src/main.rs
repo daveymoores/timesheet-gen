@@ -1,10 +1,10 @@
 use std::process;
-mod interface;
-mod helpers;
 mod config;
-mod utils;
 mod data;
 mod db;
+mod helpers;
+mod interface;
+mod utils;
 
 fn main() {
     let cli = interface::cli::Cli::new();

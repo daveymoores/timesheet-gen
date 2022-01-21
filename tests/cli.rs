@@ -65,9 +65,9 @@ fn runs_init_with_args() {
 fn runs_make_with_success() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("autolog")?;
     let assert = cmd.arg("make").assert();
-    assert
-        .failure()
-        .stdout("Finding project data for \'apple\'...\nDoes \'autolog\' require a project/PO number?\n");
+    assert.failure().stdout(
+        "Finding project data for \'apple\'...\nDoes \'autolog\' require a project/PO number?\n",
+    );
     Ok(())
 }
 
