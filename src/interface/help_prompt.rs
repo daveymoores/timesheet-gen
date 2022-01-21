@@ -66,9 +66,9 @@ impl HelpPrompt {
 
     pub fn repo_already_initialised() {
         println!(
-            "\u{1F916} timesheet-gen has already been initialised for this repository.\n\
-    Try 'timesheet-gen make' to create your first timesheet \n\
-    or 'timesheet-gen help' for more options."
+            "\u{1F916} autolog has already been initialised for this repository.\n\
+    Try 'autolog make' to create your first timesheet \n\
+    or 'autolog help' for more options."
         );
         std::process::exit(exitcode::OK);
     }
@@ -78,11 +78,11 @@ impl HelpPrompt {
             "\n{}",
             Style::new()
                 .bold()
-                .paint("timesheet-gen initialised \u{1F389} \n")
+                .paint("autolog initialised \u{1F389} \n")
         );
         println!(
-            "Try 'timesheet-gen make' to create your first timesheet \n\
-            or 'timesheet-gen help' for more options."
+            "Try 'autolog make' to create your first timesheet \n\
+            or 'autolog help' for more options."
         );
         std::process::exit(exitcode::OK);
     }
@@ -95,19 +95,19 @@ impl HelpPrompt {
                 .paint("New repository added \u{1F389} \n")
         );
         println!(
-            "Try 'timesheet-gen make' to create your first timesheet \n\
-            or 'timesheet-gen help' for more options."
+            "Try 'autolog make' to create your first timesheet \n\
+            or 'autolog help' for more options."
         );
         std::process::exit(exitcode::OK);
     }
 
     pub fn show_edited_config_success() {
-        println!("\ntimesheet-gen successfully edited \u{1F389}");
+        println!("\nautolog successfully edited \u{1F389}");
         crate::utils::exit_process();
     }
 
     pub fn show_updated_config_success() {
-        println!("\ntimesheet-gen successfully updated \u{1F389}");
+        println!("\nautolog successfully updated \u{1F389}");
         crate::utils::exit_process();
     }
 
@@ -347,10 +347,10 @@ impl HelpPrompt {
             None => {
                 println!(
                     "A configuration file hasn't been found, which suggests \n\
-                    timesheet-gen hasn't been initialised yet, or that all \n\
+                    autolog hasn't been initialised yet, or that all \n\
                     clients and repositories were removed. \n\
                     \n\
-                    Run timesheet-gen init to add your first client."
+                    Run autolog init to add your first client."
                 );
                 std::process::exit(exitcode::OK);
             }
@@ -415,7 +415,7 @@ impl HelpPrompt {
         Self::print_question("Set an alias for this client?");
         println!(
             "{}",
-            Self::dim_text("Note: These can be updated by running timesheet-gen update.")
+            Self::dim_text("Note: These can be updated by running autolog update.")
         );
 
         if Confirm::new().default(true).interact()? {
@@ -504,7 +504,7 @@ impl HelpPrompt {
         if prompt_for_approver {
             Self::print_question("Do timesheets under this client require approval?");
             println!("{}", Self::dim_text(
-            "(This will enable signing functionality, see https://timesheet-gen.io/docs/signing)",
+            "(This will enable signing functionality, see https://autolog.dev/docs/signing)",
             ));
 
             if Confirm::new().default(true).interact()? {
@@ -690,23 +690,22 @@ impl HelpPrompt {
 
         self
     }
-}
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::config::New;
-//     use crate::data::repository;
-//
-//     #[test]
-//     fn it_sets_a_value() {
-//         let repository = Rc::new(RefCell::new(repository::Repository::new()));
-//         let client_repositories = Rc::new(RefCell::new(ClientRepositories::new()));
-//
-//         let mut y = HelpPrompt::new(Rc::clone(&repository), Rc::clone(&client_repositories));
-//
-//         y.set_value_on_client_repo(true);
-//         println!("{:#?}", client_repositories);
-//         assert!(client_repositories.borrow()[0].requires_approval);
-//     }
-// }
+    pub fn list_clients_and_repos(&self, config: ConfigurationDoc) -> &Self {
+        for client in config {
+            println!("\n {}", Style::new().bold().paint(client.get_client_name()));
+            let ascii_table = AsciiTable::default();
+            let mut rows = vec![];
+
+            if let Some(repositories) = client.repositories {
+                for repo in repositories {
+                    rows.push(vec![repo.namespace.unwrap()]);
+                }
+
+                ascii_table.print(rows);
+            }
+        }
+
+        self
+    }
+}

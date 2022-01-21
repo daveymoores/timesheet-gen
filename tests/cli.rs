@@ -2,7 +2,7 @@ use assert_cmd::Command;
 
 #[test]
 fn runs_binary_with_a_command_that_doesnt_exist() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("timesheet-gen")?;
+    let mut cmd = Command::cargo_bin("autolog")?;
     cmd.arg("foo");
     cmd.assert().failure();
 
@@ -11,7 +11,7 @@ fn runs_binary_with_a_command_that_doesnt_exist() -> Result<(), Box<dyn std::err
 
 #[test]
 fn runs_binary_with_a_command_that_does_exist() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("timesheet-gen")?;
+    let mut cmd = Command::cargo_bin("autolog")?;
     cmd.arg("--help");
     cmd.assert().success();
 
@@ -21,7 +21,7 @@ fn runs_binary_with_a_command_that_does_exist() -> Result<(), Box<dyn std::error
 #[test]
 #[ignore]
 fn runs_init_for_repo_outside_of_current_directory() {
-    let mut cmd = Command::cargo_bin("timesheet-gen").unwrap();
+    let mut cmd = Command::cargo_bin("autolog").unwrap();
     let assert = cmd
         .env("TEST_MODE", "true")
         .arg("init")
@@ -35,7 +35,7 @@ fn runs_init_for_repo_outside_of_current_directory() {
 
 #[test]
 fn runs_init_for_path_that_doesnt_exist() {
-    let mut cmd = Command::cargo_bin("timesheet-gen").unwrap();
+    let mut cmd = Command::cargo_bin("autolog").unwrap();
     let assert = cmd
         .env("TEST_MODE", "true")
         .arg("init")
@@ -50,30 +50,30 @@ fn runs_init_for_path_that_doesnt_exist() {
 #[test]
 #[ignore]
 fn runs_init_with_args() {
-    let mut cmd = Command::cargo_bin("timesheet-gen").unwrap();
+    let mut cmd = Command::cargo_bin("autolog").unwrap();
     let assert = cmd.env("TEST_MODE", "true").arg("init").assert();
 
     assert.success().stdout(
-        "\u{1F916} timesheet-gen has already been initialised for this repository.\n\
-        Try \'timesheet-gen make\' to create your first timesheet \n\
-        or \'timesheet-gen help\' for more options.\n",
+        "\u{1F916} autolog has already been initialised for this repository.\n\
+        Try \'autolog make\' to create your first timesheet \n\
+        or \'autolog help\' for more options.\n",
     );
 }
 
 #[test]
 #[ignore]
 fn runs_make_with_success() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("timesheet-gen")?;
+    let mut cmd = Command::cargo_bin("autolog")?;
     let assert = cmd.arg("make").assert();
     assert
         .failure()
-        .stdout("Finding project data for \'apple\'...\nDoes \'timesheet-gen\' require a project/PO number?\n");
+        .stdout("Finding project data for \'apple\'...\nDoes \'autolog\' require a project/PO number?\n");
     Ok(())
 }
 
 #[test]
 fn runs_remove_with_failure() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("timesheet-gen")?;
+    let mut cmd = Command::cargo_bin("autolog")?;
     let assert = cmd
         .env("TEST_MODE", "true")
         .arg("remove")
@@ -90,7 +90,7 @@ fn runs_remove_with_failure() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 #[ignore]
 fn runs_remove_and_prompts_to_remove_client() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("timesheet-gen")?;
+    let mut cmd = Command::cargo_bin("autolog")?;
     let assert = cmd
         .env("TEST_MODE", "true")
         .arg("remove")
@@ -105,17 +105,17 @@ fn runs_remove_and_prompts_to_remove_client() -> Result<(), Box<dyn std::error::
 #[test]
 #[ignore]
 fn runs_remove_and_prompts_to_remove_namespace() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("timesheet-gen")?;
+    let mut cmd = Command::cargo_bin("autolog")?;
     let assert = cmd
         .env("TEST_MODE", "true")
         .arg("remove")
         .arg("--client=apple")
-        .arg("--namespace=timesheet-gen")
+        .arg("--namespace=autolog")
         .assert();
 
     assert
         .failure()
-        .stdout("Remove \'timesheet-gen\' from client \'apple\'?\n");
+        .stdout("Remove \'autolog\' from client \'apple\'?\n");
 
     Ok(())
 }

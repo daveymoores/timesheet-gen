@@ -178,7 +178,7 @@ impl Config {
         // pass a prompt for if the config file doesn't exist
         crate::utils::file::file_reader::read_data_from_config_file(buffer, prompt.clone()).unwrap_or_else(
             |err| {
-                eprintln!("Error initialising timesheet-gen: {}", err);
+                eprintln!("Error initialising autolog: {}", err);
                 std::process::exit(exitcode::CANTCREAT);
             },
         );
@@ -337,7 +337,7 @@ impl Make for Config {
                         std::process::exit(exitcode::CANTCREAT);
                     });
 
-                // generate timesheet-gen.io link using existing config
+                // generate autolog.dev link using existing config
                 link_builder::build_unique_uri(Rc::clone(&client_repositories), options)
                     .await
                     .unwrap_or_else(|err| {
@@ -500,7 +500,7 @@ impl Remove for Config {
                 //TODO - would be nice to improve this
                 if deserialized_config.len() == 0 {
                     crate::utils::file::file_reader::delete_config_file().expect(
-                        "Config file was empty so timesheet-gen tried to remove it. That failed.",
+                        "Config file was empty so autolog tried to remove it. That failed.",
                     );
                     exit_process();
                     return;
@@ -590,6 +590,41 @@ impl Update for Config {
     }
 }
 
+pub trait List {
+    /// List repositories under each client
+    fn list(
+        &self,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
+        prompt: RcHelpPrompt,
+    );
+}
+
+impl List for Config {
+    fn list(
+        &self,
+        repository: RCRepository,
+        client_repositories: RCClientRepositories,
+        prompt: RcHelpPrompt,
+    ) {
+        // try to read config file. Write a new one if it doesn't exist
+        let mut buffer = String::new();
+        self.check_for_config_file(
+            &mut buffer,
+            Rc::clone(&repository),
+            Rc::clone(&client_repositories),
+            Rc::clone(&prompt),
+        );
+
+        if crate::utils::config_file_found(&mut buffer) {
+            let deserialized_config: ConfigurationDoc = serde_json::from_str(&buffer)
+                .expect("Initialisation of ClientRepository struct from buffer failed");
+
+            prompt.borrow().list_clients_and_repos(deserialized_config);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::data::client_repositories::ClientRepositories;
@@ -611,7 +646,7 @@ mod tests {
 
         let config = Config::new();
         let options = vec![
-            Option::from("timesheet-gen".to_string()),
+            Option::from("autolog".to_string()),
             Option::from("20".to_string()),
             Option::from("1".to_string()),
             Option::from("11".to_string()),
@@ -800,7 +835,7 @@ mod tests {
         {
             assert_eq!(
                 *repository.namespace.as_ref().unwrap(),
-                "timesheet-gen".to_string()
+                "autolog".to_string()
             )
         }
     }
@@ -819,7 +854,7 @@ mod tests {
             .check_for_client_or_repo_in_buffer(
                 &mut vec![deserialized_config],
                 Option::None,
-                Option::from(&"timesheet-gen".to_string()),
+                Option::from(&"autolog".to_string()),
                 Option::None,
             )
             .unwrap()
@@ -827,7 +862,7 @@ mod tests {
         {
             assert_eq!(
                 *repository.namespace.as_ref().unwrap(),
-                "timesheet-gen".to_string()
+                "autolog".to_string()
             )
         }
     }

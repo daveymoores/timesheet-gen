@@ -15,7 +15,7 @@ pub fn create_mock_client_repository(client_repository: &mut ClientRepositories)
         client_contact_person: Option::from("John Smith".to_string()),
         name: Option::from("Jim Jones".to_string()),
         email: Option::from("jim@jones.com".to_string()),
-        namespace: Option::from("timesheet-gen".to_string()),
+        namespace: Option::from("autolog".to_string()),
         ..Default::default()
     });
 

@@ -15,9 +15,9 @@
     "repositories": [
       {
         "id": "BPBM_mscBm_6-CT6n3dbZ",
-        "namespace": "timesheet-gen",
+        "namespace": "autolog",
         "repo_path": ".",
-        "git_path": "/Users/djm/WebstormProjects/rust-projects/timesheet-gen/.git/",
+        "git_path": "/Users/djm/WebstormProjects/rust-projects/autolog/.git/",
         "git_log_dates": {
           "2021": {
             "12": [

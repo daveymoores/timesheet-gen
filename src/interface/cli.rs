@@ -1,7 +1,7 @@
 extern crate clap;
 use crate::data::client_repositories::ClientRepositories;
 use crate::config;
-use crate::config::{Edit, Init, Make, New, Remove, Update};
+use crate::config::{Edit, Init, Make, New, Remove, Update, List};
 use crate::interface::help_prompt::{ConfigurationDoc, HelpPrompt, RCClientRepositories};
 use crate::data::repository;
 use crate::data::repository::Repository;
@@ -21,6 +21,7 @@ pub enum Commands {
     Edit,
     Remove,
     Update,
+    List,
 }
 
 #[derive(Debug, Default)]
@@ -89,7 +90,7 @@ impl Cli<'_> {
                     isn't set, it defaults to the current day",
             );
 
-        let app: App = App::new("timesheet-gen")
+        let app: App = App::new("autolog")
             .version("0.1")
             .author("Davey Moores")
             .about(
@@ -147,7 +148,9 @@ impl Cli<'_> {
                     .help(
                         "Pass an optional namespace/project name of the git repository",
                     )))
-            .subcommand(App::new("make")
+            .subcommand(App::new("list")
+                .about("List all clients and associated repositories"))
+        .subcommand(App::new("make")
                 .about("Generate a new timesheet on a unique link")
                 .arg(Arg::with_name("client")
                     .short("c")
@@ -166,6 +169,7 @@ impl Cli<'_> {
                     isn't set, it defaults to the current day",
                     ))
                 .arg(&year_arg));
+
 
         // extract the matches
         let matches = app.get_matches_from_safe(args)?;
@@ -243,6 +247,8 @@ impl Cli<'_> {
             options.push(Some(update.value_of("client").unwrap().to_string()));
             options.push(update.value_of("namespace").map(String::from));
             command = Some(Commands::Update);
+        } else if let Some(_) = matches.subcommand_matches("list") {
+            command = Some(Commands::List);
         } else {
             return Err(Error {
                 message: "No matches for inputs".to_string(),
@@ -306,7 +312,7 @@ impl Cli<'_> {
         prompt: &RcHelpPrompt,
         mut deserialized_config: ConfigurationDoc,
     ) where
-        T: Init + Make + Edit + Update + Remove,
+        T: Init + Make + Edit + Update + Remove + List,
     {
         match cli.command {
             None => {
@@ -344,6 +350,11 @@ impl Cli<'_> {
                     Rc::clone(client_repositories),
                     Rc::clone(prompt),
                 ),
+                Commands::List => config.list(
+                    Rc::clone(&repository),
+                    Rc::clone(client_repositories),
+                    Rc::clone(prompt),
+                ),
             },
         }
     }
@@ -376,7 +387,7 @@ mod tests {
     where
         I: Iterator<Item = T>,
         T: Into<OsString> + Clone,
-        K: Init + Make + Edit + Update + Remove,
+        K: Init + Make + Edit + Update + Remove + List,
     {
         let cli = Cli::new_from(commands).unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
@@ -466,6 +477,17 @@ mod tests {
             _client_repositories: RCClientRepositories,
             _prompt: RcHelpPrompt,
             _deserialized_config: &mut ConfigurationDoc,
+        ) {
+            assert!(true);
+        }
+    }
+
+    impl List for MockConfig {
+        fn list(
+            &self,
+            _repository: RCRepository,
+            _client_repositories: RCClientRepositories,
+            _prompt: RcHelpPrompt,
         ) {
             assert!(true);
         }
