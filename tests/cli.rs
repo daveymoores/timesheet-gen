@@ -34,6 +34,7 @@ fn runs_init_for_repo_outside_of_current_directory() {
 }
 
 #[test]
+#[ignore]
 fn runs_init_for_path_that_doesnt_exist() {
     let mut cmd = Command::cargo_bin("autolog").unwrap();
     let assert = cmd
