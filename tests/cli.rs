@@ -72,8 +72,8 @@ fn runs_make_with_success() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-fn runs_remove_with_failure() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("autolog")?;
+fn runs_remove_with_failure() {
+    let mut cmd = Command::cargo_bin("autolog").unwrap();
     let assert = cmd
         .env("TEST_MODE", "true")
         .arg("remove")
@@ -83,8 +83,6 @@ fn runs_remove_with_failure() -> Result<(), Box<dyn std::error::Error>> {
     assert
         .failure()
         .stderr("The client, or client + namespace combination you passed has not be found.\n");
-
-    Ok(())
 }
 
 #[test]

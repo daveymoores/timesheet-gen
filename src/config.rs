@@ -139,8 +139,8 @@ impl Config {
                 {
                     option = (Option::None, Option::from(&deserialized_config[i]));
                 } else if i == &deserialized_config.len() - 1 {
-                    // if the client is passed but not found
-                    //TODO - if this happens it would be good to give options - i.e list of clients, and list of repos
+                    //TODO - if the client is passed but not found
+                    //TODO - it would be good to give options - i.e list of clients, and list of repos
                     eprintln!(
                         "The client, or client + namespace combination you passed has not be found.");
                     std::process::exit(exitcode::CANTCREAT);
