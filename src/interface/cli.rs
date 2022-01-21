@@ -1,16 +1,16 @@
 extern crate clap;
-use crate::data::client_repositories::ClientRepositories;
 use crate::config;
-use crate::config::{Edit, Init, Make, New, Remove, Update, List};
-use crate::interface::help_prompt::{ConfigurationDoc, HelpPrompt, RCClientRepositories};
+use crate::config::{Edit, Init, List, Make, New, Remove, Update};
+use crate::data::client_repositories::ClientRepositories;
 use crate::data::repository;
 use crate::data::repository::Repository;
+use crate::interface::help_prompt::{ConfigurationDoc, HelpPrompt, RCClientRepositories};
+use crate::utils::file::file_reader;
 use chrono::prelude::*;
 use clap::{App, Arg, ArgMatches, Error};
 use std::cell::RefCell;
 use std::ffi::OsString;
 use std::rc::Rc;
-use crate::utils::file::file_reader;
 
 pub type RcHelpPrompt = Rc<RefCell<HelpPrompt>>;
 
@@ -169,7 +169,6 @@ impl Cli<'_> {
                     isn't set, it defaults to the current day",
                     ))
                 .arg(&year_arg));
-
 
         // extract the matches
         let matches = app.get_matches_from_safe(args)?;
@@ -364,8 +363,8 @@ impl Cli<'_> {
 mod tests {
     use super::*;
     use crate::config::{New, Remove};
-    use crate::interface::help_prompt::RCRepository;
     use crate::data::repository::Repository;
+    use crate::interface::help_prompt::RCRepository;
     use std::fmt::Debug;
     use std::str::FromStr;
 

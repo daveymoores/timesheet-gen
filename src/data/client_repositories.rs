@@ -269,11 +269,13 @@ impl ClientRepositories {
                     .collect();
 
                 let timesheet = match &repositories[i].git_log_dates {
-                    Some(git_log_dates) => crate::utils::date::date_parser::get_timesheet_map_from_date_hashmap(
-                        git_log_dates.clone(),
-                        &mut repositories[i],
-                        adjacent_git_log_dates,
-                    ),
+                    Some(git_log_dates) => {
+                        crate::utils::date::date_parser::get_timesheet_map_from_date_hashmap(
+                            git_log_dates.clone(),
+                            &mut repositories[i],
+                            adjacent_git_log_dates,
+                        )
+                    }
                     None => {
                         eprintln!("No dates parsed from git log");
                         process::exit(exitcode::DATAERR);
@@ -292,10 +294,10 @@ impl ClientRepositories {
 mod tests {
     use crate::data::client_repositories::{Client, ClientRepositories, User};
     use crate::data::repository::Repository;
+    use crate::helpers::mocks;
     use nanoid::nanoid;
     use serde_json::json;
     use std::cell::RefCell;
-    use crate::helpers::mocks;
 
     #[test]
     fn it_set_requires_approval() {

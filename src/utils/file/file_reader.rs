@@ -1,5 +1,6 @@
 use crate::data::client_repositories::ClientRepositories;
 use crate::interface::help_prompt::{ConfigurationDoc, Onboarding, RCClientRepositories};
+use crate::utils::is_test_mode;
 use serde_json::json;
 use std::cell::RefCell;
 use std::fs::File;
@@ -8,8 +9,6 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::rc::Rc;
 use tempfile::tempfile;
-use crate::utils::is_test_mode;
-
 
 const CONFIG_FILE_NAME: &str = ".autolog.txt";
 
@@ -181,6 +180,7 @@ pub fn get_canonical_path(path: &str) -> String {
 mod tests {
     use super::*;
     use crate::data::client_repositories::Client;
+    use crate::helpers::mocks;
     use envtestkit::lock::lock_test;
     use envtestkit::set_env;
     use nanoid::nanoid;
@@ -188,7 +188,6 @@ mod tests {
     use std::error::Error;
     use std::ffi::OsString;
     use std::path::Path;
-    use crate::helpers::mocks;
 
     #[test]
     fn it_serializes_a_config_and_adds_to_an_existing_client() {
@@ -272,10 +271,7 @@ mod tests {
         let _test = set_env(OsString::from("TEST_MODE"), "false");
 
         let path_buf = PathBuf::from("/path/to/usr");
-        assert_eq!(
-            get_filepath(path_buf).unwrap(),
-            "/path/to/usr/.autolog.txt"
-        );
+        assert_eq!(get_filepath(path_buf).unwrap(), "/path/to/usr/.autolog.txt");
     }
 
     #[test]

@@ -1,11 +1,11 @@
 #![allow(unused_imports)]
-use crate::data::repository::{Repository, GitLogDates};
-use std::cell::RefCell;
 use crate::data::client_repositories::ClientRepositories;
-use crate::utils::date::date_parser::{TimesheetYears, get_timesheet_map_from_date_hashmap};
-use std::collections::{HashMap, HashSet};
-use serde_json::{Value, Map, Number};
+use crate::data::repository::{GitLogDates, Repository};
+use crate::utils::date::date_parser::{get_timesheet_map_from_date_hashmap, TimesheetYears};
 use crate::utils::link::link_builder::TimesheetHoursForMonth;
+use serde_json::{Map, Number, Value};
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 
 #[cfg(test)]
 pub fn create_mock_client_repository(client_repository: &mut ClientRepositories) {
@@ -53,18 +53,18 @@ pub fn get_timesheet_hashmap() -> GitLogDates {
         (2019, vec![(1, vec![3])]),
         (2021, vec![(10, vec![23, 20, 21]), (9, vec![8])]),
     ]
-        .into_iter()
-        .map(|x| {
-            let y: HashMap<u32, HashSet<u32>> =
-                x.1.into_iter()
-                    .map(|k| {
-                        let n: HashSet<u32> = k.1.into_iter().collect();
-                        (k.0, n)
-                    })
-                    .collect();
-            (x.0, y)
-        })
-        .collect();
+    .into_iter()
+    .map(|x| {
+        let y: HashMap<u32, HashSet<u32>> =
+            x.1.into_iter()
+                .map(|k| {
+                    let n: HashSet<u32> = k.1.into_iter().collect();
+                    (k.0, n)
+                })
+                .collect();
+        (x.0, y)
+    })
+    .collect();
 
     date_hashmap
 }

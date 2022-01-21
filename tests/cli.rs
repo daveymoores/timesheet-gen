@@ -65,15 +65,15 @@ fn runs_init_with_args() {
 fn runs_make_with_success() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("autolog")?;
     let assert = cmd.arg("make").assert();
-    assert
-        .failure()
-        .stdout("Finding project data for \'apple\'...\nDoes \'autolog\' require a project/PO number?\n");
+    assert.failure().stdout(
+        "Finding project data for \'apple\'...\nDoes \'autolog\' require a project/PO number?\n",
+    );
     Ok(())
 }
 
 #[test]
-fn runs_remove_with_failure() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("autolog")?;
+fn runs_remove_with_failure() {
+    let mut cmd = Command::cargo_bin("autolog").unwrap();
     let assert = cmd
         .env("TEST_MODE", "true")
         .arg("remove")
@@ -83,8 +83,6 @@ fn runs_remove_with_failure() -> Result<(), Box<dyn std::error::Error>> {
     assert
         .failure()
         .stderr("The client, or client + namespace combination you passed has not be found.\n");
-
-    Ok(())
 }
 
 #[test]

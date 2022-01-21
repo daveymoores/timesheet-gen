@@ -2,12 +2,12 @@ pub mod date;
 pub mod file;
 pub mod link;
 
-use std::env;
-use std::error::Error;
-use std::process::Output;
 use dialoguer::Confirm;
 use dotenv::dotenv;
 use random_string::generate;
+use std::env;
+use std::error::Error;
+use std::process::Output;
 
 pub fn confirm() -> Result<bool, Box<dyn Error>> {
     if is_test_mode() {

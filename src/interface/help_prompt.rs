@@ -1,5 +1,6 @@
 use crate::data::client_repositories::ClientRepositories;
 use crate::data::repository::Repository;
+use crate::utils::file::file_reader;
 use ansi_term::Style;
 use ascii_table::AsciiTable;
 /// Help prompt handles all of the interactions with the user.
@@ -10,7 +11,6 @@ use regex::Regex;
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
-use crate::utils::file::file_reader;
 
 pub type ConfigurationDoc = Vec<ClientRepositories>;
 pub type RCRepository = Rc<RefCell<Repository>>;

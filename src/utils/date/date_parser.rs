@@ -1,12 +1,12 @@
 use crate::data::repository::{GitLogDates, Repository};
-use chrono::{TimeZone, Utc, NaiveDate};
+use chrono::{NaiveDate, TimeZone, Utc};
+use regex::Regex;
 use serde_json::{Map, Number, Value};
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
-use std::{process, io};
-use std::io::ErrorKind;
-use regex::Regex;
 use std::error::Error;
+use std::io::ErrorKind;
+use std::{io, process};
 
 fn return_worked_hours_from_worked_days(
     worked_days: &Vec<u32>,
@@ -203,10 +203,9 @@ pub fn get_days_from_month(year: i32, month: u32) -> u32 {
         },
         1,
     )
-        .signed_duration_since(NaiveDate::from_ymd(year, month, 1))
-        .num_days() as u32
+    .signed_duration_since(NaiveDate::from_ymd(year, month, 1))
+    .num_days() as u32
 }
-
 
 pub fn check_for_valid_day(
     day: &Option<String>,

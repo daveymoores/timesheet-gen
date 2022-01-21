@@ -1,4 +1,7 @@
-use crate::utils::date::date_parser::{check_for_valid_day, check_for_valid_month, check_for_valid_year, create_single_day_object, DayMap, TimesheetYears};
+use crate::utils::date::date_parser::{
+    check_for_valid_day, check_for_valid_month, check_for_valid_year, create_single_day_object,
+    DayMap, TimesheetYears,
+};
 use chrono::{DateTime, Datelike};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -203,7 +206,6 @@ impl Repository {
             .output()
             .expect("Failed to find 'git_path'");
 
-        // TODO catch error here if path isn't found
         self.find_git_path_from_directory(output_path)?;
 
         Ok(self)
@@ -391,10 +393,10 @@ impl Repository {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::helpers::mocks;
     use serde_json::{json, Map, Number};
     use std::os::unix::process::ExitStatusExt;
     use std::process::ExitStatus;
-    use crate::helpers::mocks;
 
     #[test]
     fn it_checks_for_different_user_details() {
@@ -612,12 +614,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
 
         let output_path = Output {
             status: ExitStatus::from_raw(0),
-            stdout: vec![
-                47, 85, 115, 101, 114, 115, 47, 100, 106, 109, 47, 87, 101, 98, 115, 116, 111, 114,
-                109, 80, 114, 111, 106, 101, 99, 116, 115, 47, 114, 117, 115, 116, 45, 112, 114,
-                111, 106, 101, 99, 116, 115, 47, 116, 105, 109, 101, 115, 104, 101, 101, 116, 45,
-                103, 101, 110, 10,
-            ],
+            stdout: Vec::from("/Users/djm/WebstormProjects/rust-projects/autolog\n"),
             stderr: vec![],
         };
 
