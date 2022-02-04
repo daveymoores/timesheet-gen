@@ -14,4 +14,4 @@ Checklist to alpha:
 - [ ] In timesheet edits 
 - [ ] Request approval by notification
 
-![Timesheet example](./readme-assets/timesheet.jpg?raw=true "Timesheet example")
+![Timesheet example](./readme-assets/timesheet.png?raw=true "Timesheet example")
