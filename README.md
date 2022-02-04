@@ -10,6 +10,7 @@ Checklist to alpha:
 - [X] Allow in timesheet approvals via QR codes
 - [X] Split time between multiple projects
 - [X] Edit, Update, Remove, List, Make
+- [X] Deploy pre-alpha on homebrew
 - [ ] Optional signup
 - [ ] In timesheet edits 
 - [ ] Request approval by notification
