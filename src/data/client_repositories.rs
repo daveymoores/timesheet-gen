@@ -31,6 +31,7 @@ pub struct User {
     pub name: String,
     pub email: String,
     pub is_alias: bool,
+    pub thumbnail: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -93,6 +94,7 @@ impl ClientRepositories {
                 name: repository.name.clone().unwrap_or("None".to_string()),
                 email: repository.email.clone().unwrap_or("None".to_string()),
                 is_alias: false,
+                thumbnail: Option::None,
             });
         }
 
@@ -526,6 +528,7 @@ mod tests {
                 name: "Jim Jones".to_string(),
                 email: "jim@jones.com".to_string(),
                 is_alias: false,
+                thumbnail: Option::None,
             })
         );
 
@@ -559,6 +562,7 @@ mod tests {
                 name: "Jim Jones".to_string(),
                 email: "jim@jones.com".to_string(),
                 is_alias: false,
+                thumbnail: Option::None,
             }),
             repositories: Option::Some(vec![
                 Repository {

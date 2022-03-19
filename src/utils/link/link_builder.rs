@@ -231,6 +231,7 @@ mod test {
             name: "Jim Jones".to_string(),
             email: "jim@jones.com".to_string(),
             is_alias: false,
+            thumbnail: Option::None,
         });
 
         let approver = Option::from(Approver {
