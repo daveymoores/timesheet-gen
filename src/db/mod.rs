@@ -6,7 +6,6 @@ use mongodb::options::{ClientOptions, ResolverConfig};
 use mongodb::{bson::doc, options::FindOptions};
 use mongodb::{Client, Collection};
 use serde::de::DeserializeOwned;
-use std::env;
 use std::error::Error;
 
 pub struct Db {
@@ -17,8 +16,7 @@ impl Db {
     pub async fn new() -> Result<Db, Box<dyn Error>> {
         dotenv().ok();
 
-        let client_uri =
-            env::var("MONGODB_URI").expect("You must set the MONGODB_URI environment var!");
+        let client_uri = env!("MONGODB_URI");
 
         let options: ClientOptions =
             ClientOptions::parse_with_resolver_config(&client_uri, ResolverConfig::cloudflare())

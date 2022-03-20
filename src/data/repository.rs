@@ -31,6 +31,8 @@ pub struct Repository {
     pub client_address: Option<String>,
     pub project_number: Option<String>,
     pub timesheet: Option<TimesheetYears>,
+    pub service: Option<String>,
+    pub service_username: Option<String>,
 }
 
 impl Default for Repository {
@@ -51,6 +53,8 @@ impl Default for Repository {
             client_address: None,
             project_number: None,
             timesheet: None,
+            service: None,
+            service_username: None,
         }
     }
 }
@@ -133,6 +137,16 @@ impl Repository {
 
     pub fn set_name(&mut self, value: String) -> &mut Self {
         self.name = Option::from(value);
+        self
+    }
+
+    pub fn set_service(&mut self, value: String) -> &mut Self {
+        self.service = Option::from(value);
+        self
+    }
+
+    pub fn set_service_username(&mut self, value: String) -> &mut Self {
+        self.service_username = Option::from(value);
         self
     }
 
@@ -241,7 +255,15 @@ impl Repository {
             .output()
             .expect("Failed to find 'user.email'");
 
-        self.find_repository_details(output_name, output_email)?;
+        let repository_service = Command::new("git")
+            .arg("-C")
+            .arg(&self.repo_path.clone().unwrap())
+            .arg("remote")
+            .arg("-v")
+            .output()
+            .expect("Failed to find 'user.email'");
+
+        self.find_repository_details(output_name, output_email, repository_service)?;
 
         Ok(self)
     }
@@ -260,14 +282,47 @@ impl Repository {
         !name_is_same | !email_is_same
     }
 
+    pub fn find_service_data_from_output(
+        &mut self,
+        service: String,
+    ) -> Result<&mut Self, Box<dyn std::error::Error>> {
+        let regex =
+            regex::Regex::new(r"(?:\S+@)(?P<service>\w+)(?:.(com|org))[:/](?P<username>\S+)/")
+                .unwrap();
+
+        match regex.captures(&*service) {
+            None => {}
+            Some(cap) => {
+                match cap.name("service") {
+                    None => {}
+                    Some(capture) => {
+                        self.set_service(capture.as_str().to_owned());
+                    }
+                };
+
+                match cap.name("username") {
+                    None => {}
+                    Some(capture) => {
+                        self.set_service_username(capture.as_str().to_owned());
+                    }
+                };
+            }
+        }
+
+        Ok(self)
+    }
+
     pub fn find_repository_details(
         &mut self,
         output_name: Output,
         output_email: Output,
+        output_service: Output,
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
+        let service = crate::utils::trim_output_from_utf8(output_service)?;
         let name = crate::utils::trim_output_from_utf8(output_name)?;
         let email = crate::utils::trim_output_from_utf8(output_email)?;
 
+        self.find_service_data_from_output(service)?;
         self.set_name(name);
         self.set_email(email);
 
@@ -397,6 +452,66 @@ mod tests {
     use serde_json::{json, Map, Number};
     use std::os::unix::process::ExitStatusExt;
     use std::process::ExitStatus;
+
+    #[test]
+    fn it_sets_service() {
+        let mut repository = Repository {
+            ..Default::default()
+        };
+
+        repository.set_service("github".to_string());
+        assert_eq!(repository.service.unwrap(), "github".to_string());
+    }
+
+    #[test]
+    fn it_sets_service_username() {
+        let mut repository = Repository {
+            ..Default::default()
+        };
+
+        repository.set_service_username("daveymoores".to_string());
+        assert_eq!(
+            repository.service_username.unwrap(),
+            "daveymoores".to_string()
+        );
+    }
+
+    #[test]
+    fn it_finds_a_service_from_output_string() {
+        let mut repository = Repository {
+            ..Default::default()
+        };
+
+        repository
+            .find_service_data_from_output(
+                "\
+        origin  git@github.com:daveymoores/autolog.git (fetch)
+origin  git@github.com:daveymoores/autolog.git (push)\
+        "
+                .to_string(),
+            )
+            .unwrap();
+
+        assert_eq!(repository.service.unwrap(), "github".to_string());
+        assert_eq!(
+            repository.service_username.unwrap(),
+            "daveymoores".to_string()
+        );
+    }
+
+    #[test]
+    fn it_doesnt_find_a_service_from_output_string() {
+        let mut repository = Repository {
+            ..Default::default()
+        };
+
+        repository
+            .find_service_data_from_output("".to_string())
+            .unwrap();
+
+        assert_eq!(repository.service, Option::None);
+        assert_eq!(repository.service_username, Option::None);
+    }
 
     #[test]
     fn it_checks_for_different_user_details() {

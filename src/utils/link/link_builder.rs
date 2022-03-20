@@ -10,9 +10,10 @@ use num_traits::cast::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::error::Error;
-use std::{env, process};
+use std::process;
+use std::rc::Rc;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 struct Timesheet {
     namespace: String,
     timesheet: TimesheetHoursForMonth,
@@ -95,33 +96,17 @@ fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> f64 {
     total_hours
 }
 
-pub async fn build_unique_uri(
+fn generate_timesheet_vec(
     client_repositories: RCClientRepositories,
     options: Vec<Option<String>>,
-) -> Result<(), Box<dyn Error>> {
-    dotenv::dotenv().ok();
-
-    let mongodb_db = env::var("MONGODB_DB").expect("You must set the MONGODB_DB environment var!");
-    let mongodb_collection = env::var("MONGODB_COLLECTION")
-        .expect("You must set the MONGODB_COLLECTION environment var!");
-
-    let month_year_string = get_string_month_year(&options[1], &options[2])?;
-    crate::interface::help_prompt::HelpPrompt::show_generating_timesheet_message(
-        &*month_year_string,
-    );
-
-    let db = db::Db::new().await?;
-    let collection = db
-        .client
-        .database(&mongodb_db)
-        .collection(&mongodb_collection);
-
+    month_year_string: &String,
+) -> Result<Vec<Timesheet>, Box<dyn Error>> {
     let mut timesheets: Vec<Timesheet> = vec![];
-
     let client_repos = client_repositories.borrow_mut();
     let repos_option = &client_repos.repositories;
     let repos = repos_option.as_ref().unwrap();
 
+    // for each repo, find the specified timesheet month and push into vec
     for i in 0..repos.len() {
         let namespace = &repos[i].namespace;
         let project_number = &repos[i].project_number;
@@ -142,15 +127,42 @@ pub async fn build_unique_uri(
         }
     }
 
-    // prevent this from build a document if there aren't timesheets for the month
+    // prevent this from building a document if there aren't timesheets for the month
     if timesheets.len() == 0 {
         eprintln!(
             "No days worked for any repositories in {}. \n\
             Timesheet not generated.",
             &month_year_string
         );
+
         std::process::exit(exitcode::DATAERR);
     }
+
+    Ok(timesheets)
+}
+
+pub async fn build_unique_uri(
+    client_repositories: RCClientRepositories,
+    options: Vec<Option<String>>,
+) -> Result<(), Box<dyn Error>> {
+    dotenv::dotenv().ok();
+    let month_year_string = get_string_month_year(&options[1], &options[2])?;
+    let timesheets =
+        generate_timesheet_vec(Rc::clone(&client_repositories), options, &month_year_string)?;
+    let client_repos = client_repositories.borrow_mut();
+
+    crate::interface::help_prompt::HelpPrompt::show_generating_timesheet_message(
+        &*month_year_string,
+    );
+
+    let mongodb_db = env!("MONGODB_DB");
+    let mongodb_collection = env!("MONGODB_COLLECTION");
+
+    let db = db::Db::new().await?;
+    let collection = db
+        .client
+        .database(&mongodb_db)
+        .collection(&mongodb_collection);
 
     let random_path: String = db.generate_random_path(&collection).await?;
     let document = build_document(
@@ -164,13 +176,12 @@ pub async fn build_unique_uri(
     // Check for existing index for TTL on the collection
     let index_names = collection.list_index_names().await?;
 
-    let expire_time_seconds: i32 = env::var("EXPIRE_TIME_SECONDS")
-        .expect("You must set the EXPIRE_TIME_SECONDS environment var!")
+    let expire_time_seconds: i32 = env!("EXPIRE_TIME_SECONDS")
         .parse()
         .expect("Expire time can't be parsed to i32");
 
     if !index_names.contains(&String::from("expiration_date")) {
-        // create TTL index to expire documents after 30 minutes
+        // create TTL index to expire documents after expire_time_seconds
         db.client
             .database(&mongodb_db)
             .run_command(
@@ -192,11 +203,7 @@ pub async fn build_unique_uri(
 
     collection.insert_one(document.clone(), None).await?;
 
-    let timesheet_gen_uri: String = format!(
-        "{}/{}",
-        env::var("TIMESHEET_GEN_URI").expect("You must set the TIMESHEET_GEN_URI environment var!"),
-        &random_path
-    );
+    let timesheet_gen_uri: String = format!("{}/{}", env!("AUTOLOG_URI"), &random_path);
 
     crate::interface::help_prompt::HelpPrompt::show_new_link_success(
         expire_time_seconds / 60,
@@ -212,14 +219,40 @@ mod test {
     use crate::data::repository::Repository;
     use crate::helpers::mocks;
     use crate::utils::link::link_builder::{
-        build_document, calculate_total_hours, find_month_from_timesheet, get_string_month_year,
-        Timesheet, TimesheetDocument,
+        build_document, calculate_total_hours, find_month_from_timesheet, generate_timesheet_vec,
+        get_string_month_year, Timesheet, TimesheetDocument,
     };
     use chrono::{TimeZone, Utc};
+    use expect_test::expect_file;
     use nanoid::nanoid;
     use serde_json::json;
     use std::cell::RefCell;
     use std::rc::Rc;
+
+    #[test]
+    fn it_generates_timesheet_vec() {
+        let options = vec![
+            Option::None,
+            Option::from("10".to_owned()),
+            Option::from("2021".to_owned()),
+        ];
+
+        let client_repository = ClientRepositories {
+            repositories: Option::from(vec![mocks::create_mock_repository()]),
+            ..Default::default()
+        };
+
+        let timesheets = generate_timesheet_vec(
+            Rc::new(RefCell::new(client_repository)),
+            options,
+            &"February, 2021".to_string(),
+        )
+        .unwrap();
+
+        let expected =
+            expect_file!["../../../testing-utils/snapshots/it_generates_timesheet_vec.txt"];
+        expected.assert_debug_eq(&timesheets.get(0));
+    }
 
     #[test]
     fn it_builds_document() {
@@ -237,6 +270,7 @@ mod test {
             name: "Jim Jones".to_string(),
             email: "jim@jones.com".to_string(),
             is_alias: false,
+            thumbnail: Option::None,
         });
 
         let approver = Option::from(Approver {
