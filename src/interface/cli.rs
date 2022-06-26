@@ -33,7 +33,7 @@ pub struct Cli<'a> {
 
 impl Cli<'_> {
     pub fn new() -> Self {
-        Self::new_from(std::env::args_os().into_iter()).unwrap_or_else(|e| e.exit())
+        Self::new_from(std::env::args_os()).unwrap_or_else(|e| e.exit())
     }
 
     fn new_from<I, T>(args: I) -> Result<Self, clap::Error>
@@ -246,7 +246,7 @@ impl Cli<'_> {
             options.push(Some(update.value_of("client").unwrap().to_string()));
             options.push(update.value_of("namespace").map(String::from));
             command = Some(Commands::Update);
-        } else if let Some(_) = matches.subcommand_matches("list") {
+        } else if matches.subcommand_matches("list").is_some() {
             command = Some(Commands::List);
         } else {
             return Err(Error {
@@ -269,7 +269,7 @@ impl Cli<'_> {
         let repository = Rc::new(RefCell::new(repository::Repository::new()));
         let client_repositories = Rc::new(RefCell::new(ClientRepositories::new()));
         let matches = &self.matches;
-        let cli: Cli = self.parse_commands(&matches)?;
+        let cli: Cli = self.parse_commands(matches)?;
 
         // pass the path for init so that I already know it if user is being onboarded
         match &cli.command {
@@ -320,37 +320,37 @@ impl Cli<'_> {
             Some(commands) => match commands {
                 Commands::Init => config.init(
                     cli.options,
-                    Rc::clone(&repository),
+                    Rc::clone(repository),
                     Rc::clone(client_repositories),
                     Rc::clone(prompt),
                 ),
                 Commands::Make => config.make(
                     cli.options,
-                    Rc::clone(&repository),
+                    Rc::clone(repository),
                     Rc::clone(client_repositories),
                     Rc::clone(prompt),
                 ),
                 Commands::Edit => config.edit(
                     cli.options,
-                    Rc::clone(&repository),
+                    Rc::clone(repository),
                     Rc::clone(client_repositories),
                     Rc::clone(prompt),
                 ),
                 Commands::Remove => config.remove(
                     cli.options,
-                    Rc::clone(&repository),
+                    Rc::clone(repository),
                     Rc::clone(client_repositories),
                     Rc::clone(prompt),
                     &mut deserialized_config,
                 ),
                 Commands::Update => config.update(
                     cli.options,
-                    Rc::clone(&repository),
+                    Rc::clone(repository),
                     Rc::clone(client_repositories),
                     Rc::clone(prompt),
                 ),
                 Commands::List => config.list(
-                    Rc::clone(&repository),
+                    Rc::clone(repository),
                     Rc::clone(client_repositories),
                     Rc::clone(prompt),
                 ),
@@ -377,7 +377,7 @@ mod tests {
                 x.unwrap_or("None".to_string())
                     .parse::<T>()
                     .unwrap()
-                    .clone()
+                    
             })
             .collect()
     }
@@ -565,7 +565,7 @@ mod tests {
         let new_cli = cli.parse_commands(&cli.matches);
         let result = new_cli.unwrap();
 
-        assert_eq!(result.command.unwrap().clone(), Commands::Init);
+        assert_eq!(result.command.unwrap(), Commands::Init);
     }
 
     #[test]
@@ -575,7 +575,7 @@ mod tests {
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<String>(result.options);
         assert_eq!(values, vec!["/this/is/a/path".to_string()]);
-        assert_eq!(result.command.unwrap().clone(), Commands::Init);
+        assert_eq!(result.command.unwrap(), Commands::Init);
     }
 
     #[test]
@@ -589,7 +589,7 @@ mod tests {
         let result = new_cli.unwrap();
         let values = unwrap_iter_with_option::<String>(result.options);
         assert_eq!(values, vec!["None".to_string(), month, year]);
-        assert_eq!(result.command.unwrap().clone(), Commands::Make);
+        assert_eq!(result.command.unwrap(), Commands::Make);
     }
 
     #[test]

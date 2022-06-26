@@ -167,17 +167,15 @@ impl ClientRepositories {
     }
 
     pub fn remove_repository_by_namespace(&mut self, namespace: &String) -> &mut Self {
-        self.repositories.as_mut().map(|repos| {
-            repos.retain(|repo| {
+        if let Some(repos) = self.repositories.as_mut() { repos.retain(|repo| {
                 repo.namespace.as_ref().unwrap().to_lowercase() != namespace.to_lowercase()
-            })
-        });
+            }) }
 
         self
     }
 
     pub fn set_approvers_name(&mut self, value: String) -> &mut Self {
-        if let Some(_) = self.approver {
+        if self.approver.is_some() {
             self.approver
                 .as_mut()
                 .map(|approver| approver.approvers_name = Option::from(value));
@@ -192,7 +190,7 @@ impl ClientRepositories {
     }
 
     pub fn set_approvers_email(&mut self, value: String) -> &mut Self {
-        if let Some(_) = self.approver {
+        if self.approver.is_some() {
             self.approver
                 .as_mut()
                 .map(|approver| approver.approvers_email = Option::from(value));
@@ -264,7 +262,7 @@ impl ClientRepositories {
             for i in 0..repositories.len() {
                 // for each repository, build a vec of the git_log_dates from the other repositories
                 let adjacent_git_log_dates: Vec<GitLogDates> = repositories
-                    .into_iter()
+                    .iter_mut()
                     .enumerate()
                     .filter(|(index, _)| index != &i)
                     .map(|(_, repo)| repo.git_log_dates.as_ref().unwrap().clone())
@@ -535,14 +533,14 @@ mod tests {
         assert_eq!(
             json!(client_repositories.repositories.as_ref().unwrap()[0]),
             json!(Repository {
-                client_id: Option::from(client_id.clone()),
+                client_id: Option::from(client_id),
                 client_name: Option::from("Alphabet".to_string()),
                 client_address: Option::from("Alphabet way".to_string()),
                 client_contact_person: Option::from("John Jones".to_string()),
-                user_id: Option::from(user_id.clone()),
+                user_id: Option::from(user_id),
                 name: Option::from("Jim Jones".to_string()),
                 email: Option::from("jim@jones.com".to_string()),
-                id: Option::from(repo_id.clone()),
+                id: Option::from(repo_id),
                 ..Default::default()
             })
         );
@@ -602,7 +600,7 @@ mod tests {
             .unwrap()[0..3];
 
         let ts = timesheet
-            .into_iter()
+            .iter()
             .map(|day| day.get("hours").unwrap().clone().as_f64().unwrap())
             .collect::<Vec<f64>>();
 

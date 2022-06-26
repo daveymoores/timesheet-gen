@@ -55,7 +55,7 @@ impl Config {
         if found_client_repo.is_some() {
             client_repositories
                 .borrow_mut()
-                .set_values_from_buffer(&found_client_repo.unwrap())
+                .set_values_from_buffer(found_client_repo.unwrap())
                 .exec_generate_timesheets_from_git_history()
                 .compare_logs_and_set_timesheets();
         }
@@ -64,7 +64,7 @@ impl Config {
         if found_repo.is_some() {
             repository
                 .borrow_mut()
-                .set_values_from_buffer(&found_repo.unwrap());
+                .set_values_from_buffer(found_repo.unwrap());
         }
     }
 
@@ -180,7 +180,7 @@ impl Config {
         prompt: RcHelpPrompt,
     ) {
         // pass a prompt for if the config file doesn't exist
-        crate::utils::file::file_reader::read_data_from_config_file(buffer, prompt.clone())
+        crate::utils::file::file_reader::read_data_from_config_file(buffer, prompt)
             .unwrap_or_else(|err| {
                 eprintln!("Error initialising autolog: {}", err);
                 std::process::exit(exitcode::CANTCREAT);
@@ -192,7 +192,7 @@ impl Config {
             Config::fetch_interaction_data(client_repositories.borrow_mut(), repository.borrow());
             Config::write_to_config_file(Option::Some(client_repositories), None);
             crate::interface::help_prompt::HelpPrompt::show_write_new_config_success();
-            return;
+            
         }
     }
 }
@@ -322,8 +322,8 @@ impl Make for Config {
             Self::push_found_values_into_rcs(
                 Rc::clone(&repository),
                 Rc::clone(&client_repositories),
-                found_repo.clone(),
-                found_client_repo.clone(),
+                found_repo,
+                found_client_repo,
             );
 
             if found_client_repo.is_some() {
@@ -406,8 +406,8 @@ impl Edit for Config {
             Self::push_found_values_into_rcs(
                 Rc::clone(&repository),
                 Rc::clone(&client_repositories),
-                found_repo.clone(),
-                found_client_repo.clone(),
+                found_repo,
+                found_client_repo,
             );
 
             if found_client_repo.is_some() {
@@ -501,7 +501,7 @@ impl Remove for Config {
 
                 // if there are no clients, lets remove the file and next time will be onboarding
                 //TODO - would be nice to improve this
-                if deserialized_config.len() == 0 {
+                if deserialized_config.is_empty() {
                     crate::utils::file::file_reader::delete_config_file().expect(
                         "Config file was empty so autolog tried to remove it. That failed.",
                     );
@@ -565,8 +565,8 @@ impl Update for Config {
             Self::push_found_values_into_rcs(
                 Rc::clone(&repository),
                 Rc::clone(&client_repositories),
-                found_repo.clone(),
-                found_client_repo.clone(),
+                found_repo,
+                found_client_repo,
             );
 
             if found_client_repo.is_some() {

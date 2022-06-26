@@ -125,7 +125,7 @@ pub fn serialize_config(
                     let requires_approval = client_repo_borrow.requires_approval;
 
                     let config_data: ConfigurationDoc = if config
-                        .into_iter()
+                        .iter_mut()
                         .any(|x| &x.get_client_name() == client_name)
                     {
                         let x: ConfigurationDoc = config

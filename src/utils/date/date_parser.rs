@@ -15,11 +15,10 @@ fn return_worked_hours_from_worked_days(
 ) -> f64 {
     // if day exists in adjacent days, then split the number of hours by number of occurrences
     let frequency_of_day_worked_in_adjacent_timesheets: f64 = (adjacent_days_in_month
-        .into_iter()
+        .iter()
         .map(|month| month.get(day))
         .filter(|e| e.is_some())
-        .collect::<Vec<Option<&u32>>>()
-        .len()
+        .count()
         + 1) as f64;
 
     let worked_day = worked_days.contains(day);
@@ -70,7 +69,7 @@ fn parse_hours_from_date(
     let mut vector = vec![];
 
     for day in 1..date_tuple.2 + 1 {
-        let is_weekend: bool = is_weekend(&date_tuple, day.clone());
+        let is_weekend: bool = is_weekend(&date_tuple, day);
         let mut day_map = Map::new();
         let hours_worked =
             return_worked_hours_from_worked_days(&worked_days, &day, &adjacent_days_in_month);
@@ -163,11 +162,11 @@ pub fn get_timesheet_map_from_date_hashmap(
         .into_iter()
         .map(|(year, months)| {
             let month_map: TimesheetMonths = months
-                .clone()
+                
                 .into_iter()
                 .map(|(month, days)| {
                     let mut worked_days = days.into_iter().collect::<Vec<u32>>();
-                    worked_days.sort();
+                    worked_days.sort_unstable();
                     let days_in_month = get_days_from_month(year, month);
                     let adjacent_days_in_month = get_adjacent_git_log_days_for_month(
                         adjacent_git_log_dates.clone(),
@@ -214,7 +213,7 @@ pub fn check_for_valid_day(
 ) -> Result<&String, Box<dyn Error>> {
     let day_string = day
         .as_ref()
-        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, format!("Day not found")))?;
+        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, "Day not found".to_string()))?;
 
     let days_in_month = get_days_from_month(year, month);
     let day_regex = Regex::new(r"^(3[0-1]|2[0-9]|1[0-9]|[1-9])$").unwrap();
@@ -234,7 +233,7 @@ pub fn check_for_valid_day(
 pub fn check_for_valid_month(month: &Option<String>) -> Result<u32, Box<dyn Error>> {
     let month_u32 = month
         .as_ref()
-        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, format!("Month not found")))?
+        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, "Month not found".to_string()))?
         .parse::<u32>()?;
 
     let month_regex = Regex::new(r"^(1[0-2]|[1-9])$").unwrap();
@@ -249,7 +248,7 @@ pub fn check_for_valid_month(month: &Option<String>) -> Result<u32, Box<dyn Erro
 pub fn check_for_valid_year(year: &Option<String>) -> Result<&String, Box<dyn Error>> {
     let year_string = year
         .as_ref()
-        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, format!("Year not found")))?;
+        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, "Year not found".to_string()))?;
 
     let year_regex = Regex::new(r"^((19|20)\d{2})$").unwrap();
 
@@ -326,7 +325,7 @@ mod tests {
         ]);
 
         let day_vec = parse_hours_from_date(
-            (2021 as i32, 10 as u32, 31 as u32),
+            (2021_i32, 10_u32, 31_u32),
             vec![1, 4, 6],
             &mut Default::default(),
             adjacent_days_in_month,
