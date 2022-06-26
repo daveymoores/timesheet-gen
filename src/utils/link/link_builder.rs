@@ -60,15 +60,15 @@ fn find_month_from_timesheet<'a>(
         .get(&options[2].as_ref().unwrap().to_string())
         .and_then(|year| {
             year.get(&options[1].as_ref().unwrap().to_string())
-                .and_then(|month| Option::from(month))
+                .and_then(Option::from)
         });
     Ok(option)
 }
 
 fn build_document<'a>(
     creation_date: DateTime<Utc>,
-    random_path: &'a String,
-    month_year_string: &'a String,
+    random_path: &'a str,
+    month_year_string: &'a str,
     timesheets: &'a Vec<Timesheet>,
     client_repositories: &'a ClientRepositories,
 ) -> TimesheetDocument {
@@ -77,8 +77,8 @@ fn build_document<'a>(
     // so make it all owned
     TimesheetDocument {
         creation_date,
-        random_path: random_path.clone(),
-        month_year: month_year_string.clone(),
+        random_path: random_path.to_string(),
+        month_year: month_year_string.to_string(),
         user: repos.user.clone(),
         client: repos.client.clone(),
         approver: repos.approver.clone(),
@@ -88,18 +88,18 @@ fn build_document<'a>(
 
 fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> f64 {
     let hours: Vec<f64> = timesheet_month
-        .into_iter()
+        .iter()
         .map(|x| x.get("hours").unwrap().as_f64().unwrap())
         .collect();
 
-    let total_hours: f64 = hours.iter().map(|&i| i).sum();
+    let total_hours: f64 = hours.iter().copied().sum();
     total_hours
 }
 
 fn generate_timesheet_vec(
     client_repositories: RCClientRepositories,
     options: Vec<Option<String>>,
-    month_year_string: &String,
+    month_year_string: &str,
 ) -> Result<Vec<Timesheet>, Box<dyn Error>> {
     let mut timesheets: Vec<Timesheet> = vec![];
     let client_repos = client_repositories.borrow_mut();
@@ -107,11 +107,11 @@ fn generate_timesheet_vec(
     let repos = repos_option.as_ref().unwrap();
 
     // for each repo, find the specified timesheet month and push into vec
-    for i in 0..repos.len() {
-        let namespace = &repos[i].namespace;
-        let project_number = &repos[i].project_number;
+    for repo in repos {
+        let namespace = &repo.namespace;
+        let project_number = &repo.project_number;
 
-        let timesheet_hours_for_month = find_month_from_timesheet(&repos[i], &options)
+        let timesheet_hours_for_month = find_month_from_timesheet(repo, &options)
             .unwrap_or_else(|err| {
                 eprintln!("Error finding year/month in timesheet data: {}", err);
                 std::process::exit(exitcode::DATAERR);
@@ -121,14 +121,14 @@ fn generate_timesheet_vec(
             timesheets.push(Timesheet {
                 namespace: namespace.as_ref().map(|x| x.to_owned()).unwrap(),
                 timesheet: timesheet.to_owned(),
-                total_hours: calculate_total_hours(&timesheet),
+                total_hours: calculate_total_hours(timesheet),
                 project_number: project_number.to_owned(),
             });
         }
     }
 
     // prevent this from building a document if there aren't timesheets for the month
-    if timesheets.len() == 0 {
+    if timesheets.is_empty() {
         eprintln!(
             "No days worked for any repositories in {}. \n\
             Timesheet not generated.",
@@ -155,14 +155,14 @@ pub async fn build_unique_uri(
         &*month_year_string,
     );
 
-    let mongodb_db = env!("MONGODB_DB");
-    let mongodb_collection = env!("MONGODB_COLLECTION");
+    let mongodb_db: &str = env!("MONGODB_DB");
+    let mongodb_collection: &str = env!("MONGODB_COLLECTION");
 
     let db = db::Db::new().await?;
     let collection = db
         .client
-        .database(&mongodb_db)
-        .collection(&mongodb_collection);
+        .database(mongodb_db)
+        .collection(mongodb_collection);
 
     let random_path: String = db.generate_random_path(&collection).await?;
     let document = build_document(
@@ -183,10 +183,10 @@ pub async fn build_unique_uri(
     if !index_names.contains(&String::from("expiration_date")) {
         // create TTL index to expire documents after expire_time_seconds
         db.client
-            .database(&mongodb_db)
+            .database(mongodb_db)
             .run_command(
                 doc! {
-                    "createIndexes": &mongodb_collection,
+                    "createIndexes": mongodb_collection,
                     "indexes": [
                         {
                             "key": { "creation_date": 1 },

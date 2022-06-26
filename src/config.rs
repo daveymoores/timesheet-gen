@@ -36,11 +36,11 @@ impl Config {
     ) {
         let client_id = old_client_repos.get_client_id();
 
-        for i in 0..deserialized_config.len() {
-            if deserialized_config[i].get_client_id() == client_id {
+        for config in &deserialized_config {
+            if config.get_client_id() == client_id {
                 new_client_repos.push(old_client_repos.deref().clone())
             } else {
-                new_client_repos.push(deserialized_config[i].clone())
+                new_client_repos.push(config.clone())
             }
         }
     }
