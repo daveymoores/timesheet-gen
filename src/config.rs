@@ -52,19 +52,19 @@ impl Config {
         found_client_repo: Option<&ClientRepositories>,
     ) {
         // ...and fetch a new batch of interaction data
-        if found_client_repo.is_some() {
+        if let Some(repo) = found_client_repo  {
             client_repositories
                 .borrow_mut()
-                .set_values_from_buffer(found_client_repo.unwrap())
+                .set_values_from_buffer(repo)
                 .exec_generate_timesheets_from_git_history()
                 .compare_logs_and_set_timesheets();
         }
 
         // if it's been found, set the working repo to the timesheet struct as it may be operated on
-        if found_repo.is_some() {
+        if let Some(repo) = found_repo {
             repository
                 .borrow_mut()
-                .set_values_from_buffer(found_repo.unwrap());
+                .set_values_from_buffer(repo);
         }
     }
 
@@ -477,8 +477,8 @@ impl Remove for Config {
             let config: ConfigurationDoc = serde_json::from_str(&buffer)
                 .expect("Initialisation of ClientRepository struct from buffer failed");
 
-            for i in 0..config.len() {
-                deserialized_config.push(config[i].clone());
+            for item in &config {
+                deserialized_config.push(item.clone());
             }
 
             let (_found_repo, found_client_repo) = self

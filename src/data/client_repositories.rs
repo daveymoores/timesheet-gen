@@ -70,16 +70,22 @@ impl Default for ClientRepositories {
 impl ClientRepositories {
     pub fn set_values(&mut self, repository: Ref<Repository>) -> &mut Self {
         self.client = Option::from(Client {
-            id: repository.client_id.clone().unwrap_or("None".to_string()),
-            client_name: repository.client_name.clone().unwrap_or("None".to_string()),
+            id: repository
+                .client_id
+                .clone()
+                .unwrap_or_else(|| "None".to_string()),
+            client_name: repository
+                .client_name
+                .clone()
+                .unwrap_or_else(|| "None".to_string()),
             client_address: repository
                 .client_address
                 .clone()
-                .unwrap_or("None".to_string()),
+                .unwrap_or_else(|| "None".to_string()),
             client_contact_person: repository
                 .client_contact_person
                 .clone()
-                .unwrap_or("None".to_string()),
+                .unwrap_or_else(|| "None".to_string()),
         });
 
         let should_set_user = match self.user.as_ref() {
@@ -90,9 +96,18 @@ impl ClientRepositories {
         // if an alias hasn't been, or there isn't a user yet, set the user from repo
         if should_set_user {
             self.user = Option::from(User {
-                id: repository.user_id.clone().unwrap_or("None".to_string()),
-                name: repository.name.clone().unwrap_or("None".to_string()),
-                email: repository.email.clone().unwrap_or("None".to_string()),
+                id: repository
+                    .user_id
+                    .clone()
+                    .unwrap_or_else(|| "None".to_string()),
+                name: repository
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| "None".to_string()),
+                email: repository
+                    .email
+                    .clone()
+                    .unwrap_or_else(|| "None".to_string()),
                 is_alias: false,
                 thumbnail: Option::None,
             });
@@ -167,9 +182,11 @@ impl ClientRepositories {
     }
 
     pub fn remove_repository_by_namespace(&mut self, namespace: &String) -> &mut Self {
-        if let Some(repos) = self.repositories.as_mut() { repos.retain(|repo| {
+        if let Some(repos) = self.repositories.as_mut() {
+            repos.retain(|repo| {
                 repo.namespace.as_ref().unwrap().to_lowercase() != namespace.to_lowercase()
-            }) }
+            })
+        }
 
         self
     }
