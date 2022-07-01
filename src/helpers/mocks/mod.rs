@@ -77,13 +77,13 @@ pub fn create_mock_repository() -> Repository {
     let timesheet =
         get_timesheet_map_from_date_hashmap(date_hashmap, &mut Default::default(), vec![]);
 
-    let repository = Repository {
+    
+
+    Repository {
         namespace: Option::from("autolog".to_owned()),
         timesheet: Option::from(timesheet),
         ..Default::default()
-    };
-
-    repository
+    }
 }
 
 #[cfg(test)]

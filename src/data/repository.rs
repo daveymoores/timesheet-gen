@@ -190,7 +190,7 @@ impl Repository {
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
         let reg = regex::Regex::new(r"(?P<namespace>[^/][\w\d()_\-,.]+)/\.git/")?;
 
-        match reg.captures(&self.git_path.clone().unwrap().as_str()) {
+        match reg.captures(self.git_path.clone().unwrap().as_str()) {
             None => {
                 println!("No repositories found at path. Please check that the path is valid.");
                 process::exit(exitcode::DATAERR);
@@ -201,7 +201,7 @@ impl Repository {
                     process::exit(exitcode::DATAERR);
                 }
                 Some(capture) => {
-                    self.set_namespace((&capture.as_str()).parse().unwrap());
+                    self.set_namespace(capture.as_str().parse().unwrap());
                 }
             },
         }
@@ -231,7 +231,7 @@ impl Repository {
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
         let path_string: String = crate::utils::trim_output_from_utf8(output_path)?;
 
-        self.set_git_path(path_string.to_owned() + &*String::from("/.git/").to_owned());
+        self.set_git_path(path_string + &*String::from("/.git/"));
 
         Ok(self)
     }
@@ -425,7 +425,7 @@ impl Repository {
         let day: usize = day_string.parse()?;
 
         let is_weekend =
-            match self.get_timesheet_entry(&year_string, &month_u32, day, "weekend".to_string()) {
+            match self.get_timesheet_entry(year_string, &month_u32, day, "weekend".to_string()) {
                 Ok(result) => result.cloned().unwrap(),
                 Err(err) => {
                     eprintln!("Error retrieving timesheet entry: {}", err);
@@ -435,7 +435,7 @@ impl Repository {
 
         // update hour value
         self.mutate_timesheet_entry(
-            &year_string,
+            year_string,
             &month_u32,
             day,
             create_single_day_object(is_weekend.as_bool().unwrap(), hour, true),
@@ -548,7 +548,7 @@ origin  git@github.com:daveymoores/autolog.git (push)\
             ts.get_timesheet_entry(&"2021".to_string(), &11, 2, "hours".to_string())
                 .unwrap()
                 .unwrap(),
-            &Value::Number(Number::from_f64(33 as f64).unwrap())
+            &Value::Number(Number::from_f64(33_f64).unwrap())
         );
     }
 
@@ -692,10 +692,10 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
         // of the numeric values and order them. Not great but snapshot testing with hashmaps isn't a thing in Rust...
         let mut k = vec![];
         for (key, value) in x.into_iter() {
-            k.push(key.clone());
+            k.push(key);
             for (key, value) in value.into_iter() {
                 k.push(key as i32);
-                let x = value.into_iter().map(|x| x).collect::<Vec<u32>>();
+                let x = value.into_iter().collect::<Vec<u32>>();
 
                 for y in x {
                     k.push(y as i32);
@@ -704,7 +704,7 @@ Date:   Thu, 3 Jan 2019 11:06:17 +0200
         }
 
         // sort them as hashmaps and hashsets don't have an order
-        k.sort();
+        k.sort_unstable();
 
         let expected_array: Vec<i32> = vec![1, 1, 3, 8, 8, 9, 10, 20, 21, 23, 2019, 2020, 2021];
         assert_eq!(k, expected_array);

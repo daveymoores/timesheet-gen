@@ -288,11 +288,11 @@ impl HelpPrompt {
 
         let mut clients: Vec<String> = deserialized_config
             .iter()
-            .map(|client| client.get_client_name().clone())
+            .map(|client| client.get_client_name())
             .collect();
 
         // If the clients array is empty, lets just onboard
-        if clients.len() == 0 {
+        if clients.is_empty() {
             self.onboarding(false)?;
         }
 
@@ -315,7 +315,7 @@ impl HelpPrompt {
 
             self.client_repositories
                 .borrow_mut()
-                .set_values_from_buffer(&client);
+                .set_values_from_buffer(client);
 
             let unwrapped_client = client.client.as_ref().unwrap();
 
@@ -370,7 +370,7 @@ impl HelpPrompt {
         };
 
         if Confirm::new().default(true).interact()? {
-            borrow.set_repo_path(String::from(path));
+            borrow.set_repo_path(path);
         } else {
             Self::print_question("Give a path to the repository you would like to use");
 
@@ -381,7 +381,7 @@ impl HelpPrompt {
 
             let input: String = Input::new().with_initial_text(path).interact_text()?;
 
-            borrow.set_repo_path(String::from(input));
+            borrow.set_repo_path(input);
         }
 
         Ok(self)
@@ -462,7 +462,7 @@ impl HelpPrompt {
                 let is_alias = &user.is_alias;
 
                 // if the user details differ, prompt for alias
-                if repository_borrow.has_different_user_details(&name, &email) & !is_alias {
+                if repository_borrow.has_different_user_details(name, email) & !is_alias {
                     self.prompt_for_setting_user_alias(name.to_string(), email.to_string())?;
                 }
             }
@@ -590,7 +590,7 @@ impl HelpPrompt {
                                 &options[1].as_ref().unwrap()
                             ));
 
-                            return Ok(&self);
+                            return Ok(self);
                         } else {
                             Self::print_question("Repository not found. Nothing removed.");
                             crate::utils::exit_process();
@@ -621,7 +621,7 @@ impl HelpPrompt {
                         "'{}' removed \u{1F389}",
                         &options[0].as_ref().unwrap()
                     ));
-                    return Ok(&self);
+                    return Ok(self);
                 } else {
                     Self::print_question("Client not found. Nothing removed.");
                     crate::utils::exit_process();
@@ -657,11 +657,11 @@ impl HelpPrompt {
             let row = vec![Self::dim_text("Email:"), email.clone()];
             data.append(&mut vec![row]);
         }
-        if let Some(name) = self.repository.borrow().name.as_ref().clone() {
+        if let Some(name) = self.repository.borrow().name.as_ref() {
             let row = vec![Self::dim_text("Name:"), name.clone()];
             data.append(&mut vec![row]);
         }
-        if let Some(client_name) = self.repository.borrow().client_name.as_ref().clone() {
+        if let Some(client_name) = self.repository.borrow().client_name.as_ref() {
             let row = vec![Self::dim_text("Client company name:"), client_name.clone()];
             data.append(&mut vec![row]);
         }
@@ -670,7 +670,6 @@ impl HelpPrompt {
             .borrow()
             .client_contact_person
             .as_ref()
-            .clone()
         {
             let row = vec![
                 Self::dim_text("Client contact person:"),
@@ -678,7 +677,7 @@ impl HelpPrompt {
             ];
             data.append(&mut vec![row]);
         }
-        if let Some(client_address) = self.repository.borrow().client_address.as_ref().clone() {
+        if let Some(client_address) = self.repository.borrow().client_address.as_ref() {
             let row = vec![
                 Self::dim_text("Client address:"),
                 client_address.clone().replace("\n", " "),
