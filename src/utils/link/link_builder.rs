@@ -34,7 +34,7 @@ struct TimesheetDocument {
 
 pub type TimesheetHoursForMonth = Vec<Map<String, Value>>;
 
-fn get_string_month_year(
+pub fn get_string_month_year(
     month: &Option<String>,
     year: &Option<String>,
 ) -> Result<String, Box<dyn Error>> {
@@ -48,7 +48,7 @@ fn get_string_month_year(
     ))
 }
 
-fn find_month_from_timesheet<'a>(
+pub fn find_month_from_timesheet<'a>(
     sheet: &'a Repository,
     options: &'a Vec<Option<String>>,
 ) -> Result<Option<&'a TimesheetHoursForMonth>, Box<dyn Error>> {

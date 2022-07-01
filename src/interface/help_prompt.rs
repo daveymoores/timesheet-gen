@@ -106,6 +106,17 @@ impl HelpPrompt {
         crate::utils::exit_process();
     }
 
+    pub fn search_for_timesheet_under_client(&self) {
+        let client_repositories = self.client_repositories.borrow_mut();
+        println!(
+            "{}",
+            Self::dim_text(&*format!(
+                "\u{1F916} Finding project data for '{}'...",
+                client_repositories.get_client_name()
+            ))
+        );
+    }
+
     pub fn show_updated_config_success() {
         println!("\nautolog successfully updated \u{1F389}");
         crate::utils::exit_process();
@@ -529,14 +540,6 @@ impl HelpPrompt {
     pub fn add_project_numbers(&self) -> Result<&Self, Box<dyn Error>> {
         let mut client_repositories = self.client_repositories.borrow_mut();
 
-        println!(
-            "{}",
-            Self::dim_text(&*format!(
-                "\u{1F916} Finding project data for '{}'...",
-                client_repositories.get_client_name()
-            ))
-        );
-
         for i in 0..client_repositories.repositories.as_ref().unwrap().len() {
             Self::print_question(&*format!(
                 "Does '{}' require a project/PO number?",
@@ -665,11 +668,7 @@ impl HelpPrompt {
             let row = vec![Self::dim_text("Client company name:"), client_name.clone()];
             data.append(&mut vec![row]);
         }
-        if let Some(client_contact_person) = self
-            .repository
-            .borrow()
-            .client_contact_person
-            .as_ref()
+        if let Some(client_contact_person) = self.repository.borrow().client_contact_person.as_ref()
         {
             let row = vec![
                 Self::dim_text("Client contact person:"),
