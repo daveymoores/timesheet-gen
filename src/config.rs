@@ -10,6 +10,7 @@ use std::cell::{Ref, RefMut};
 use std::ops::Deref;
 use std::process;
 use std::rc::Rc;
+use crate::utils::link::link_builder::{find_month_from_timesheet, get_string_month_year};
 
 /// Creates and modifies the config file. Config does not directly hold the information
 /// contained in the config file, but provides the various operations that can be
@@ -327,8 +328,34 @@ impl Make for Config {
             );
 
             if found_client_repo.is_some() {
-                prompt
-                    .borrow_mut()
+                let prompt_borrow = prompt
+                    .borrow_mut();
+
+                // Fail early if worked days don't exist for chosen month/year
+                let client_repo_borrow = &client_repositories
+                    .borrow_mut().clone();
+
+                prompt_borrow.search_for_timesheet_under_client();
+
+                let repository = client_repo_borrow
+                    .repositories
+                    .as_ref()
+                    .unwrap().iter().find(| &repo| find_month_from_timesheet(repo, &options).unwrap_or_else(|err| {
+                        eprintln!("Error finding year/month in timesheet data: {}", err);
+                        std::process::exit(exitcode::DATAERR);
+                    }).is_some());
+
+                if repository.is_none() {
+                    eprintln!(
+                        "No days worked for any repositories in {}. \n\
+            Timesheet not generated.",
+                        get_string_month_year(&options[1], &options[2]).expect("month year string")
+                    );
+
+                    std::process::exit(exitcode::DATAERR);
+                }
+
+                prompt_borrow
                     .add_project_numbers()
                     .unwrap_or_else(|err| {
                         eprintln!("Error parsing project number: {}", err);
