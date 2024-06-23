@@ -34,7 +34,7 @@ pub fn get_filepath(path: PathBuf) -> Result<String, Box<dyn std::error::Error>>
 /// Read config file or throw error and call error function
 fn read_file<T>(
     buffer: &mut String,
-    path: String,
+    path: &str,
     prompt: Rc<RefCell<T>>,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -60,7 +60,8 @@ where
     T: Onboarding,
 {
     let config_path = get_filepath(get_home_path())?;
-    read_file(buffer, config_path, prompt)?;
+    let path = &config_path;
+    read_file(buffer, path, prompt)?;
 
     Ok(())
 }
@@ -138,7 +139,7 @@ pub fn serialize_config(
                                         client: client.clone(),
                                         user: user.clone(),
                                         repositories: Some(
-                                            vec![
+                                            [
                                                 c.clone().repositories.unwrap(),
                                                 vec![repository.to_owned()],
                                             ]
@@ -298,12 +299,7 @@ mod tests {
 
         let mut buffer = String::new();
 
-        read_file(
-            &mut buffer,
-            String::from("./testing-utils/.hello.txt"),
-            mock_prompt,
-        )
-        .unwrap();
+        read_file(&mut buffer, "./testing-utils/.hello.txt", mock_prompt).unwrap();
 
         assert_eq!(buffer.trim(), "hello");
     }
@@ -324,12 +320,7 @@ mod tests {
 
         let mut buffer = String::new();
 
-        read_file(
-            &mut buffer,
-            String::from("./testing-utils/.timesheet.txt"),
-            mock_prompt,
-        )
-        .unwrap();
+        read_file(&mut buffer, "./testing-utils/.timesheet.txt", mock_prompt).unwrap();
     }
 
     #[test]
