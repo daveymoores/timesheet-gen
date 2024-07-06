@@ -50,7 +50,7 @@ fn get_string_month_year(
 
 fn find_month_from_timesheet<'a>(
     sheet: &'a Repository,
-    options: &'a Vec<Option<String>>,
+    options: &'a [Option<String>],
 ) -> Result<Option<&'a TimesheetHoursForMonth>, Box<dyn Error>> {
     // safe to unwrap options here as it would have been caught above
     let option = sheet
@@ -60,16 +60,16 @@ fn find_month_from_timesheet<'a>(
         .get(&options[2].as_ref().unwrap().to_string())
         .and_then(|year| {
             year.get(&options[1].as_ref().unwrap().to_string())
-                .and_then(|month| Option::from(month))
+                .and_then(Option::from)
         });
     Ok(option)
 }
 
 fn build_document<'a>(
     creation_date: DateTime<Utc>,
-    random_path: &'a String,
-    month_year_string: &'a String,
-    timesheets: &'a Vec<Timesheet>,
+    random_path: &'a str,
+    month_year_string: &'a str,
+    timesheets: &'a [Timesheet],
     client_repositories: &'a ClientRepositories,
 ) -> TimesheetDocument {
     let repos = client_repositories;
@@ -77,22 +77,22 @@ fn build_document<'a>(
     // so make it all owned
     TimesheetDocument {
         creation_date,
-        random_path: random_path.clone(),
-        month_year: month_year_string.clone(),
+        random_path: random_path.to_owned(),
+        month_year: month_year_string.to_owned(),
         user: repos.user.clone(),
         client: repos.client.clone(),
         approver: repos.approver.clone(),
-        timesheets: timesheets.clone(),
+        timesheets: timesheets.to_owned(),
     }
 }
 
 fn calculate_total_hours(timesheet_month: &TimesheetHoursForMonth) -> f64 {
     let hours: Vec<f64> = timesheet_month
-        .into_iter()
+        .iter()
         .map(|x| x.get("hours").unwrap().as_f64().unwrap())
         .collect();
 
-    let total_hours: f64 = hours.iter().map(|&i| i).sum();
+    let total_hours: f64 = hours.iter().copied().sum();
     total_hours
 }
 
@@ -107,12 +107,12 @@ fn generate_timesheet_vec(
     let repos = repos_option.as_ref().unwrap();
 
     // for each repo, find the specified timesheet month and push into vec
-    for i in 0..repos.len() {
-        let namespace = &repos[i].namespace;
-        let project_number = &repos[i].project_number;
+    for repo in repos.iter() {
+        let namespace = &repo.namespace;
+        let project_number = &repo.project_number;
 
-        let timesheet_hours_for_month = find_month_from_timesheet(&repos[i], &options)
-            .unwrap_or_else(|err| {
+        let timesheet_hours_for_month =
+            find_month_from_timesheet(repo, &options).unwrap_or_else(|err| {
                 eprintln!("Error finding year/month in timesheet data: {}", err);
                 std::process::exit(exitcode::DATAERR);
             });
@@ -121,14 +121,14 @@ fn generate_timesheet_vec(
             timesheets.push(Timesheet {
                 namespace: namespace.as_ref().map(|x| x.to_owned()).unwrap(),
                 timesheet: timesheet.to_owned(),
-                total_hours: calculate_total_hours(&timesheet),
+                total_hours: calculate_total_hours(timesheet),
                 project_number: project_number.to_owned(),
             });
         }
     }
 
     // prevent this from building a document if there aren't timesheets for the month
-    if timesheets.len() == 0 {
+    if timesheets.is_empty() {
         eprintln!(
             "No days worked for any repositories in {}. \n\
             Timesheet not generated.",
@@ -152,7 +152,7 @@ pub async fn build_unique_uri(
     let client_repos = client_repositories.borrow_mut();
 
     crate::interface::help_prompt::HelpPrompt::show_generating_timesheet_message(
-        &*month_year_string,
+        &month_year_string,
     );
 
     let mongodb_db = env!("MONGODB_DB");
@@ -161,8 +161,8 @@ pub async fn build_unique_uri(
     let db = db::Db::new().await?;
     let collection = db
         .client
-        .database(&mongodb_db)
-        .collection(&mongodb_collection);
+        .database(mongodb_db)
+        .collection(mongodb_collection);
 
     let random_path: String = db.generate_random_path(&collection).await?;
     let document = build_document(
@@ -183,7 +183,7 @@ pub async fn build_unique_uri(
     if !index_names.contains(&String::from("expiration_date")) {
         // create TTL index to expire documents after expire_time_seconds
         db.client
-            .database(&mongodb_db)
+            .database(mongodb_db)
             .run_command(
                 doc! {
                     "createIndexes": &mongodb_collection,
@@ -207,7 +207,7 @@ pub async fn build_unique_uri(
 
     crate::interface::help_prompt::HelpPrompt::show_new_link_success(
         expire_time_seconds / 60,
-        &*timesheet_gen_uri,
+        &timesheet_gen_uri,
     );
 
     process::exit(exitcode::OK);

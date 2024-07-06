@@ -40,7 +40,7 @@ fn read_file<T>(
 where
     T: Onboarding,
 {
-    match File::open(&path) {
+    match File::open(path) {
         Ok(mut file) => {
             file.read_to_string(buffer)?;
         }
@@ -126,7 +126,7 @@ pub fn serialize_config(
                     let requires_approval = client_repo_borrow.requires_approval;
 
                     let config_data: ConfigurationDoc = if config
-                        .into_iter()
+                        .iter_mut()
                         .any(|x| &x.get_client_name() == client_name)
                     {
                         let x: ConfigurationDoc = config
