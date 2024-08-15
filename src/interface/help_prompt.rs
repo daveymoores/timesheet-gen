@@ -604,13 +604,13 @@ impl HelpPrompt {
             if crate::utils::confirm()? {
                 let config_len = deserialized_config.len();
                 deserialized_config.retain(|client_repo| {
-                    &client_repo
+                    client_repo
                         .client
                         .as_ref()
                         .unwrap()
                         .client_name
                         .to_lowercase()
-                        != &options[0].as_ref().unwrap().to_lowercase()
+                        != options[0].as_ref().unwrap().to_lowercase()
                 });
 
                 if config_len != deserialized_config.len() {
@@ -662,11 +662,7 @@ impl HelpPrompt {
             let row = vec![Self::dim_text("Client company name:"), client_name.clone()];
             data.append(&mut vec![row]);
         }
-        if let Some(client_contact_person) = self
-            .repository
-            .borrow()
-            .client_contact_person
-            .as_ref()
+        if let Some(client_contact_person) = self.repository.borrow().client_contact_person.as_ref()
         {
             let row = vec![
                 Self::dim_text("Client contact person:"),

@@ -14,8 +14,7 @@ pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 /// Holds the data from the config file. Config can access these values
 // and perform various operations on it
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[derive(Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Repository {
     pub id: Option<String>,
     pub namespace: Option<String>,
@@ -35,7 +34,6 @@ pub struct Repository {
     pub service: Option<String>,
     pub service_username: Option<String>,
 }
-
 
 struct Iter<'a> {
     inner: &'a Repository,
@@ -393,7 +391,7 @@ impl Repository {
 
     pub fn update_hours_on_month_day_entry(
         &mut self,
-        options: &Vec<Option<String>>,
+        options: &[Option<String>],
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
         let year_string = check_for_valid_year(&options[4])?;
         let month_u32 = check_for_valid_month(&options[3])?;

@@ -34,8 +34,7 @@ pub struct User {
     pub thumbnail: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[derive(Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct ClientRepositories {
     pub client: Option<Client>,
     pub user: Option<User>,
@@ -53,7 +52,6 @@ impl New for ClientRepositories {
         }
     }
 }
-
 
 impl ClientRepositories {
     pub fn set_values(&mut self, repository: Ref<Repository>) -> &mut Self {
@@ -99,9 +97,12 @@ impl ClientRepositories {
     }
 
     pub fn update_client_name(&mut self, value: String) -> &mut Self {
-        self.client
-            .as_mut()
-            .map(|client| client.client_name = value.clone());
+        let client = self.client.as_mut();
+
+        if let Some(client) = client {
+            client.client_name.clone_from(&value)
+        }
+
         self.repositories.as_mut().map(|repos| {
             repos
                 .iter_mut()
@@ -115,9 +116,12 @@ impl ClientRepositories {
     }
 
     pub fn update_client_address(&mut self, value: String) -> &mut Self {
-        self.client
-            .as_mut()
-            .map(|client| client.client_address = value.clone());
+        let client = self.client.as_mut();
+
+        if let Some(client) = client {
+            client.client_address.clone_from(&value)
+        }
+
         self.repositories.as_mut().map(|repos| {
             repos
                 .iter_mut()
@@ -131,9 +135,12 @@ impl ClientRepositories {
     }
 
     pub fn update_client_contact_person(&mut self, value: String) -> &mut Self {
-        self.client
-            .as_mut()
-            .map(|client| client.client_contact_person = value.clone());
+        let client = self.client.as_mut();
+
+        if let Some(client) = client {
+            client.client_contact_person.clone_from(&value)
+        }
+
         self.repositories.as_mut().map(|repos| {
             repos
                 .iter_mut()
@@ -154,26 +161,25 @@ impl ClientRepositories {
         self
     }
 
-    pub fn remove_repository_by_namespace(&mut self, namespace: &String) -> &mut Self {
-        if let Some(repos) = self.repositories.as_mut() { repos.retain(|repo| {
+    pub fn remove_repository_by_namespace(&mut self, namespace: &str) -> &mut Self {
+        if let Some(repos) = self.repositories.as_mut() {
+            repos.retain(|repo| {
                 repo.namespace.as_ref().unwrap().to_lowercase() != namespace.to_lowercase()
-            }) }
+            })
+        }
 
         self
     }
 
     pub fn set_approvers_name(&mut self, value: String) -> &mut Self {
-        if self.approver.is_some() {
-            self.approver
-                .as_mut()
-                .map(|approver| approver.approvers_name = Option::from(value));
+        if let Some(approver) = self.approver.as_mut() {
+            approver.approvers_name = Option::from(value);
         } else {
-            self.approver = Option::Some(Approver {
+            self.approver = Some(Approver {
                 approvers_name: Option::from(value),
                 approvers_email: Option::None,
             });
         }
-
         self
     }
 
@@ -198,22 +204,30 @@ impl ClientRepositories {
     }
 
     pub fn set_user_name(&mut self, value: String) -> &mut Self {
-        self.user.as_mut().map(|user| user.name = value);
+        if let Some(user) = self.user.as_mut() {
+            user.name = value;
+        }
         self
     }
 
     pub fn set_user_email(&mut self, value: String) -> &mut Self {
-        self.user.as_mut().map(|user| user.email = value);
+        if let Some(user) = self.user.as_mut() {
+            user.email = value;
+        }
         self
     }
 
     pub fn set_is_user_alias(&mut self, value: bool) -> &mut Self {
-        self.user.as_mut().map(|user| user.is_alias = value);
+        if let Some(user) = self.user.as_mut() {
+            user.is_alias = value;
+        }
         self
     }
 
     pub fn set_user_id(&mut self, value: String) -> &mut Self {
-        self.user.as_mut().map(|user| user.id = value);
+        if let Some(user) = self.user.as_mut() {
+            user.id = value;
+        }
         self
     }
 

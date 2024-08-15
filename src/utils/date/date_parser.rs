@@ -9,9 +9,9 @@ use std::io::ErrorKind;
 use std::{io, process};
 
 fn return_worked_hours_from_worked_days(
-    worked_days: &Vec<u32>,
+    worked_days: &[u32],
     day: &u32,
-    adjacent_days_in_month: &Vec<HashSet<u32>>,
+    adjacent_days_in_month: &[HashSet<u32>],
 ) -> f64 {
     // if day exists in adjacent days, then split the number of hours by number of occurrences
     let frequency_of_day_worked_in_adjacent_timesheets: f64 = (adjacent_days_in_month
