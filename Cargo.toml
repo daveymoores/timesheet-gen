@@ -27,6 +27,9 @@ tempfile = "3.2.0"
 ascii_table = "3.0.2"
 ansi_term = "0.12.1"
 envtestkit = "1.1.2"
+google-calendar3 = "3.0.0"
+hyper = { version = "0.14", features = ["client", "runtime"] }
+yup-oauth2 = "6.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.2"
