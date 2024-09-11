@@ -251,6 +251,8 @@ impl Cli<'_> {
             command = Some(Commands::Update);
         } else if matches.subcommand_matches("list").is_some() {
             command = Some(Commands::List);
+        } else if matches.subcommand_matches("link").is_some() {
+            command = Some(Commands::Link);
         } else {
             return Err(Error {
                 message: "No matches for inputs".to_string(),
@@ -307,7 +309,7 @@ impl Cli<'_> {
     }
 
     pub fn run_command<T>(
-        cli: Cli,
+        cli: Cli<'_>,
         config: T,
         repository: &Rc<RefCell<repository::Repository>>,
         client_repositories: &RCClientRepositories,
@@ -357,12 +359,9 @@ impl Cli<'_> {
                     Rc::clone(client_repositories),
                     Rc::clone(prompt),
                 ),
-                Commands::Link => config.link(
-                    cli.options,
-                    Rc::clone(repository),
-                    Rc::clone(client_repositories),
-                    Rc::clone(prompt),
-                ),
+                Commands::Link => {
+                    config.link();
+                }
             },
         }
     }
@@ -374,7 +373,6 @@ mod tests {
     use crate::config::{New, Remove};
     use crate::data::repository::Repository;
     use crate::interface::help_prompt::RCRepository;
-    use async_trait::async_trait;
     use std::fmt::Debug;
     use std::str::FromStr;
 
@@ -503,13 +501,7 @@ mod tests {
     }
 
     impl Link for MockConfig {
-        fn link(
-            &self,
-            _options: Vec<Option<String>>,
-            _repository: Rc<RefCell<Repository>>,
-            _client_repositories: RCClientRepositories,
-            _prompt: RcHelpPrompt,
-        ) {
+        fn link(&self) {
             assert!(true);
         }
     }

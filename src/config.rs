@@ -6,16 +6,12 @@ use crate::utils;
 use crate::utils::exit_process;
 use crate::utils::file::file_reader;
 use crate::utils::link::link_builder;
-use async_trait::async_trait;
-use google_calendar3::CalendarHub;
-use hyper_rustls::HttpsConnectorBuilder;
-use hyper_util::client::legacy::Client;
-use hyper_util::rt::TokioExecutor;
+extern crate google_calendar3 as calendar3;
+use calendar3::{hyper, hyper_rustls, oauth2, CalendarHub};
 use std::cell::{Ref, RefMut};
 use std::ops::Deref;
 use std::process;
 use std::rc::Rc;
-use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 
 /// Creates and modifies the config file. Config does not directly hold the information
 /// contained in the config file, but provides the various operations that can be
@@ -633,46 +629,37 @@ impl List for Config {
 
 pub trait Link {
     /// List repositories under each client
-    fn link(
-        &self,
-        options: Vec<Option<String>>,
-        repository: RCRepository,
-        client_repositories: RCClientRepositories,
-        prompt: RcHelpPrompt,
-    );
+    fn link(&self);
 }
 
 impl Link for Config {
-    fn link(
-        &self,
-        options: Vec<Option<String>>,
-        repository: RCRepository,
-        client_repositories: RCClientRepositories,
-        prompt: RcHelpPrompt,
-    ) {
+    #[tokio::main]
+    async fn link(&self) {
         // Load the credentials file
-        let secret = yup_oauth2::read_application_secret("client_secret.json")
+        let secret = oauth2::read_application_secret("client_secret.json")
             .await
             .expect("client_secret.json file not found");
 
         // Create an authenticator
-        let auth =
-            InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
-                .build()
-                .await
-                .unwrap();
+        let auth = oauth2::InstalledFlowAuthenticator::builder(
+            secret,
+            oauth2::InstalledFlowReturnMethod::HTTPRedirect,
+        )
+        .build()
+        .await
+        .unwrap();
 
-        // Create an HTTPS client
-        let https = HttpsConnectorBuilder::new()
-            .with_native_roots()
-            .expect("no native root CA certificates found")
-            .https_only()
-            .enable_http1()
-            .build();
-        let client = Client::builder(TokioExecutor::new()).build(https);
-
-        // Create the CalendarHub
-        let hub = CalendarHub::new(client, auth);
+        let hub = CalendarHub::new(
+            hyper::Client::builder().build(
+                hyper_rustls::HttpsConnectorBuilder::new()
+                    .with_native_roots()
+                    .unwrap()
+                    .https_or_http()
+                    .enable_http1()
+                    .build(),
+            ),
+            auth,
+        );
 
         // List events from the primary calendar
         let result = hub.events().list("primary").doit().await;
