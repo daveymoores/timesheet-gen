@@ -27,8 +27,6 @@ pub fn exit_process() {
     if !is_test_mode() {
         std::process::exit(exitcode::OK);
     }
-
-    return;
 }
 
 pub fn trim_output_from_utf8(output: Output) -> Result<String, Box<dyn std::error::Error>> {
@@ -41,7 +39,7 @@ pub fn generate_random_path() -> String {
     generate(10, charset)
 }
 
-pub fn config_file_found(buffer: &mut String) -> bool {
+pub fn config_file_found(buffer: &mut str) -> bool {
     !buffer.is_empty()
 }
 

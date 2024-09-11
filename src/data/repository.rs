@@ -14,7 +14,7 @@ pub type GitLogDates = HashMap<i32, HashMap<u32, HashSet<u32>>>;
 /// Holds the data from the config file. Config can access these values
 // and perform various operations on it
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Repository {
     pub id: Option<String>,
     pub namespace: Option<String>,
@@ -33,30 +33,6 @@ pub struct Repository {
     pub timesheet: Option<TimesheetYears>,
     pub service: Option<String>,
     pub service_username: Option<String>,
-}
-
-impl Default for Repository {
-    fn default() -> Self {
-        Self {
-            id: None,
-            namespace: None,
-            namespace_alias: None,
-            repo_path: None,
-            git_path: None,
-            git_log_dates: None,
-            user_id: None,
-            name: None,
-            email: None,
-            client_id: None,
-            client_name: None,
-            client_contact_person: None,
-            client_address: None,
-            project_number: None,
-            timesheet: None,
-            service: None,
-            service_username: None,
-        }
-    }
 }
 
 struct Iter<'a> {
@@ -190,7 +166,7 @@ impl Repository {
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
         let reg = regex::Regex::new(r"(?P<namespace>[^/][\w\d()_\-,.]+)/\.git/")?;
 
-        match reg.captures(&self.git_path.clone().unwrap().as_str()) {
+        match reg.captures(self.git_path.clone().unwrap().as_str()) {
             None => {
                 println!("No repositories found at path. Please check that the path is valid.");
                 process::exit(exitcode::DATAERR);
@@ -201,7 +177,7 @@ impl Repository {
                     process::exit(exitcode::DATAERR);
                 }
                 Some(capture) => {
-                    self.set_namespace((&capture.as_str()).parse().unwrap());
+                    self.set_namespace(capture.as_str().parse().unwrap());
                 }
             },
         }
@@ -290,7 +266,7 @@ impl Repository {
             regex::Regex::new(r"(?:\S+@)(?P<service>\w+)(?:.(com|org))[:/](?P<username>\S+)/")
                 .unwrap();
 
-        match regex.captures(&*service) {
+        match regex.captures(&service) {
             None => {}
             Some(cap) => {
                 match cap.name("service") {
@@ -415,7 +391,7 @@ impl Repository {
 
     pub fn update_hours_on_month_day_entry(
         &mut self,
-        options: &Vec<Option<String>>,
+        options: &[Option<String>],
     ) -> Result<&mut Self, Box<dyn std::error::Error>> {
         let year_string = check_for_valid_year(&options[4])?;
         let month_u32 = check_for_valid_month(&options[3])?;
@@ -425,7 +401,7 @@ impl Repository {
         let day: usize = day_string.parse()?;
 
         let is_weekend =
-            match self.get_timesheet_entry(&year_string, &month_u32, day, "weekend".to_string()) {
+            match self.get_timesheet_entry(year_string, &month_u32, day, "weekend".to_string()) {
                 Ok(result) => result.cloned().unwrap(),
                 Err(err) => {
                     eprintln!("Error retrieving timesheet entry: {}", err);
@@ -435,7 +411,7 @@ impl Repository {
 
         // update hour value
         self.mutate_timesheet_entry(
-            &year_string,
+            year_string,
             &month_u32,
             day,
             create_single_day_object(is_weekend.as_bool().unwrap(), hour, true),

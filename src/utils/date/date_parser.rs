@@ -3,19 +3,19 @@ use chrono::{NaiveDate, TimeZone, Utc};
 use regex::Regex;
 use serde_json::{Map, Number, Value};
 use std::collections::{HashMap, HashSet};
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use std::error::Error;
 use std::io::ErrorKind;
 use std::{io, process};
 
 fn return_worked_hours_from_worked_days(
-    worked_days: &Vec<u32>,
+    worked_days: &[u32],
     day: &u32,
-    adjacent_days_in_month: &Vec<HashSet<u32>>,
+    adjacent_days_in_month: &[HashSet<u32>],
 ) -> f64 {
     // if day exists in adjacent days, then split the number of hours by number of occurrences
     let frequency_of_day_worked_in_adjacent_timesheets: f64 = (adjacent_days_in_month
-        .into_iter()
+        .iter()
         .map(|month| month.get(day))
         .filter(|e| e.is_some())
         .collect::<Vec<Option<&u32>>>()
@@ -24,21 +24,18 @@ fn return_worked_hours_from_worked_days(
 
     let worked_day = worked_days.contains(day);
     match worked_day {
-        true => (8.0 / frequency_of_day_worked_in_adjacent_timesheets),
+        true => 8.0 / frequency_of_day_worked_in_adjacent_timesheets,
         false => 0.0,
     }
 }
 
 pub fn is_weekend(date_tuple: &(i32, u32, u32), day: u32) -> bool {
     let day_of_week_index = Utc
-        .ymd(date_tuple.0, date_tuple.1, day.try_into().unwrap())
+        .ymd(date_tuple.0, date_tuple.1, day)
         .format("%u")
         .to_string();
 
-    match day_of_week_index.parse().unwrap() {
-        6 | 7 => true,
-        _ => false,
-    }
+    matches!(day_of_week_index.parse().unwrap(), 6 | 7)
 }
 
 pub type DayMap = [(String, Value); 3];
@@ -70,7 +67,7 @@ fn parse_hours_from_date(
     let mut vector = vec![];
 
     for day in 1..date_tuple.2 + 1 {
-        let is_weekend: bool = is_weekend(&date_tuple, day.clone());
+        let is_weekend: bool = is_weekend(&date_tuple, day);
         let mut day_map = Map::new();
         let hours_worked =
             return_worked_hours_from_worked_days(&worked_days, &day, &adjacent_days_in_month);
@@ -143,8 +140,8 @@ fn get_adjacent_git_log_days_for_month<'a>(
     month: &'a u32,
 ) -> Vec<HashSet<u32>> {
     let mut repo_days = vec![];
-    for i in 0..adjacent_git_log_days.len() {
-        if let Some(year) = adjacent_git_log_days[i].get(year) {
+    for log_day in adjacent_git_log_days.iter() {
+        if let Some(year) = log_day.get(year) {
             if let Some(month) = year.get(month) {
                 repo_days.push(month.clone());
             }
@@ -214,7 +211,7 @@ pub fn check_for_valid_day(
 ) -> Result<&String, Box<dyn Error>> {
     let day_string = day
         .as_ref()
-        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, format!("Day not found")))?;
+        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, "Day not found".to_string()))?;
 
     let days_in_month = get_days_from_month(year, month);
     let day_regex = Regex::new(r"^(3[0-1]|2[0-9]|1[0-9]|[1-9])$").unwrap();
@@ -234,12 +231,12 @@ pub fn check_for_valid_day(
 pub fn check_for_valid_month(month: &Option<String>) -> Result<u32, Box<dyn Error>> {
     let month_u32 = month
         .as_ref()
-        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, format!("Month not found")))?
+        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, "Month not found".to_string()))?
         .parse::<u32>()?;
 
     let month_regex = Regex::new(r"^(1[0-2]|[1-9])$").unwrap();
 
-    if !month_regex.is_match(&*month_u32.to_string()) {
+    if !month_regex.is_match(&month_u32.to_string()) {
         return Err("Not a real month".into());
     }
 
@@ -249,7 +246,7 @@ pub fn check_for_valid_month(month: &Option<String>) -> Result<u32, Box<dyn Erro
 pub fn check_for_valid_year(year: &Option<String>) -> Result<&String, Box<dyn Error>> {
     let year_string = year
         .as_ref()
-        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, format!("Year not found")))?;
+        .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, "Year not found".to_string()))?;
 
     let year_regex = Regex::new(r"^((19|20)\d{2})$").unwrap();
 
