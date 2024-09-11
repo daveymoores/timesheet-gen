@@ -1,6 +1,6 @@
 extern crate clap;
 use crate::config;
-use crate::config::{Edit, Init, List, Make, New, Remove, Update};
+use crate::config::{Edit, Init, Link, List, Make, New, Remove, Update};
 use crate::data::client_repositories::ClientRepositories;
 use crate::data::repository;
 use crate::data::repository::Repository;
@@ -22,6 +22,7 @@ pub enum Commands {
     Remove,
     Update,
     List,
+    Link,
 }
 
 #[derive(Debug, Default)]
@@ -150,6 +151,8 @@ impl Cli<'_> {
                     )))
             .subcommand(App::new("list")
                 .about("List all clients and associated repositories"))
+            .subcommand(App::new("link")
+                .about("Link to calendar service"))
         .subcommand(App::new("make")
                 .about("Generate a new timesheet on a unique link")
                 .arg(Arg::with_name("client")
@@ -311,7 +314,7 @@ impl Cli<'_> {
         prompt: &RcHelpPrompt,
         mut deserialized_config: ConfigurationDoc,
     ) where
-        T: Init + Make + Edit + Update + Remove + List,
+        T: Init + Make + Edit + Update + Remove + List + Link,
     {
         match cli.command {
             None => {
@@ -354,6 +357,12 @@ impl Cli<'_> {
                     Rc::clone(client_repositories),
                     Rc::clone(prompt),
                 ),
+                Commands::Link => config.link(
+                    cli.options,
+                    Rc::clone(repository),
+                    Rc::clone(client_repositories),
+                    Rc::clone(prompt),
+                ),
             },
         }
     }
@@ -365,6 +374,7 @@ mod tests {
     use crate::config::{New, Remove};
     use crate::data::repository::Repository;
     use crate::interface::help_prompt::RCRepository;
+    use async_trait::async_trait;
     use std::fmt::Debug;
     use std::str::FromStr;
 
@@ -386,7 +396,7 @@ mod tests {
     where
         I: Iterator<Item = T>,
         T: Into<OsString> + Clone,
-        K: Init + Make + Edit + Update + Remove + List,
+        K: Init + Make + Edit + Update + Remove + List + Link,
     {
         let cli = Cli::new_from(commands).unwrap();
         let new_cli = cli.parse_commands(&cli.matches);
@@ -485,6 +495,18 @@ mod tests {
         fn list(
             &self,
             _repository: RCRepository,
+            _client_repositories: RCClientRepositories,
+            _prompt: RcHelpPrompt,
+        ) {
+            assert!(true);
+        }
+    }
+
+    impl Link for MockConfig {
+        fn link(
+            &self,
+            _options: Vec<Option<String>>,
+            _repository: Rc<RefCell<Repository>>,
             _client_repositories: RCClientRepositories,
             _prompt: RcHelpPrompt,
         ) {
