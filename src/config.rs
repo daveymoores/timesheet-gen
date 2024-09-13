@@ -734,45 +734,6 @@ impl Link for Config {
             println!("No service specified.");
         }
     }
-
-    // Create an authenticator
-    // let auth = oauth2::InstalledFlowAuthenticator::builder(
-    //     secret,
-    //     oauth2::InstalledFlowReturnMethod::HTTPRedirect,
-    // )
-    // .build()
-    // .await
-    // .unwrap();
-
-    // let hub = CalendarHub::new(
-    //     hyper::Client::builder().build(
-    //         hyper_rustls::HttpsConnectorBuilder::new()
-    //             .with_native_roots()
-    //             .unwrap()
-    //             .https_or_http()
-    //             .enable_http1()
-    //             .build(),
-    //     ),
-    //     auth,
-    // );
-
-    // List events from the primary calendar
-    // let result = hub.events().list("primary").doit().await;
-
-    // match result {
-    //     Ok((_, events)) => {
-    //         if let Some(items) = events.items {
-    //             for event in items {
-    //                 println!("Event: {:?}", event.summary);
-    //             }
-    //         } else {
-    //             println!("No events found.");
-    //         }
-    //     }
-    //     Err(e) => {
-    //         eprintln!("Error: {:?}", e);
-    //     }
-    // }
 }
 
 #[cfg(test)]
