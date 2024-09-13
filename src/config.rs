@@ -679,6 +679,8 @@ impl Link for Config {
         let home_dir = home_dir().expect("Could not find home directory");
         let token_path = home_dir.join(".autolog.token");
 
+        crate::interface::help_prompt::HelpPrompt::oauth2_authenticating();
+
         if let Some(service) = options.get(0).and_then(|s| s.as_deref()) {
             match service {
                 "gcal" => {
@@ -709,7 +711,7 @@ impl Link for Config {
                                 .expect("Failed to save token");
                             crate::interface::help_prompt::HelpPrompt::show_oauth2_success(service)
                         } else {
-                            println!("Token is valid.");
+                            crate::interface::help_prompt::HelpPrompt::oauth2_link_valid(service)
                         }
                     } else {
                         // Create a new token
