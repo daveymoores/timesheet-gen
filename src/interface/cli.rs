@@ -152,8 +152,14 @@ impl Cli<'_> {
             .subcommand(App::new("list")
                 .about("List all clients and associated repositories"))
             .subcommand(App::new("link")
-                .about("Link to calendar service"))
-        .subcommand(App::new("make")
+                .about("Link to calendar service")
+                .arg(Arg::with_name("service")
+                    .short("s")
+                    .long("service")
+                    .value_name("service")
+                    .help("Required service name. Currently only supports gcal",
+                    ).required(true)))
+            .subcommand(App::new("make")
                 .about("Generate a new timesheet on a unique link")
                 .arg(Arg::with_name("client")
                     .short("c")
@@ -251,7 +257,8 @@ impl Cli<'_> {
             command = Some(Commands::Update);
         } else if matches.subcommand_matches("list").is_some() {
             command = Some(Commands::List);
-        } else if matches.subcommand_matches("link").is_some() {
+        } else if let Some(link) = matches.subcommand_matches("link") {
+            options.push(Some(link.value_of("service").unwrap().to_string()));
             command = Some(Commands::Link);
         } else {
             return Err(Error {
@@ -359,9 +366,7 @@ impl Cli<'_> {
                     Rc::clone(client_repositories),
                     Rc::clone(prompt),
                 ),
-                Commands::Link => {
-                    config.link();
-                }
+                Commands::Link => config.link(cli.options),
             },
         }
     }
@@ -501,7 +506,7 @@ mod tests {
     }
 
     impl Link for MockConfig {
-        fn link(&self) {
+        fn link(&self, _options: Vec<Option<String>>) {
             assert!(true);
         }
     }

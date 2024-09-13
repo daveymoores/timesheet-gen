@@ -131,6 +131,19 @@ impl HelpPrompt {
         ));
     }
 
+    pub fn show_oauth2_success(service: &str) {
+        println!("\n{} successfully authenticated \u{1F389}", service);
+        crate::utils::exit_process();
+    }
+
+    pub fn show_oauth2_expired_token(service: &str) {
+        println!(
+            "\nToken for {} has expired. Please re-authenticate.",
+            service
+        );
+        crate::utils::exit_process();
+    }
+
     fn take_and_validate_email<'a>(initial_text: Option<&str>) -> futures::io::Result<String> {
         let text = initial_text.unwrap_or_default();
 

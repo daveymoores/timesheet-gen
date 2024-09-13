@@ -7,11 +7,15 @@ use crate::utils::exit_process;
 use crate::utils::file::file_reader;
 use crate::utils::link::link_builder;
 extern crate google_calendar3 as calendar3;
-use calendar3::{hyper, hyper_rustls, oauth2, CalendarHub};
+use calendar3::{hyper, hyper_rustls, oauth2};
+use dirs::home_dir;
 use std::cell::{Ref, RefMut};
 use std::ops::Deref;
+use std::path::PathBuf;
 use std::process;
 use std::rc::Rc;
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 
 /// Creates and modifies the config file. Config does not directly hold the information
 /// contained in the config file, but provides the various operations that can be
@@ -193,6 +197,43 @@ impl Config {
             Config::write_to_config_file(Option::Some(client_repositories), None);
             crate::interface::help_prompt::HelpPrompt::show_write_new_config_success();
         }
+    }
+
+    async fn save_token(
+        self,
+        token: &oauth2::AccessToken,
+        path: &PathBuf,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let token_json = serde_json::to_string(token)?;
+        let mut file = File::create(path).await?;
+        file.write_all(token_json.as_bytes()).await?;
+        Ok(())
+    }
+
+    async fn load_token(
+        self,
+        path: &PathBuf,
+    ) -> Result<oauth2::AccessToken, Box<dyn std::error::Error>> {
+        let token_json = tokio::fs::read_to_string(path).await?;
+        let token: oauth2::AccessToken = serde_json::from_str(&token_json)?;
+        Ok(token)
+    }
+
+    async fn create_authenticator(
+        self,
+        secret: oauth2::ApplicationSecret,
+        token_path: PathBuf,
+    ) -> oauth2::authenticator::Authenticator<
+        hyper_rustls::HttpsConnector<hyper::client::HttpConnector>,
+    > {
+        oauth2::InstalledFlowAuthenticator::builder(
+            secret,
+            oauth2::InstalledFlowReturnMethod::HTTPRedirect,
+        )
+        .persist_tokens_to_disk(token_path) // Automatically save tokens to disk
+        .build()
+        .await
+        .unwrap()
     }
 }
 
@@ -629,56 +670,107 @@ impl List for Config {
 
 pub trait Link {
     /// List repositories under each client
-    fn link(&self);
+    fn link(&self, options: Vec<Option<String>>);
 }
 
 impl Link for Config {
     #[tokio::main]
-    async fn link(&self) {
-        // Load the credentials file
-        let secret = oauth2::read_application_secret("client_secret.json")
-            .await
-            .expect("client_secret.json file not found");
+    async fn link(&self, options: Vec<Option<String>>) {
+        let home_dir = home_dir().expect("Could not find home directory");
+        let token_path = home_dir.join(".autolog.token");
 
-        // Create an authenticator
-        let auth = oauth2::InstalledFlowAuthenticator::builder(
-            secret,
-            oauth2::InstalledFlowReturnMethod::HTTPRedirect,
-        )
-        .build()
-        .await
-        .unwrap();
+        if let Some(service) = options.get(0).and_then(|s| s.as_deref()) {
+            match service {
+                "gcal" => {
+                    // Load the credentials file
+                    let secret = oauth2::read_application_secret("client_secret.json")
+                        .await
+                        .expect("client_secret.json file not found");
 
-        let hub = CalendarHub::new(
-            hyper::Client::builder().build(
-                hyper_rustls::HttpsConnectorBuilder::new()
-                    .with_native_roots()
-                    .unwrap()
-                    .https_or_http()
-                    .enable_http1()
-                    .build(),
-            ),
-            auth,
-        );
+                    if token_path.exists() {
+                        // Load the token from the file
+                        let token = self
+                            .load_token(&token_path)
+                            .await
+                            .expect("Failed to load token");
 
-        // List events from the primary calendar
-        let result = hub.events().list("primary").doit().await;
-
-        match result {
-            Ok((_, events)) => {
-                if let Some(items) = events.items {
-                    for event in items {
-                        println!("Event: {:?}", event.summary);
+                        // Check if the token is valid
+                        if token.is_expired() {
+                            crate::interface::help_prompt::HelpPrompt::show_oauth2_expired_token(
+                                service,
+                            );
+                            let auth = self.create_authenticator(secret, token_path.clone()).await;
+                            let token = auth
+                                .token(&["https://www.googleapis.com/auth/calendar"])
+                                .await
+                                .unwrap();
+                            self.save_token(&token, &token_path)
+                                .await
+                                .expect("Failed to save token");
+                            crate::interface::help_prompt::HelpPrompt::show_oauth2_success(service)
+                        } else {
+                            println!("Token is valid.");
+                        }
+                    } else {
+                        // Create a new token
+                        let auth = self.create_authenticator(secret, token_path.clone()).await;
+                        let token = auth
+                            .token(&["https://www.googleapis.com/auth/calendar"])
+                            .await
+                            .unwrap();
+                        self.save_token(&token, &token_path)
+                            .await
+                            .expect("Failed to save token");
+                        crate::interface::help_prompt::HelpPrompt::show_oauth2_success(service)
                     }
-                } else {
-                    println!("No events found.");
+                }
+                _ => {
+                    println!("Unsupported service: {}", service);
                 }
             }
-            Err(e) => {
-                eprintln!("Error: {:?}", e);
-            }
+        } else {
+            println!("No service specified.");
         }
     }
+
+    // Create an authenticator
+    // let auth = oauth2::InstalledFlowAuthenticator::builder(
+    //     secret,
+    //     oauth2::InstalledFlowReturnMethod::HTTPRedirect,
+    // )
+    // .build()
+    // .await
+    // .unwrap();
+
+    // let hub = CalendarHub::new(
+    //     hyper::Client::builder().build(
+    //         hyper_rustls::HttpsConnectorBuilder::new()
+    //             .with_native_roots()
+    //             .unwrap()
+    //             .https_or_http()
+    //             .enable_http1()
+    //             .build(),
+    //     ),
+    //     auth,
+    // );
+
+    // List events from the primary calendar
+    // let result = hub.events().list("primary").doit().await;
+
+    // match result {
+    //     Ok((_, events)) => {
+    //         if let Some(items) = events.items {
+    //             for event in items {
+    //                 println!("Event: {:?}", event.summary);
+    //             }
+    //         } else {
+    //             println!("No events found.");
+    //         }
+    //     }
+    //     Err(e) => {
+    //         eprintln!("Error: {:?}", e);
+    //     }
+    // }
 }
 
 #[cfg(test)]
